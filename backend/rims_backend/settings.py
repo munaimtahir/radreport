@@ -61,12 +61,8 @@ WSGI_APPLICATION = "rims_backend.wsgi.application"
 
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("DB_NAME", "rims"),
-        "USER": os.getenv("DB_USER", "rims"),
-        "PASSWORD": os.getenv("DB_PASSWORD", "rims"),
-        "HOST": os.getenv("DB_HOST", "localhost"),
-        "PORT": os.getenv("DB_PORT", "5434"),
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
 }
 
