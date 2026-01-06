@@ -3,6 +3,23 @@
 This repo is a **merge-friendly, independent RIMS** designed to later merge into your LIMS with minimal pain.
 It matches the same architectural philosophy: Django + DRF + Postgres + JWT + (optional) Celery/Redis + React/Vite.
 
+## 🚀 Deployment Status
+
+✅ **Production Ready** - Assessment completed January 6, 2026
+
+- All critical security issues resolved
+- Comprehensive deployment documentation
+- Production configuration ready
+- See [DEPLOYMENT_READINESS_ASSESSMENT.md](DEPLOYMENT_READINESS_ASSESSMENT.md) for details
+
+## 📚 Documentation
+
+- **[DEPLOYMENT.md](DEPLOYMENT.md)** - Complete deployment guide
+- **[SECURITY.md](SECURITY.md)** - Security best practices
+- **[SETUP.md](SETUP.md)** - Development setup
+- **[TESTING.md](TESTING.md)** - Testing guide
+- **[STATUS.md](STATUS.md)** - Implementation status
+
 ## What is included
 - Backend: Django 5 + DRF + JWT + drf-spectacular + django-filter + CORS
 - Core domain apps: `patients`, `catalog`, `studies`, `templates`, `reporting`, `audit`, `accounts`
