@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
+from django.http import FileResponse, Http404
 from .models import Report
 from .serializers import ReportSerializer
 from .pdf import build_basic_pdf
@@ -74,3 +75,13 @@ class ReportViewSet(viewsets.ModelViewSet):
         AuditLog.objects.create(actor=request.user, action="report.finalize", entity_type="Report", entity_id=str(report.id),
                                 meta={"pdf": report.pdf_file.name})
         return Response(ReportSerializer(report).data, status=status.HTTP_200_OK)
+
+    @action(detail=True, methods=["get"])
+    def download_pdf(self, request, pk=None):
+        report = self.get_object()
+        if not report.pdf_file:
+            return Response({"detail": "PDF not available"}, status=status.HTTP_404_NOT_FOUND)
+        try:
+            return FileResponse(report.pdf_file.open(), content_type="application/pdf", filename=f"{report.study.accession}.pdf")
+        except (ValueError, IOError):
+            raise Http404("PDF file not found")

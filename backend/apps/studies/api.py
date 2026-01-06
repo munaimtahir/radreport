@@ -9,3 +9,8 @@ class StudyViewSet(viewsets.ModelViewSet):
     search_fields = ["accession", "patient__name", "patient__mrn", "service__name"]
     filterset_fields = ["status", "service__modality__code", "service"]
     ordering_fields = ["created_at", "accession", "status"]
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        context["request"] = self.request
+        return context
