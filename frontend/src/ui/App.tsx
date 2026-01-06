@@ -6,6 +6,7 @@ import Dashboard from "../views/Dashboard";
 import Patients from "../views/Patients";
 import Studies from "../views/Studies";
 import Templates from "../views/Templates";
+import ReportEditor from "../views/ReportEditor";
 
 function Shell() {
   const { token, logout } = useAuth();
@@ -29,6 +30,7 @@ function Shell() {
           <Route path="/patients" element={<Patients />} />
           <Route path="/studies" element={<Studies />} />
           <Route path="/templates" element={<Templates />} />
+          <Route path="/reports/:reportId/edit" element={<ReportEditor />} />
         </Routes>
       </main>
     </div>

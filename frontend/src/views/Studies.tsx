@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet, apiPost, apiPatch } from "../ui/api";
+import { Link } from "react-router-dom";
 
 interface Patient {
   id: string;
@@ -27,6 +28,7 @@ interface Study {
   performed_by: string;
   reported_by: string;
   created_at: string;
+  report?: { id: string; status: string };
 }
 
 export default function Studies() {
@@ -52,12 +54,21 @@ export default function Studies() {
     if (!token) return;
     try {
       setLoading(true);
-      const [studiesData, patientsData, servicesData] = await Promise.all([
+      const [studiesData, patientsData, servicesData, reportsData] = await Promise.all([
         apiGet(`/studies/${statusFilter ? `?status=${statusFilter}` : ""}`, token),
         apiGet("/patients/", token),
         apiGet("/services/", token),
+        apiGet("/reports/", token).catch(() => ({ results: [] })), // Load reports to link them
       ]);
-      setStudies(studiesData.results || studiesData);
+      const studies = studiesData.results || studiesData;
+      const reports = reportsData.results || reportsData || [];
+      // Map reports to studies by study_id
+      const reportsMap = new Map(reports.map((r: any) => [r.study_id || r.study?.id || r.study, r]));
+      const studiesWithReports = studies.map((s: Study) => ({
+        ...s,
+        report: reportsMap.get(s.id),
+      }));
+      setStudies(studiesWithReports);
       setPatients(patientsData.results || patientsData);
       setServices(servicesData.results || servicesData);
       setError("");
@@ -289,9 +300,26 @@ export default function Studies() {
                   </span>
                 </td>
                 <td style={{ padding: 10, border: "1px solid #ddd" }}>
-                  <button onClick={() => handleEdit(s)} style={{ fontSize: 12 }}>
-                    Edit
-                  </button>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={() => handleEdit(s)} style={{ fontSize: 12 }}>
+                      Edit
+                    </button>
+                    {s.report && (
+                      <Link
+                        to={`/reports/${s.report.id}/edit`}
+                        style={{
+                          fontSize: 12,
+                          padding: "4px 8px",
+                          background: "#007bff",
+                          color: "white",
+                          textDecoration: "none",
+                          borderRadius: 4,
+                        }}
+                      >
+                        {s.report.status === "final" ? "View Report" : "Edit Report"}
+                      </Link>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}
