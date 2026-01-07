@@ -93,9 +93,12 @@ export default function FrontDeskIntake() {
     if (!token) return;
     try {
       const data = await apiGet("/services/?include_inactive=false", token);
-      setServices(data.results || data);
+      setServices(data.results || data || []);
+      setError("");
     } catch (e: any) {
-      setError(e.message);
+      console.error("Failed to load services:", e);
+      setError(e.message || "Failed to load services");
+      setServices([]);
     }
   };
   
@@ -179,17 +182,34 @@ export default function FrontDeskIntake() {
     }
   };
   
-  const handleAddToCart = (service: Service) => {
-    const cartItem: CartItem = {
-      service_id: service.id,
-      service_name: service.name,
-      service_code: service.code,
-      modality: service.modality.code,
-      charge: service.charges || service.price,
-      indication: "",
-    };
-    setCart([...cart, cartItem]);
-    setServiceSearch("");
+  const handleAddToCart = (service: Service, e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    try {
+      if (!service || !service.id) {
+        throw new Error("Invalid service selected");
+      }
+      
+      const cartItem: CartItem = {
+        service_id: service.id,
+        service_name: service.name || "Unknown Service",
+        service_code: service.code,
+        modality: service.modality?.code || "N/A",
+        charge: service.charges || service.price || 0,
+        indication: "",
+      };
+      setCart([...cart, cartItem]);
+      setServiceSearch("");
+      setError(""); // Clear any previous errors
+      setSuccess(`Service "${service.name || 'Unknown'}" added to cart`);
+      setTimeout(() => setSuccess(""), 2000);
+    } catch (err: any) {
+      console.error("Error adding service to cart:", err);
+      setError(err.message || "Failed to add service to cart");
+      setTimeout(() => setError(""), 5000);
+    }
   };
   
   const handleRemoveFromCart = (index: number) => {
@@ -490,15 +510,25 @@ export default function FrontDeskIntake() {
             type="text"
             value={serviceSearch}
             onChange={(e) => setServiceSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+            }}
             placeholder="Search services..."
             style={{ width: "100%", padding: 8 }}
+            autoComplete="off"
           />
           {serviceSearch && filteredServices.length > 0 && (
-            <div style={{ border: "1px solid #ddd", borderRadius: 4, marginTop: 5, maxHeight: 200, overflowY: "auto" }}>
+            <div 
+              style={{ border: "1px solid #ddd", borderRadius: 4, marginTop: 5, maxHeight: 200, overflowY: "auto" }}
+              onClick={(e) => e.stopPropagation()}
+            >
               {filteredServices.map((s) => (
                 <div
                   key={s.id}
-                  onClick={() => handleAddToCart(s)}
+                  onClick={(e) => handleAddToCart(s, e)}
                   style={{
                     padding: 10,
                     cursor: "pointer",
