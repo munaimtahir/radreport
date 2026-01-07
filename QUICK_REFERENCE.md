@@ -45,11 +45,13 @@ git clone https://github.com/munaimtahir/radreport.git radreport-filter
 cd radreport-filter
 
 # 3. Remove from history
-echo "backend/venv/
+cat > paths-to-remove.txt <<EOF
+backend/venv/
 frontend/node_modules/
 backend/staticfiles/
 backend/db.sqlite3
-backend/media/pdfs/" > paths-to-remove.txt
+backend/media/pdfs/
+EOF
 
 git-filter-repo --invert-paths --paths-from-file paths-to-remove.txt --force
 
