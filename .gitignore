@@ -1,56 +1,42 @@
-# Python
+# Dependencies / virtualenv
+node_modules/
+venv/
+.venv/
+backend/venv/
+
+# Python caches
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-*.egg-info/
+*.pyc
+*.pyo
+
+# Frontend builds
 dist/
 build/
-*.egg
-.venv/
-venv/
-ENV/
-env/
+.next/
+coverage/
 
-# Django
-*.log
-db.sqlite3
-db.sqlite3-journal
-/backend/media/
-/backend/staticfiles/
-/backend/static/
+# Django static/media/runtime outputs
+backend/staticfiles/
+backend/media/
+backend/uploads/
+backend/reports/
 
-# Node
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-/frontend/dist/
-/frontend/.vite/
+# Databases / dumps / backups
+*.sqlite3
+*.db
+*.sql
+*.dump
+*.bak
+*.gz
+*.zip
+*.7z
+*.rar
 
-# Environment files
-.env
-.env.local
-.env.*.local
-.env.production
-.env.prod
-
-# IDE
+# IDE / OS junk
 .vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
 .DS_Store
-Thumbs.db
 
-# Docker
-*.pid
-*.seed
-*.log
-
-# Build artifacts
-*.tsbuildinfo
+# Test/tool caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
