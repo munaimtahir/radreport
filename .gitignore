@@ -8,12 +8,17 @@ backend/venv/
 __pycache__/
 *.pyc
 *.pyo
+**/__pycache__/
+**/*.pyc
 
 # Frontend builds
 dist/
+frontend/dist/
+**/dist/
 build/
 .next/
 coverage/
+*.tsbuildinfo
 
 # Django static/media/runtime outputs
 backend/staticfiles/
@@ -40,3 +45,7 @@ backend/reports/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+
+# Environment files
+.env
+.env.*
