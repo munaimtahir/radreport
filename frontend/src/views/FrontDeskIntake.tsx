@@ -214,19 +214,33 @@ export default function FrontDeskIntake() {
       setPaidAmount("");
       setPaymentMethod("");
       
-      // Print receipt if requested
+      // Generate and print receipt if requested
       if (printReceipt && visit.id && token) {
         const API_BASE = (import.meta as any).env.VITE_API_BASE || "http://localhost:8000/api";
-        const receiptUrl = `${API_BASE}/visits/${visit.id}/receipt/`;
         
-        // Fetch PDF with authentication and open in new window
-        fetch(receiptUrl, {
+        // First generate receipt (creates receipt number and PDF if not exists)
+        fetch(`${API_BASE}/visits/${visit.id}/generate-receipt/`, {
+          method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
           },
         })
           .then((res) => {
-            if (!res.ok) throw new Error("Failed to fetch receipt");
+            if (!res.ok) throw new Error("Failed to generate receipt");
+            return res.json();
+          })
+          .then((updatedVisit) => {
+            // Then fetch the PDF
+            const receiptUrl = `${API_BASE}/visits/${visit.id}/receipt/`;
+            return fetch(receiptUrl, {
+              headers: {
+                Authorization: `Bearer ${token}`,
+              },
+            });
+          })
+          .then((res) => {
+            if (!res.ok) throw new Error("Failed to fetch receipt PDF");
             return res.blob();
           })
           .then((blob) => {
@@ -238,8 +252,8 @@ export default function FrontDeskIntake() {
             }
           })
           .catch((err) => {
-            console.error("Failed to load receipt:", err);
-            setError("Failed to load receipt. Please try again.");
+            console.error("Failed to generate/load receipt:", err);
+            setError("Failed to generate receipt. Please try again.");
           });
       }
       
