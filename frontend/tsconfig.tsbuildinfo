@@ -1,1 +1,0 @@
-{"root":["./src/main.tsx","./src/ui/App.tsx","./src/ui/api.ts","./src/ui/auth.tsx","./src/views/Dashboard.tsx","./src/views/Login.tsx","./src/views/Patients.tsx","./src/views/ReportEditor.tsx","./src/views/Studies.tsx","./src/views/Templates.tsx"],"version":"5.9.3"}

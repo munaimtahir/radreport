@@ -60,6 +60,7 @@ yarn-error.log*
 # Frontend build
 frontend/dist/
 frontend/build/
+*.tsbuildinfo
 
 # Coverage
 htmlcov/
