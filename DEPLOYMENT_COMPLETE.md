@@ -108,6 +108,34 @@ export $(grep -v '^#' .env.production | xargs)
 python create_superuser.py
 ```
 
+### Load Production Data (Templates & Services)
+```bash
+cd /home/munaim/srv/apps/radreport/backend
+source venv/bin/activate
+export $(grep -v '^#' .env.production | xargs)
+python load_production_data.py
+```
+
+This script will:
+- Import the Ultrasound Abdomen template from `docs/presets/templates/abdomen_usg_v1.json`
+- Import all services from `service_master_export_20260107_143330.csv`
+- Link templates to services automatically
+- Create/update modalities as needed
+
+**Note**: If you need to reload data, you can run this script again. It will update existing services and templates.
+
+### Initialize Receipt System
+```bash
+cd /home/munaim/srv/apps/radreport/backend
+source venv/bin/activate
+export $(grep -v '^#' .env.production | xargs)
+python initialize_receipt_system.py
+```
+
+This script initializes:
+- ReceiptSettings (singleton) for receipt branding
+- ReceiptSequence for current month (receipt number generation)
+
 ## 🚀 Deployment Checklist
 
 - ✅ PostgreSQL database container running
@@ -118,6 +146,9 @@ python create_superuser.py
 - ✅ Caddy reverse proxy configured and running
 - ✅ SSL certificate automatically provisioned
 - ✅ All services enabled for auto-start on boot
+- ✅ **Templates and Services**: Loaded via `load_production_data.py` (36 services + 1 template)
+- ✅ **Receipt System**: Initialized via `initialize_receipt_system.py`
+- ✅ **Frontend**: Rebuilt with production API configuration
 
 ## 🔍 Testing
 
