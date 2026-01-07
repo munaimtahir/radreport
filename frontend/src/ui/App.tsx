@@ -7,6 +7,7 @@ import Patients from "../views/Patients";
 import Studies from "../views/Studies";
 import Templates from "../views/Templates";
 import ReportEditor from "../views/ReportEditor";
+import FrontDeskIntake from "../views/FrontDeskIntake";
 
 function Shell() {
   const { token, logout } = useAuth();
@@ -18,6 +19,7 @@ function Shell() {
         <h2 style={{ marginTop: 0 }}>RIMS</h2>
         <nav style={{ display: "grid", gap: 8 }}>
           <Link to="/">Dashboard</Link>
+          <Link to="/intake">Front Desk Intake</Link>
           <Link to="/patients">Patients</Link>
           <Link to="/studies">Studies</Link>
           <Link to="/templates">Templates</Link>
@@ -27,6 +29,7 @@ function Shell() {
       <main style={{ flex: 1, padding: 20 }}>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/intake" element={<FrontDeskIntake />} />
           <Route path="/patients" element={<Patients />} />
           <Route path="/studies" element={<Studies />} />
           <Route path="/templates" element={<Templates />} />

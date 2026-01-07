@@ -8,6 +8,6 @@ class ModalityAdmin(admin.ModelAdmin):
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
-    list_display = ("name", "modality", "price", "tat_minutes", "is_active")
-    search_fields = ("name",)
-    list_filter = ("modality", "is_active")
+    list_display = ("code", "name", "modality", "category", "charges", "tat_value", "tat_unit", "is_active")
+    search_fields = ("name", "code")
+    list_filter = ("modality", "category", "is_active")

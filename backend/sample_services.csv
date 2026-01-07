@@ -1,0 +1,15 @@
+code,name,category,modality,charges,tat_value,tat_unit,active
+USG001,Abdominal USG,Radiology,USG,1500.00,2,hours,true
+USG002,Pelvic USG,Radiology,USG,1200.00,2,hours,true
+USG003,Obstetric USG,Radiology,USG,1800.00,2,hours,true
+CT001,Chest CT,Radiology,CT,5000.00,24,hours,true
+CT002,Head CT,Radiology,CT,4500.00,24,hours,true
+CT003,Abdomen CT,Radiology,CT,5500.00,24,hours,true
+XRAY001,Chest X-Ray,Radiology,XRAY,800.00,1,hours,true
+XRAY002,Abdomen X-Ray,Radiology,XRAY,700.00,1,hours,true
+XRAY003,Extremity X-Ray,Radiology,XRAY,600.00,1,hours,true
+LAB001,Complete Blood Count,Lab,LAB,500.00,4,hours,true
+LAB002,Liver Function Test,Lab,LAB,800.00,6,hours,true
+LAB003,Kidney Function Test,Lab,LAB,700.00,6,hours,true
+OPD001,General Consultation,OPD,CONSULT,500.00,0,hours,true
+OPD002,Specialist Consultation,OPD,CONSULT,1000.00,0,hours,true
