@@ -74,7 +74,10 @@ export default function FrontDeskIntake() {
   }, [token]);
   
   // Calculate billing totals
-  const subtotal = cart.reduce((sum, item) => sum + item.charge, 0);
+  const subtotal = cart.reduce((sum, item) => {
+    const charge = typeof item.charge === 'number' ? item.charge : parseFloat(item.charge) || 0;
+    return sum + charge;
+  }, 0);
   const discountAmount = discountType === "amount" 
     ? parseFloat(discountValue) || 0 
     : subtotal * ((parseFloat(discountValue) || 0) / 100);
@@ -192,12 +195,15 @@ export default function FrontDeskIntake() {
         throw new Error("Invalid service selected");
       }
       
+      const chargeValue = service.charges || service.price || 0;
+      const chargeNumber = typeof chargeValue === 'number' ? chargeValue : parseFloat(chargeValue) || 0;
+      
       const cartItem: CartItem = {
         service_id: service.id,
         service_name: service.name || "Unknown Service",
         service_code: service.code,
         modality: service.modality?.code || "N/A",
-        charge: service.charges || service.price || 0,
+        charge: chargeNumber,
         indication: "",
       };
       setCart([...cart, cartItem]);
@@ -573,7 +579,7 @@ export default function FrontDeskIntake() {
                       />
                     </td>
                     <td style={{ padding: 10, textAlign: "right", border: "1px solid #ddd" }}>
-                      Rs. {item.charge.toFixed(2)}
+                      Rs. {(typeof item.charge === 'number' ? item.charge : parseFloat(item.charge) || 0).toFixed(2)}
                     </td>
                     <td style={{ padding: 10, textAlign: "center", border: "1px solid #ddd" }}>
                       <button onClick={() => handleRemoveFromCart(index)} style={{ color: "red" }}>
