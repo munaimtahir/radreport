@@ -39,9 +39,6 @@ COPY . /app/
 # Create necessary directories
 RUN mkdir -p /app/media /app/staticfiles /app/static
 
-# Collect static files during build
-RUN python manage.py collectstatic --noinput
-
 # Create non-root user for security
 RUN useradd -m -u 1000 appuser && \
     chown -R appuser:appuser /app

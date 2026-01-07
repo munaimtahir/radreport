@@ -15,9 +15,6 @@ if [ ! -f ".env.prod" ]; then
     exit 1
 fi
 
-# Load environment
-export $(cat .env.prod | grep -v '^#' | xargs)
-
 echo "Step 1: Validating configuration..."
 bash scripts/validate-deployment.sh
 echo ""
