@@ -114,7 +114,7 @@ echo ""
 
 # Check for common issues in docker-compose.yml
 echo "Validating docker-compose.yml..."
-if grep -q "version:" docker-compose.yml; then
+if grep -q "services:" docker-compose.yml; then
     echo -e "  ${GREEN}✓${NC} docker-compose.yml syntax appears valid"
 else
     echo -e "  ${YELLOW}⚠${NC} docker-compose.yml may have syntax issues"
