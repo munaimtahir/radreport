@@ -28,6 +28,7 @@ EXPOSE 80
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
 
-# nginx runs as root by default but drops privileges
-# No need to change user as nginx handles this internally
+# Note: In the official nginx image, the master process starts as root and drops
+# privileges for worker processes to the nginx user. For stricter least-privilege
+# isolation, consider running this container as a non-root user at deployment time.
 CMD ["nginx", "-g", "daemon off;"]
