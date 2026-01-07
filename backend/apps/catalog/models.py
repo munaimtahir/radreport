@@ -10,17 +10,54 @@ class Modality(models.Model):
         return f"{self.code}"
 
 class Service(models.Model):
+    CATEGORY_CHOICES = [
+        ("Radiology", "Radiology"),
+        ("Lab", "Lab"),
+        ("OPD", "OPD"),
+        ("Procedure", "Procedure"),
+    ]
+    
+    TAT_UNIT_CHOICES = [
+        ("hours", "Hours"),
+        ("days", "Days"),
+    ]
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=50, unique=True, null=True, blank=True)  # CSV-driven unique code
     modality = models.ForeignKey(Modality, on_delete=models.PROTECT, related_name="services")
     name = models.CharField(max_length=150)
+    category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default="Radiology")
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    tat_minutes = models.PositiveIntegerField(default=60)
+    charges = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Alias for price, CSV-driven")
+    tat_value = models.PositiveIntegerField(default=1, help_text="TAT numeric value")
+    tat_unit = models.CharField(max_length=10, choices=TAT_UNIT_CHOICES, default="hours")
+    tat_minutes = models.PositiveIntegerField(default=60, help_text="Calculated TAT in minutes")
     default_template = models.ForeignKey("templates.Template", on_delete=models.SET_NULL, null=True, blank=True)
     requires_radiologist_approval = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
 
     class Meta:
         unique_together = ("modality", "name")
+        indexes = [
+            models.Index(fields=["code"]),
+            models.Index(fields=["category"]),
+            models.Index(fields=["is_active"]),
+        ]
+
+    def save(self, *args, **kwargs):
+        # Sync charges to price if charges is set
+        if self.charges and not self.price:
+            self.price = self.charges
+        elif self.price and not self.charges:
+            self.charges = self.price
+        
+        # Calculate tat_minutes from tat_value and tat_unit
+        if self.tat_unit == "hours":
+            self.tat_minutes = self.tat_value * 60
+        elif self.tat_unit == "days":
+            self.tat_minutes = self.tat_value * 24 * 60
+        
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.modality.code} - {self.name}"

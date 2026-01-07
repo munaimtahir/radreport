@@ -7,7 +7,7 @@ from rest_framework.permissions import AllowAny
 from apps.patients.api import PatientViewSet
 from apps.catalog.api import ModalityViewSet, ServiceViewSet
 from apps.templates.api import TemplateViewSet, TemplateVersionViewSet
-from apps.studies.api import StudyViewSet
+from apps.studies.api import StudyViewSet, VisitViewSet
 from apps.reporting.api import ReportViewSet
 from apps.audit.api import AuditLogViewSet
 from django.http import JsonResponse
@@ -20,6 +20,7 @@ router.register(r"services", ServiceViewSet, basename="services")
 router.register(r"templates", TemplateViewSet, basename="templates")
 router.register(r"template-versions", TemplateVersionViewSet, basename="template-versions")
 router.register(r"studies", StudyViewSet, basename="studies")
+router.register(r"visits", VisitViewSet, basename="visits")
 router.register(r"reports", ReportViewSet, basename="reports")
 router.register(r"audit", AuditLogViewSet, basename="audit")
 
