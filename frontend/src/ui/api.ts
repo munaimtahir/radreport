@@ -1,9 +1,9 @@
 const API_BASE = (import.meta as any).env.VITE_API_BASE || "http://localhost:8000/api";
 
 async function apiRequest(path: string, token: string | null, options: RequestInit = {}) {
-  const headers: HeadersInit = {
+  const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
