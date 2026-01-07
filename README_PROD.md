@@ -22,17 +22,17 @@ This guide provides step-by-step instructions for deploying RIMS (Radiology Info
 
 ```bash
 # Build and start
-docker-compose up -d --build
+docker compose up -d --build
 
 # View logs
-docker-compose logs -f backend
-docker-compose logs -f frontend
+docker compose logs -f backend
+docker compose logs -f frontend
 
 # Stop services
-docker-compose down
+docker compose down
 
 # Stop and remove volumes (destructive!)
-docker-compose down -v
+docker compose down -v
 ```
 
 ---
@@ -57,7 +57,7 @@ sudo chmod +x /usr/local/bin/docker-compose
 
 # Verify installation
 docker --version
-docker-compose --version
+docker compose --version
 
 # Log out and back in for group changes to take effect
 ```
@@ -122,13 +122,13 @@ DB_PASSWORD=your_secure_database_password_here
 
 ```bash
 # Build images (this will take a few minutes)
-docker-compose build
+docker compose build
 
 # Start services in detached mode
-docker-compose up -d
+docker compose up -d
 
 # Check that all services are running
-docker-compose ps
+docker compose ps
 
 # Expected output:
 # NAME                  STATUS              PORTS
@@ -141,7 +141,7 @@ docker-compose ps
 
 ```bash
 # Enter backend container
-docker-compose exec backend python manage.py createsuperuser
+docker compose exec backend python manage.py createsuperuser
 
 # Follow prompts to create admin user
 # Username: admin
@@ -161,10 +161,10 @@ curl http://127.0.0.1:8081/
 # Expected: HTML content
 
 # View backend logs
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # View frontend logs
-docker-compose logs -f frontend
+docker compose logs -f frontend
 ```
 
 ---
@@ -342,26 +342,26 @@ curl -X POST https://rims.alshifalab.pk/api/auth/token/ \
 
 ```bash
 # All services
-docker-compose logs -f
+docker compose logs -f
 
 # Backend only
-docker-compose logs -f backend
+docker compose logs -f backend
 
 # Frontend only
-docker-compose logs -f frontend
+docker compose logs -f frontend
 
 # Database only
-docker-compose logs -f db
+docker compose logs -f db
 
 # Last 100 lines
-docker-compose logs --tail=100 backend
+docker compose logs --tail=100 backend
 ```
 
 ### 5.2 Database Backup
 
 ```bash
 # Create backup
-docker-compose exec db pg_dump -U rims rims > backup_$(date +%Y%m%d_%H%M%S).sql
+docker compose exec db pg_dump -U rims rims > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # Or using Docker directly
 docker exec rims_db_prod pg_dump -U rims rims > backup_$(date +%Y%m%d_%H%M%S).sql
@@ -370,23 +370,23 @@ docker exec rims_db_prod pg_dump -U rims rims > backup_$(date +%Y%m%d_%H%M%S).sq
 ### 5.3 Database Restore
 
 ```bash
-# Restore from backup
-cat backup_20260107_120000.sql | docker-compose exec -T db psql -U rims rims
+# Restore from backup (replace YYYYMMDD_HHMMSS with your actual backup timestamp)
+cat backup_YYYYMMDD_HHMMSS.sql | docker compose exec -T db psql -U rims rims
 
 # Or using Docker directly
-cat backup_20260107_120000.sql | docker exec -i rims_db_prod psql -U rims rims
+cat backup_YYYYMMDD_HHMMSS.sql | docker exec -i rims_db_prod psql -U rims rims
 ```
 
 ### 5.4 Restart Services
 
 ```bash
 # Restart all services
-docker-compose restart
+docker compose restart
 
 # Restart specific service
-docker-compose restart backend
-docker-compose restart frontend
-docker-compose restart db
+docker compose restart backend
+docker compose restart frontend
+docker compose restart db
 ```
 
 ### 5.5 Update Application
@@ -399,30 +399,30 @@ cd /opt/apps/rims
 git pull origin main
 
 # Rebuild and restart
-docker-compose down
-docker-compose up -d --build
+docker compose down
+docker compose up -d --build
 
 # Check logs for any issues
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ### 5.6 Execute Django Management Commands
 
 ```bash
 # Run migrations
-docker-compose exec backend python manage.py migrate
+docker compose exec backend python manage.py migrate
 
 # Create superuser
-docker-compose exec backend python manage.py createsuperuser
+docker compose exec backend python manage.py createsuperuser
 
 # Collect static files
-docker-compose exec backend python manage.py collectstatic --noinput
+docker compose exec backend python manage.py collectstatic --noinput
 
 # Django shell
-docker-compose exec backend python manage.py shell
+docker compose exec backend python manage.py shell
 
 # Custom management command
-docker-compose exec backend python manage.py your_custom_command
+docker compose exec backend python manage.py your_custom_command
 ```
 
 ---
@@ -435,17 +435,17 @@ If a deployment fails, you can quickly rollback:
 
 ```bash
 # Stop current deployment
-docker-compose down
+docker compose down
 
 # Checkout previous version
 git log --oneline -5  # Find previous commit
 git checkout <previous-commit-hash>
 
 # Rebuild and start
-docker-compose up -d --build
+docker compose up -d --build
 
 # Verify services
-docker-compose ps
+docker compose ps
 curl http://127.0.0.1:8015/api/health/
 ```
 
@@ -455,20 +455,20 @@ If migrations fail:
 
 ```bash
 # Restore database from backup
-docker-compose down
+docker compose down
 docker volume rm rims_postgres_data
 
 # Start database only
-docker-compose up -d db
+docker compose up -d db
 
 # Wait for DB to be ready
 sleep 10
 
 # Restore backup
-cat backup_YYYYMMDD_HHMMSS.sql | docker-compose exec -T db psql -U rims rims
+cat backup_YYYYMMDD_HHMMSS.sql | docker compose exec -T db psql -U rims rims
 
 # Start all services
-docker-compose up -d
+docker compose up -d
 ```
 
 ---
@@ -514,8 +514,8 @@ sudo systemctl restart docker
 
 ```bash
 # Update base images regularly
-docker-compose pull
-docker-compose up -d --build
+docker compose pull
+docker compose up -d --build
 
 # Update system packages
 sudo apt-get update
@@ -530,7 +530,7 @@ sudo apt-get upgrade -y
 
 ```bash
 # Check logs
-docker-compose logs backend
+docker compose logs backend
 
 # Common issues:
 # - Database not ready: Wait for DB healthcheck
@@ -542,23 +542,23 @@ docker-compose logs backend
 
 ```bash
 # Verify database is running
-docker-compose ps db
+docker compose ps db
 
 # Check database logs
-docker-compose logs db
+docker compose logs db
 
 # Test connection
-docker-compose exec backend python -c "from django.db import connection; connection.ensure_connection(); print('Connected!')"
+docker compose exec backend python -c "from django.db import connection; connection.ensure_connection(); print('Connected!')"
 ```
 
 ### 8.3 Frontend Not Loading
 
 ```bash
 # Check nginx logs
-docker-compose logs frontend
+docker compose logs frontend
 
 # Verify build succeeded
-docker-compose exec frontend ls -la /usr/share/nginx/html
+docker compose exec frontend ls -la /usr/share/nginx/html
 
 # Test directly
 curl http://127.0.0.1:8081/
@@ -581,10 +581,10 @@ sudo ufw status
 
 ```bash
 # Fix media directory permissions
-docker-compose exec backend chown -R appuser:appuser /app/media
+docker compose exec backend chown -R appuser:appuser /app/media
 
 # Fix staticfiles permissions
-docker-compose exec backend chown -R appuser:appuser /app/staticfiles
+docker compose exec backend chown -R appuser:appuser /app/staticfiles
 ```
 
 ---
@@ -608,7 +608,7 @@ exec gunicorn rims_backend.wsgi:application \
 
 ### 9.2 PostgreSQL Optimization
 
-Add to docker-compose.yml under db service:
+Add to docker compose.yml under db service:
 
 ```yaml
     command: >
@@ -667,7 +667,7 @@ Consider adding PgBouncer for connection pooling in high-traffic scenarios.
 │   └── src/
 ├── scripts/
 │   └── entrypoint.sh            # Backend startup script
-├── docker-compose.yml           # Production orchestration
+├── docker compose.yml           # Production orchestration
 ├── .env.prod.example            # Environment template
 ├── .env.prod                    # Actual secrets (git-ignored)
 └── README_PROD.md              # This file
@@ -679,25 +679,25 @@ Consider adding PgBouncer for connection pooling in high-traffic scenarios.
 
 ```bash
 # Start services
-docker-compose up -d
+docker compose up -d
 
 # Stop services
-docker-compose down
+docker compose down
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Restart service
-docker-compose restart backend
+docker compose restart backend
 
 # Execute command in backend
-docker-compose exec backend python manage.py <command>
+docker compose exec backend python manage.py <command>
 
 # Database backup
-docker-compose exec db pg_dump -U rims rims > backup.sql
+docker compose exec db pg_dump -U rims rims > backup.sql
 
 # Update deployment
-git pull && docker-compose up -d --build
+git pull && docker compose up -d --build
 
 # Clean up
 docker system prune -a

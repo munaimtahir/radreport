@@ -87,11 +87,17 @@ else
     ((errors++))
 fi
 
+# Check Docker Compose (v2 preferred, v1 supported with warning)
 if docker compose version &> /dev/null; then
     compose_version=$(docker compose version)
-    echo -e "  ${GREEN}✓${NC} Docker Compose installed: $compose_version"
+    echo -e "  ${GREEN}✓${NC} Docker Compose v2 installed (docker compose): $compose_version"
+elif command -v docker-compose &> /dev/null; then
+    compose_version=$(docker-compose version)
+    echo -e "  ${YELLOW}⚠${NC} Docker Compose v1 installed (docker-compose): $compose_version"
+    echo -e "     ${YELLOW}Deployment is tested with Docker Compose v2 ('docker compose'). Consider upgrading.${NC}"
+    ((warnings++))
 else
-    echo -e "  ${RED}✗${NC} Docker Compose not found"
+    echo -e "  ${RED}✗${NC} Docker Compose not found (neither 'docker compose' nor 'docker-compose' is available)"
     ((errors++))
 fi
 echo ""

@@ -346,7 +346,7 @@ server {
     # Security headers
     add_header X-Frame-Options "SAMEORIGIN" always;
     add_header X-Content-Type-Options "nosniff" always;
-    add_header X-XSS-Protection "1; mode=block" always;
+    # Note: X-XSS-Protection is deprecated; consider implementing Content-Security-Policy instead
 
     # SPA routing - serve index.html for all routes
     location / {
@@ -629,8 +629,8 @@ docker compose up -d --build
 # Database backup
 docker compose exec db pg_dump -U rims rims > backup_$(date +%Y%m%d).sql
 
-# Database restore
-cat backup_20260107.sql | docker compose exec -T db psql -U rims rims
+# Database restore (replace YYYYMMDD with the actual date from your backup filename)
+cat backup_YYYYMMDD.sql | docker compose exec -T db psql -U rims rims
 ```
 
 ---
