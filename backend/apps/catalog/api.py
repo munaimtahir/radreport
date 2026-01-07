@@ -28,6 +28,18 @@ class ServiceViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(is_active=True)
         return queryset
     
+    def perform_create(self, serializer):
+        """Set user context for audit logging"""
+        instance = serializer.save()
+        instance._current_user = self.request.user
+        instance.save()
+    
+    def perform_update(self, serializer):
+        """Set user context for audit logging"""
+        instance = serializer.save()
+        instance._current_user = self.request.user
+        instance.save()
+    
     @action(detail=False, methods=["post"], url_path="import-csv")
     def import_csv(self, request):
         """Import services from CSV file"""
@@ -86,9 +98,13 @@ class ServiceViewSet(viewsets.ModelViewSet):
                                 "is_active": is_active,
                             }
                         )
+                        if created:
+                            service._current_user = request.user
+                            service.save()
                         
                         if not created:
                             # Update existing service
+                            service._current_user = request.user
                             service.modality = modality
                             service.name = name
                             service.category = category

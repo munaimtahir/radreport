@@ -1,0 +1,37 @@
+service_code,name,department,billing_group,sub_category,price,currency,tat_min,unit,is_active,modality_code,category,tat_value,tat_unit,tat_minutes,has_template,template_id
+US001,Doppler Obstetric Single,Radiology,Ultrasound,Doppler,3000.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US002,Doppler Obstetric Twins,Radiology,Ultrasound,Doppler,6000.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US003,Doppler Obstetric Triplet,Radiology,Ultrasound,Doppler,9000.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US004,Doppler Peripheral Veins Single Side,Radiology,Ultrasound,Doppler,3500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US005,Doppler Peripheral Veins Both Sides,Radiology,Ultrasound,Doppler,7500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US006,Doppler Renal,Radiology,Ultrasound,Doppler,3500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US007,Doppler Abdomen,Radiology,Ultrasound,Doppler,5000.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US008,Ultrasound Abdomen,Radiology,Ultrasound,Gray Scale,1500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US009,Ultrasound Abdomen and Pelvis,Radiology,Ultrasound,Gray Scale,3000.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US010,Ultrasound KUB,Radiology,Ultrasound,Gray Scale,1500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US011,Ultrasound Pelvis,Radiology,Ultrasound,Gray Scale,1500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US012,Ultrasound Soft Tissue,Radiology,Ultrasound,Gray Scale,2500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US013,Ultrasound Obstetrics (1st & 2nd Trimester),Radiology,Ultrasound,Gray Scale,2000.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US014,Ultrasound for Swelling,Radiology,Ultrasound,Gray Scale,2500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US015,Doppler Thyroid,Radiology,Ultrasound,Doppler,3500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US016,Ultrasound Anomaly / Congenital Scan,Radiology,Ultrasound,Gray Scale,4000.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US017,Ultrasound Breast (Single),Radiology,Ultrasound,Gray Scale,2500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US018,Ultrasound Chest,Radiology,Ultrasound,Gray Scale,2500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US019,Doppler Uterine Arteries,Radiology,Ultrasound,Doppler,3500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US020,Ultrasound Scrotum,Radiology,Ultrasound,Gray Scale,1500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US021,Doppler Peripheral Arteries Single Side,Radiology,Ultrasound,Doppler,3500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US022,Ultrasound Cranial,Radiology,Ultrasound,Gray Scale,2500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US023,Doppler Peripheral Arteries and Veins Both Sides,Radiology,Ultrasound,Doppler,7000.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US024,Doppler Peripheral Arteries Both Sides,Radiology,Ultrasound,Doppler,7000.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US025,Ultrasound Guided Abscess Drainage (Diagnostic),Radiology,Procedure,Ultrasound Guided,3000.00,PKR,60,service,1,USG,Procedure,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US026,Ultrasound Guided Pleural Effusion Tap (Diagnostic),Radiology,Procedure,Ultrasound Guided,2500.00,PKR,60,service,1,USG,Procedure,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US027,Ultrasound Guided Ascitic Fluid Tap (Diagnostic),Radiology,Procedure,Ultrasound Guided,3000.00,PKR,60,service,1,USG,Procedure,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US028,Ultrasound Guided Abscess Drainage (Therapeutic),Radiology,Procedure,Ultrasound Guided,5000.00,PKR,60,service,1,USG,Procedure,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US029,Ultrasound Guided Ascitic Fluid Tap (Therapeutic),Radiology,Procedure,Ultrasound Guided,5000.00,PKR,60,service,1,USG,Procedure,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US030,Ultrasound Guided Pleural Effusion Tap (Therapeutic),Radiology,Procedure,Ultrasound Guided,5000.00,PKR,60,service,1,USG,Procedure,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US031,Ultrasound Knee Joint,Radiology,Ultrasound,Gray Scale,2500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US032,Ultrasound Both Hip Joints (Child),Radiology,Ultrasound,Gray Scale,3000.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US033,Doppler Scrotum,Radiology,Ultrasound,Doppler,3500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US034,Doppler Neck,Radiology,Ultrasound,Doppler,3500.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US035,Ultrasound Breast (Bilateral),Radiology,Ultrasound,Gray Scale,5000.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
+US036,Ultrasound Twin Obstetrics (Non-Doppler),Radiology,Ultrasound,Doppler,3000.00,PKR,60,service,1,USG,Radiology,1,hours,60,1,3bfad3d7-c588-4f06-9ac5-ec340b44e695
