@@ -16,6 +16,9 @@ if [ ! -f ".env.prod" ]; then
 fi
 
 echo "Step 1: Validating configuration..."
+if [ ! -x "scripts/validate-deployment.sh" ]; then
+    chmod +x scripts/validate-deployment.sh
+fi
 bash scripts/validate-deployment.sh
 echo ""
 

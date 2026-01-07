@@ -36,10 +36,14 @@ python manage.py migrate --noinput
 
 echo "==> Starting Gunicorn..."
 # Bind to all interfaces inside container (Docker network isolation provides security)
+# Workers: Use GUNICORN_WORKERS env var or default to 4
+WORKERS=${GUNICORN_WORKERS:-4}
+TIMEOUT=${GUNICORN_TIMEOUT:-120}
+
 exec gunicorn rims_backend.wsgi:application \
     --bind 0.0.0.0:8000 \
-    --workers 4 \
-    --timeout 120 \
+    --workers $WORKERS \
+    --timeout $TIMEOUT \
     --access-logfile - \
     --error-logfile - \
     --log-level info
