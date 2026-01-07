@@ -147,14 +147,12 @@ rims.alshifalab.pk {
 		reverse_proxy 127.0.0.1:8015
 	}
 
-	# Static + media (served directly by Caddy for production)
+	# Static + media (proxied to Django as per original design)
 	handle /static/* {
-		root * /home/munaim/srv/apps/radreport/backend/staticfiles
-		file_server
+		reverse_proxy 127.0.0.1:8015
 	}
 	handle /media/* {
-		root * /home/munaim/srv/apps/radreport/backend/media
-		file_server
+		reverse_proxy 127.0.0.1:8015
 	}
 
 	# Optional API docs / schema
