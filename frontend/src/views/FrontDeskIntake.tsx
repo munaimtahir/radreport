@@ -285,7 +285,8 @@ export default function FrontDeskIntake() {
       
       // Generate and print receipt if requested
       if (printReceipt && visit.id && token) {
-        const API_BASE = (import.meta as any).env.VITE_API_BASE || "http://localhost:8000/api";
+        // Use centralized API helper
+        const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
         
         // First generate receipt (creates receipt number and PDF if not exists)
         fetch(`${API_BASE}/visits/${visit.id}/generate-receipt/`, {
