@@ -270,9 +270,6 @@ COPY . /app/
 # Create necessary directories
 RUN mkdir -p /app/media /app/staticfiles /app/static
 
-# Collect static files during build
-RUN python manage.py collectstatic --noinput
-
 # Create non-root user for security
 RUN useradd -m -u 1000 appuser && \
     chown -R appuser:appuser /app
@@ -301,7 +298,7 @@ WORKDIR /app
 
 # Copy package files and install dependencies
 COPY package*.json ./
-RUN npm ci --only=production
+RUN npm ci
 
 # Copy source code and build
 COPY . .
@@ -387,6 +384,11 @@ set -e
 
 echo "==> RIMS Backend Production Entrypoint"
 
+# Set default values for DB variables if not provided
+DB_HOST=${DB_HOST:-db}
+DB_PORT=${DB_PORT:-5432}
+DB_USER=${DB_USER:-rims}
+
 # Wait for database to be ready
 echo "==> Waiting for PostgreSQL..."
 while ! pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" > /dev/null 2>&1; do
@@ -394,6 +396,10 @@ while ! pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" > /dev/null 2>&1; d
     sleep 2
 done
 echo "==> PostgreSQL is ready"
+
+# Collect static files
+echo "==> Collecting static files..."
+python manage.py collectstatic --noinput
 
 # Run database migrations
 echo "==> Running database migrations..."
