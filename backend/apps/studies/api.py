@@ -127,6 +127,55 @@ class VisitViewSet(viewsets.ModelViewSet):
         filename = visit.receipt_number or visit.visit_number
         response["Content-Disposition"] = f'inline; filename="receipt_{filename}.pdf"'
         return response
+    
+    @action(detail=True, methods=["get"], url_path="receipt-preview")
+    def receipt_preview(self, request, pk=None):
+        """Preview receipt HTML in browser (for testing/printing)"""
+        from django.template.loader import render_to_string
+        from apps.studies.models import ReceiptSettings
+        import os
+        
+        visit = self.get_object()
+        receipt_settings = ReceiptSettings.get_settings()
+        
+        # Prepare logo URL if exists
+        logo_url = None
+        if receipt_settings.logo_image and os.path.exists(receipt_settings.logo_image.path):
+            # For HTML preview, use relative URL
+            logo_url = receipt_settings.logo_image.url
+        
+        # Prepare context data
+        receipt_date = visit.receipt_generated_at or visit.created_at
+        
+        # Get items with service details
+        items = visit.items.select_related('service', 'service__modality').all()
+        
+        context = {
+            'receipt_number': visit.receipt_number or visit.visit_number,
+            'receipt_date': receipt_date,
+            'patient': {
+                'mrn': visit.patient.mrn,
+                'name': visit.patient.name,
+                'age': visit.patient.age,
+                'gender': visit.patient.gender,
+                'phone': visit.patient.phone,
+            },
+            'items': items,
+            'subtotal': visit.subtotal,
+            'discount_amount': visit.discount_amount,
+            'discount_percentage': visit.discount_percentage,
+            'net_total': visit.net_total,
+            'paid_amount': visit.paid_amount,
+            'due_amount': visit.due_amount,
+            'payment_method': visit.payment_method,
+            'consultant': None,
+            'logo_url': logo_url,
+        }
+        
+        # Render HTML template
+        html_string = render_to_string('receipts/receipt_a4_dual.html', context, request=request)
+        
+        return HttpResponse(html_string, content_type="text/html")
 
 
 class ReceiptSettingsViewSet(viewsets.ViewSet):

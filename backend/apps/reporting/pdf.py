@@ -7,8 +7,81 @@ from django.core.files.base import ContentFile
 from decimal import Decimal
 import os
 from PIL import Image
+from django.template.loader import render_to_string
+from django.conf import settings
+from weasyprint import HTML, CSS
+from django.urls import reverse
 
 def build_receipt_pdf(visit) -> ContentFile:
+    """Generate receipt PDF using HTML templates with WeasyPrint (A4 dual copy layout)"""
+    from apps.studies.models import ReceiptSettings
+    
+    # Get receipt settings
+    receipt_settings = ReceiptSettings.get_settings()
+    
+    # Prepare logo URL if exists
+    logo_url = None
+    if receipt_settings.logo_image and os.path.exists(receipt_settings.logo_image.path):
+        # WeasyPrint needs file:// protocol for local files
+        logo_path = os.path.abspath(receipt_settings.logo_image.path)
+        logo_url = f'file://{logo_path}'
+    
+    # Prepare context data
+    receipt_date = visit.receipt_generated_at or visit.created_at
+    
+    # Get items with service details
+    items = visit.items.select_related('service', 'service__modality').all()
+    
+    context = {
+        'receipt_number': visit.receipt_number or visit.visit_number,
+        'receipt_date': receipt_date,
+        'patient': {
+            'mrn': visit.patient.mrn,
+            'name': visit.patient.name,
+            'age': visit.patient.age,
+            'gender': visit.patient.gender,
+            'phone': visit.patient.phone,
+        },
+        'items': items,
+        'subtotal': visit.subtotal,
+        'discount_amount': visit.discount_amount,
+        'discount_percentage': visit.discount_percentage,
+        'net_total': visit.net_total,
+        'paid_amount': visit.paid_amount,
+        'due_amount': visit.due_amount,
+        'payment_method': visit.payment_method,
+        'consultant': None,  # Can be added if consultant field exists
+        'logo_url': logo_url,
+    }
+    
+    # Render HTML template
+    html_string = render_to_string('receipts/receipt_a4_dual.html', context)
+    
+    # Get CSS file path
+    css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'receipt_print.css')
+    if not os.path.exists(css_path):
+        # Fallback: use inline CSS
+        css = CSS(string='''
+            @page {
+                size: A4 portrait;
+                margin: 10mm;
+            }
+        ''')
+        stylesheets = [css]
+    else:
+        stylesheets = [CSS(filename=css_path)]
+    
+    # Generate PDF using WeasyPrint
+    # Use BASE_DIR as base_url for resolving static assets
+    base_url = str(settings.BASE_DIR) if hasattr(settings, 'BASE_DIR') else None
+    html = HTML(string=html_string, base_url=base_url)
+    
+    # Generate PDF
+    pdf_bytes = html.write_pdf(stylesheets=stylesheets)
+    
+    return ContentFile(pdf_bytes, name=f"receipt_{visit.receipt_number or visit.visit_number}.pdf")
+
+def build_receipt_pdf_legacy(visit) -> ContentFile:
     """Generate receipt PDF for a visit with branding support"""
     from apps.studies.models import ReceiptSettings
     
