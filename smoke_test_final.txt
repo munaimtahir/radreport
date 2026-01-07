@@ -1,0 +1,102 @@
+==========================================
+RIMS Production Smoke Test
+==========================================
+Base URL: https://rims.alshifalab.pk
+Username: admin
+Date: Wed Jan  7 19:52:13 UTC 2026
+
+==========================================
+1. HEALTH CHECK
+==========================================
+[TEST] Health endpoint... [0;32m✓ PASS[0m (HTTP 200)
+{"status": "ok"}
+
+
+==========================================
+2. AUTHENTICATION
+==========================================
+[TEST] Login... [0;32m✓ PASS[0m
+Token obtained (length: 231)
+
+==========================================
+3. PATIENT REGISTRATION
+==========================================
+[TEST] List patients... [0;32m✓ PASS[0m (HTTP 200)
+[{"id":"88e3982b-a319-4b64-8b92-d413290a13dc","mrn":"MR202601070006","name":"Smoke Test Patient","age":30,"date_of_birth":null,"gender":"M","phone":"123-456-7890","address":"","referrer":"","notes":""
+[TEST] Create patient... [0;32m✓ PASS[0m (HTTP 201)
+Patient ID: 35e4c81f-f891-42b4-b38d-67d17d16e105
+
+==========================================
+4. CATALOG MANAGEMENT
+==========================================
+[TEST] List modalities... [0;32m✓ PASS[0m (HTTP 200)
+[{"id":"0384d94d-4dc6-4fd7-ae19-ad6592ebf4d3","code":"USG","name":"USG"}]
+
+[TEST] List services... [0;32m✓ PASS[0m (HTTP 200)
+[{"id":"5dc34d0a-d57e-42cd-bd52-1826b570dbc4","modality_display":"USG","modality":{"id":"0384d94d-4dc6-4fd7-ae19-ad6592ebf4d3","code":"USG","name":"USG"},"code":"US001","name":"Doppler Obstetric Singl
+[0;32m✓ Found service: 5dc34d0a-d57e-42cd-bd52-1826b570dbc4[0m
+
+==========================================
+5. TEMPLATE MANAGEMENT
+==========================================
+[TEST] List templates... [0;32m✓ PASS[0m (HTTP 200)
+[{"id":"bf9e5c76-6c63-4f69-b812-426a9101ea46","name":"Ultrasound Abdomen (Structured)","modality_code":"USG","is_active":true,"created_at":"2026-01-07T15:24:33.556833+05:00","sections":[{"id":"5f921da
+[0;32m✓ Found template: bf9e5c76-6c63-4f69-b812-426a9101ea46[0m
+[TEST] Get template details... [0;32m✓ PASS[0m (HTTP 200)
+{"id":"bf9e5c76-6c63-4f69-b812-426a9101ea46","name":"Ultrasound Abdomen (Structured)","modality_code":"USG","is_active":true,"created_at":"2026-01-07T15:24:33.556833+05:00","sections":[{"id":"5f921dad
+
+==========================================
+6. STUDY/EXAM REGISTRATION
+==========================================
+[TEST] Create study... [0;32m✓ PASS[0m (HTTP 201)
+Study ID: bf218d38-da3e-47af-83a1-6259ead9e56d, Accession: 202601070006
+
+==========================================
+7. RECEIPT GENERATION
+==========================================
+[TEST] Receipt settings... [0;32m✓ PASS[0m (HTTP 200)
+{"header_text":"Consultants Clinic Place","logo_image":null,"header_image":null,"logo_image_url":null,"header_image_url":null,"updated_at":"2026-01-07T15:27:02.149675+05:00"}
+
+Visit response: [{"id":"114ebed2-d5ac-4695-887b-cb749a35c7eb","items":[{"id":"d2e0ba15-f4cd-4de3-8594-65589940aaa8","service_name":"Ultrasound Abdomen and Pelvis","service_code":"US009","modality":"US
+
+==========================================
+8. REPORT GENERATION
+==========================================
+[TEST] List reports... [0;32m✓ PASS[0m (HTTP 200)
+[{"id":"bd5ede17-a7d9-47c6-b4b8-8b4208e97e40","accession":"202601070006","patient_name":"Smoke Test Patient","service_name":"Doppler Obstetric Single","study_id":"bf218d38-da3e-47af-83a1-6259ead9e56d"
+[TEST] Get template versions... [0;32m✓ Found version: 106ece76-bde3-4570-a2bb-a9d76a0115ef[0m
+[TEST] Create report... [0;32m✓ PASS[0m (HTTP 200)
+Report ID: bd5ede17-a7d9-47c6-b4b8-8b4208e97e40
+
+==========================================
+9. STATIC FILES & MEDIA
+==========================================
+[TEST] Static files check... [0;31m✗ FAIL[0m (HTTP 404, expected 200)
+Response: 
+<!doctype html>
+<html lang="en">
+<head>
+  <title>Not Found</title>
+</head>
+<body>
+  <h1>Not Found</h1><p>The requested resource was not found on this server.</p>
+</body>
+</html>
+
+[1;33m⚠ Static files may be proxied[0m
+
+==========================================
+10. ADMIN PANEL
+==========================================
+[0;32m✓ Admin panel accessible[0m (HTTP 302)
+
+==========================================
+SMOKE TEST SUMMARY
+==========================================
+[0;32mPassed: 13[0m
+[0;31mFailed: 1[0m
+[1;33mWarnings: 0[0m
+
+Failed Tests:
+  - Static files check
+

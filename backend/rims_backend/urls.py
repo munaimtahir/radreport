@@ -29,8 +29,51 @@ router.register(r"receipt-settings", ReceiptSettingsViewSet, basename="receipt-s
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
-def health(_request):
-    return JsonResponse({"status": "ok"})
+def health(request):
+    """Enhanced health check endpoint that verifies app, DB, and storage."""
+    from django.db import connection
+    from pathlib import Path
+    import os
+    
+    status = {
+        "status": "ok",
+        "app": "rims_backend",
+        "checks": {}
+    }
+    
+    # Check database connectivity
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+            status["checks"]["database"] = "ok"
+    except Exception as e:
+        status["checks"]["database"] = f"error: {str(e)}"
+        status["status"] = "degraded"
+    
+    # Check static files directory
+    static_root = Path(settings.STATIC_ROOT)
+    if static_root.exists() and static_root.is_dir():
+        status["checks"]["static_files"] = "ok"
+    else:
+        status["checks"]["static_files"] = "missing"
+        status["status"] = "degraded"
+    
+    # Check media directory
+    media_root = Path(settings.MEDIA_ROOT)
+    try:
+        if not media_root.exists():
+            media_root.mkdir(parents=True, exist_ok=True)
+        # Check if writable
+        test_file = media_root / ".health_check"
+        test_file.touch()
+        test_file.unlink()
+        status["checks"]["media_storage"] = "ok"
+    except Exception as e:
+        status["checks"]["media_storage"] = f"error: {str(e)}"
+        status["status"] = "degraded"
+    
+    http_status = 200 if status["status"] == "ok" else 503
+    return JsonResponse(status, status=http_status)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
