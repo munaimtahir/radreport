@@ -269,7 +269,7 @@ echo ""
 echo "=========================================="
 echo "9. STATIC FILES & MEDIA"
 echo "=========================================="
-test_endpoint "Static files check" "GET" "/static/" "" "200" "" || echo -e "${YELLOW}⚠ Static files may be proxied${NC}"
+test_endpoint "Static files check (base.css)" "GET" "/static/admin/css/base.css" "" "200" ""
 echo ""
 
 # Test 10: Admin Panel
