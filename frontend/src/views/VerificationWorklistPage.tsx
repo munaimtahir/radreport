@@ -1,0 +1,219 @@
+import React, { useEffect, useState } from "react";
+import { useAuth } from "../ui/auth";
+import { apiGet, apiPost } from "../ui/api";
+
+interface ServiceVisit {
+  id: string;
+  visit_id: string;
+  patient_name: string;
+  patient_reg_no: string;
+  service_name: string;
+  status: string;
+  registered_at: string;
+}
+
+interface USGReport {
+  id: string;
+  service_visit_id: string;
+  report_json: any;
+}
+
+export default function VerificationWorklistPage() {
+  const { token } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [success, setSuccess] = useState<string>("");
+  const [visits, setVisits] = useState<ServiceVisit[]>([]);
+  const [selectedVisit, setSelectedVisit] = useState<ServiceVisit | null>(null);
+  const [report, setReport] = useState<USGReport | null>(null);
+  const [returnReason, setReturnReason] = useState("");
+
+  useEffect(() => {
+    if (token) {
+      loadVisits();
+    }
+  }, [token]);
+
+  const loadVisits = async () => {
+    if (!token) return;
+    try {
+      const data = await apiGet("/workflow/visits/?workflow=USG&status=PENDING_VERIFICATION", token);
+      setVisits(data.results || data || []);
+    } catch (err: any) {
+      setError(err.message || "Failed to load visits");
+    }
+  };
+
+  const loadReport = async (visitId: string) => {
+    if (!token) return;
+    try {
+      const data = await apiGet(`/workflow/usg/?visit_id=${visitId}`, token);
+      if (data && data.length > 0) {
+        setReport(data[0]);
+      } else {
+        setReport(null);
+      }
+    } catch (err: any) {
+      setReport(null);
+    }
+  };
+
+  const handleSelectVisit = async (visit: ServiceVisit) => {
+    setSelectedVisit(visit);
+    await loadReport(visit.id);
+    setReturnReason("");
+  };
+
+  const publish = async () => {
+    if (!token || !selectedVisit || !report) return;
+    setLoading(true);
+    setError("");
+    try {
+      await apiPost(`/workflow/usg/${report.id}/publish/`, token, {});
+      setSuccess("Report published successfully!");
+      
+      // Open PDF in new window
+      window.open(`/api/pdf/report/${selectedVisit.id}/`, "_blank");
+      
+      setSelectedVisit(null);
+      setReport(null);
+      await loadVisits();
+    } catch (err: any) {
+      setError(err.message || "Failed to publish report");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const returnForCorrection = async () => {
+    if (!token || !selectedVisit || !report) return;
+    if (!returnReason.trim()) {
+      setError("Please provide a reason for return");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    try {
+      await apiPost(`/workflow/usg/${report.id}/return_for_correction/`, token, {
+        reason: returnReason,
+      });
+      setSuccess("Report returned for correction");
+      setSelectedVisit(null);
+      setReport(null);
+      setReturnReason("");
+      await loadVisits();
+    } catch (err: any) {
+      setError(err.message || "Failed to return report");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ maxWidth: 1400, margin: "0 auto" }}>
+      <h1>Verification Worklist (Verification Desk)</h1>
+      
+      {error && <div style={{ color: "red", marginBottom: 16 }}>{error}</div>}
+      {success && <div style={{ color: "green", marginBottom: 16 }}>{success}</div>}
+      
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20 }}>
+        {/* Visit List */}
+        <div style={{ border: "1px solid #ddd", padding: 16, borderRadius: 8, maxHeight: "80vh", overflowY: "auto" }}>
+          <h2>Pending Verification ({visits.length})</h2>
+          {visits.length === 0 ? (
+            <p>No reports pending verification</p>
+          ) : (
+            <div style={{ display: "grid", gap: 8 }}>
+              {visits.map((visit) => (
+                <div
+                  key={visit.id}
+                  onClick={() => handleSelectVisit(visit)}
+                  style={{
+                    padding: 12,
+                    border: selectedVisit?.id === visit.id ? "2px solid #0B5ED7" : "1px solid #ddd",
+                    borderRadius: 4,
+                    cursor: "pointer",
+                    backgroundColor: selectedVisit?.id === visit.id ? "#f0f7ff" : "white",
+                  }}
+                >
+                  <div><strong>{visit.visit_id}</strong></div>
+                  <div style={{ fontSize: 14, color: "#666" }}>
+                    {visit.patient_name} ({visit.patient_reg_no})
+                  </div>
+                  <div style={{ fontSize: 12, color: "#999" }}>
+                    {new Date(visit.registered_at).toLocaleString()}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+        {/* Report Review */}
+        {selectedVisit && report && (
+          <div style={{ border: "1px solid #ddd", padding: 20, borderRadius: 8, maxHeight: "80vh", overflowY: "auto" }}>
+            <h2>USG Report Review - {selectedVisit.visit_id}</h2>
+            <div style={{ marginBottom: 16, padding: 12, backgroundColor: "#f5f5f5", borderRadius: 4 }}>
+              <div><strong>Patient:</strong> {selectedVisit.patient_name} ({selectedVisit.patient_reg_no})</div>
+              <div><strong>Service:</strong> {selectedVisit.service_name}</div>
+            </div>
+            
+            <div style={{ marginBottom: 16, border: "1px solid #ddd", padding: 16, borderRadius: 4 }}>
+              <h3>Findings</h3>
+              <div style={{ whiteSpace: "pre-wrap", fontFamily: "monospace", padding: 12, backgroundColor: "#f9f9f9", borderRadius: 4 }}>
+                {report.report_json?.findings || "No findings entered"}
+              </div>
+            </div>
+            
+            <div style={{ marginBottom: 16, border: "1px solid #ddd", padding: 16, borderRadius: 4 }}>
+              <h3>Impression</h3>
+              <div style={{ whiteSpace: "pre-wrap", fontFamily: "monospace", padding: 12, backgroundColor: "#f9f9f9", borderRadius: 4 }}>
+                {report.report_json?.impression || "No impression entered"}
+              </div>
+            </div>
+            
+            <div style={{ marginBottom: 16 }}>
+              <label><strong>Return Reason (if returning for correction):</strong></label>
+              <textarea
+                value={returnReason}
+                onChange={(e) => setReturnReason(e.target.value)}
+                rows={3}
+                style={{ width: "100%", padding: 8 }}
+                placeholder="Enter reason for return..."
+              />
+            </div>
+            
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={publish}
+                disabled={loading}
+                style={{ padding: "12px 24px", backgroundColor: "#28a745", color: "white", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 16 }}
+              >
+                Publish Report
+              </button>
+              <button
+                onClick={returnForCorrection}
+                disabled={loading || !returnReason.trim()}
+                style={{ padding: "12px 24px", backgroundColor: "#ffc107", color: "black", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 16 }}
+              >
+                Return for Correction
+              </button>
+            </div>
+          </div>
+        )}
+        
+        {selectedVisit && !report && (
+          <div style={{ border: "1px solid #ddd", padding: 20, borderRadius: 8, textAlign: "center", color: "#999" }}>
+            Report not found for this visit
+          </div>
+        )}
+        
+        {!selectedVisit && (
+          <div style={{ border: "1px solid #ddd", padding: 20, borderRadius: 8, textAlign: "center", color: "#999" }}>
+            Select a report from the list to verify
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

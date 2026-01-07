@@ -6,5 +6,5 @@ class PatientViewSet(viewsets.ModelViewSet):
     queryset = Patient.objects.all()
     serializer_class = PatientSerializer
     permission_classes = [permissions.IsAuthenticated]
-    search_fields = ["mrn", "name", "phone"]
+    search_fields = ["mrn", "patient_reg_no", "name", "phone"]
     ordering_fields = ["created_at", "mrn", "name"]

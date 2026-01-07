@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Receipt {{ receipt_number }}</title>
+</head>
+<body>
+    <div class="header">
+        <h2>RECEIPT</h2>
+        <p>Receipt No: {{ receipt_number }}</p>
+        <p>Date: {{ receipt_date|date:"d M Y H:i" }}</p>
+    </div>
+    
+    <div class="patient-info">
+        <h3>Patient Information</h3>
+        <table>
+            <tr><td class="label">Patient Reg No:</td><td>{{ patient.patient_reg_no }}</td></tr>
+            <tr><td class="label">Name:</td><td>{{ patient.name }}</td></tr>
+            <tr><td class="label">Age:</td><td>{{ patient.age }}</td></tr>
+            <tr><td class="label">Gender:</td><td>{{ patient.gender }}</td></tr>
+            <tr><td class="label">Phone:</td><td>{{ patient.phone }}</td></tr>
+        </table>
+    </div>
+    
+    <div class="service-info">
+        <h3>Service Information</h3>
+        <table>
+            <tr><td class="label">Visit ID:</td><td>{{ visit_id }}</td></tr>
+            <tr><td class="label">Service:</td><td>{{ service.name }} ({{ service.code }})</td></tr>
+        </table>
+    </div>
+    
+    <div class="amounts">
+        <h3>Payment Details</h3>
+        <table>
+            <tr><td class="label">Total Amount:</td><td>Rs. {{ total_amount }}</td></tr>
+            <tr><td class="label">Discount:</td><td>Rs. {{ discount }}</td></tr>
+            <tr><td class="label">Net Amount:</td><td>Rs. {{ net_amount }}</td></tr>
+            <tr><td class="label">Amount Paid:</td><td>Rs. {{ paid_amount }}</td></tr>
+            <tr><td class="label">Balance:</td><td>Rs. {{ balance_amount }}</td></tr>
+            <tr><td class="label">Payment Method:</td><td>{{ payment_method|upper }}</td></tr>
+            <tr><td class="label">Cashier:</td><td>{{ cashier_name }}</td></tr>
+        </table>
+    </div>
+    
+    <div style="margin-top: 30px; text-align: center;">
+        <p>Thank you for your visit!</p>
+    </div>
+</body>
+</html>

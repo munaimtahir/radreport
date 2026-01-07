@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Prescription {{ visit_id }}</title>
+</head>
+<body>
+    <div class="header">
+        <h2>PRESCRIPTION</h2>
+        <p>Visit ID: {{ visit_id }}</p>
+        <p>Date: {{ consult_date|date:"d M Y H:i" }}</p>
+    </div>
+    
+    <div class="patient-info">
+        <h3>Patient Information</h3>
+        <table>
+            <tr><td class="label">Patient Reg No:</td><td>{{ patient.patient_reg_no }}</td></tr>
+            <tr><td class="label">Name:</td><td>{{ patient.name }}</td></tr>
+            <tr><td class="label">Age:</td><td>{{ patient.age }}</td></tr>
+            <tr><td class="label">Gender:</td><td>{{ patient.gender }}</td></tr>
+        </table>
+    </div>
+    
+    <div class="section">
+        <h3>Diagnosis</h3>
+        <p>{{ diagnosis|default:"N/A" }}</p>
+    </div>
+    
+    {% if medicines %}
+    <div class="section">
+        <h3>Medicines</h3>
+        <table class="medicines-table">
+            <tr>
+                <th>Medicine</th>
+                <th>Dosage</th>
+                <th>Frequency</th>
+                <th>Duration</th>
+            </tr>
+            {% for medicine in medicines %}
+            <tr>
+                <td>{{ medicine.name|default:"" }}</td>
+                <td>{{ medicine.dosage|default:"" }}</td>
+                <td>{{ medicine.frequency|default:"" }}</td>
+                <td>{{ medicine.duration|default:"" }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+    
+    {% if investigations %}
+    <div class="section">
+        <h3>Investigations</h3>
+        <table class="investigations-table">
+            {% for investigation in investigations %}
+            <tr>
+                <td>{{ investigation.name|default:investigation }}</td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+    {% endif %}
+    
+    {% if advice %}
+    <div class="section">
+        <h3>Advice</h3>
+        <p>{{ advice }}</p>
+    </div>
+    {% endif %}
+    
+    {% if followup %}
+    <div class="section">
+        <h3>Follow-up</h3>
+        <p>{{ followup }}</p>
+    </div>
+    {% endif %}
+    
+    <div class="signature">
+        <p>Consultant: {{ consultant }}</p>
+        <p>Date: {{ consult_date|date:"d M Y H:i" }}</p>
+    </div>
+</body>
+</html>

@@ -27,6 +27,7 @@ INSTALLED_APPS = [
     "apps.templates",
     "apps.studies",
     "apps.reporting",
+    "apps.workflow",
 ]
 
 MIDDLEWARE = [

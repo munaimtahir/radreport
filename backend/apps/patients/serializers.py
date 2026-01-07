@@ -5,4 +5,4 @@ class PatientSerializer(serializers.ModelSerializer):
     class Meta:
         model = Patient
         fields = "__all__"
-        read_only_fields = ["mrn", "created_at"]
+        read_only_fields = ["mrn", "patient_reg_no", "created_at"]

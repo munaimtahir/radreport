@@ -53,3 +53,13 @@ Frontend dev server:
 ## Notes
 - This is a scaffold intended for **Cursor (structure lock) → Codex (docker/migrations/smoke tests)** workflow.
 - Template versioning is built-in so old reports never break when templates evolve.
+
+## Core Workflow (3 Desks)
+
+RIMS implements a three-desk workflow system:
+
+1. **Registration Desk**: Patient registration and service visit creation
+2. **Performance Desk**: USG reporting, OPD vitals, and consultations
+3. **Verification Desk**: USG report verification and publishing
+
+See [CORE_WORKFLOW_README.md](./CORE_WORKFLOW_README.md) for detailed documentation.

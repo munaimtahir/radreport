@@ -10,6 +10,10 @@ from apps.templates.api import TemplateViewSet, TemplateVersionViewSet
 from apps.studies.api import StudyViewSet, VisitViewSet, ReceiptSettingsViewSet
 from apps.reporting.api import ReportViewSet
 from apps.audit.api import AuditLogViewSet
+from apps.workflow.api import (
+    ServiceCatalogViewSet, ServiceVisitViewSet, USGReportViewSet,
+    OPDVitalsViewSet, OPDConsultViewSet, PDFViewSet
+)
 from django.conf import settings
 from django.conf.urls.static import static
 from django.http import JsonResponse
@@ -26,6 +30,13 @@ router.register(r"visits", VisitViewSet, basename="visits")
 router.register(r"reports", ReportViewSet, basename="reports")
 router.register(r"audit", AuditLogViewSet, basename="audit")
 router.register(r"receipt-settings", ReceiptSettingsViewSet, basename="receipt-settings")
+# Workflow endpoints
+router.register(r"workflow/service-catalog", ServiceCatalogViewSet, basename="service-catalog")
+router.register(r"workflow/visits", ServiceVisitViewSet, basename="service-visits")
+router.register(r"workflow/usg", USGReportViewSet, basename="usg-reports")
+router.register(r"workflow/opd/vitals", OPDVitalsViewSet, basename="opd-vitals")
+router.register(r"workflow/opd/consult", OPDConsultViewSet, basename="opd-consult")
+router.register(r"pdf", PDFViewSet, basename="pdf")
 
 @api_view(["GET"])
 @permission_classes([AllowAny])

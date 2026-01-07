@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>USG Report {{ visit_id }}</title>
+</head>
+<body>
+    <div class="header">
+        <h2>ULTRASOUND REPORT</h2>
+        <p>Visit ID: {{ visit_id }}</p>
+    </div>
+    
+    <div class="patient-info">
+        <h3>Patient Information</h3>
+        <table>
+            <tr><td class="label">Patient Reg No:</td><td>{{ patient.patient_reg_no }}</td></tr>
+            <tr><td class="label">Name:</td><td>{{ patient.name }}</td></tr>
+            <tr><td class="label">Age:</td><td>{{ patient.age }}</td></tr>
+            <tr><td class="label">Gender:</td><td>{{ patient.gender }}</td></tr>
+        </table>
+    </div>
+    
+    <div class="service-info">
+        <h3>Service</h3>
+        <p>{{ service.name }} ({{ service.code }})</p>
+    </div>
+    
+    <div class="findings">
+        <h3>Findings</h3>
+        <div>{{ report_data.findings|default:"N/A" }}</div>
+    </div>
+    
+    <div class="impression">
+        <h3>Impression</h3>
+        <div>{{ report_data.impression|default:"N/A" }}</div>
+    </div>
+    
+    <div class="signature">
+        <table>
+            <tr>
+                <td>Reported by: {{ created_by }}</td>
+            </tr>
+            {% if verified_by %}
+            <tr>
+                <td>Verified by: {{ verified_by }}</td>
+            </tr>
+            <tr>
+                <td>Verified at: {{ verified_at|date:"d M Y H:i" }}</td>
+            </tr>
+            {% endif %}
+        </table>
+    </div>
+</body>
+</html>
