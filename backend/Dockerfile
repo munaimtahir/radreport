@@ -20,16 +20,20 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 # Production stage
 FROM python:3.11-slim
 
-# Install runtime dependencies only (including weasyprint dependencies)
+# Install runtime dependencies only (including WeasyPrint dependencies and fonts)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     libpq5 \
+    libcairo2 \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \
     libgobject-2.0-0 \
     libgdk-pixbuf-2.0-0 \
-    libcairo2 \
     libgirepository-1.0-1 \
+    libffi8 \
+    shared-mime-info \
+    fontconfig \
+    fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy virtual environment from builder
