@@ -1,0 +1,39 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Deploy Caddyfile",
+            "type": "shell",
+            "command": "${workspaceFolder}/deploy-caddyfile.sh",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        },
+        {
+            "label": "Validate Caddyfile",
+            "type": "shell",
+            "command": "sudo caddy validate --config /etc/caddy/Caddyfile",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        },
+        {
+            "label": "Reload Caddy",
+            "type": "shell",
+            "command": "sudo systemctl reload caddy",
+            "problemMatcher": [],
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            }
+        }
+    ]
+}
