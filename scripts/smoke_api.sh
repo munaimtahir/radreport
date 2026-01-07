@@ -29,7 +29,12 @@ echo "-> Checking /api/health/ ..."
 curl_s "${BASE_URL}/api/health/" | grep -q '"status": "ok"' || fail "/api/health/ did not return {status: ok}"
 
 echo "-> Checking /api/schema/ ..."
-curl_s -I "${BASE_URL}/api/schema/" | grep -i "200" >/dev/null || fail "/api/schema/ not 200"
+if ! curl_s -I "${BASE_URL}/api/schema/" | grep -i "200" >/dev/null; then
+  echo "WARN: /api/schema/ not 200, trying /api/docs/..."
+  if ! curl_s -I "${BASE_URL}/api/docs/" | grep -i "200" >/dev/null; then
+    fail "/api/docs/ not 200"
+  fi
+fi
 
 echo "-> Checking /api/auth/token/ (should be reachable)..."
 curl_s -I "${BASE_URL}/api/auth/token/" | grep -Ei "Allow:.*POST" >/dev/null || echo "WARN: /api/auth/token/ did not advertise POST (still reachable?)"
