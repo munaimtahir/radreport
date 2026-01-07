@@ -1,4 +1,5 @@
-const API_BASE = (import.meta as any).env.VITE_API_BASE || "http://localhost:8000/api";
+// Use relative path in production, or env variable if set
+const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
 
 async function apiRequest(path: string, token: string | null, options: RequestInit = {}) {
   const headers: Record<string, string> = {
@@ -43,7 +44,12 @@ export async function apiDelete(path: string, token: string | null) {
 }
 
 export async function login(username: string, password: string) {
-  const r = await fetch(`${API_BASE.replace("/api", "")}/api/auth/token/`, {
+  // Use relative path for production
+  const isProd = (import.meta as any).env.PROD;
+  const loginUrl = isProd 
+    ? "/api/auth/token/" 
+    : `${API_BASE.replace("/api", "")}/api/auth/token/`;
+  const r = await fetch(loginUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ username, password }),
