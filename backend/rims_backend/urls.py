@@ -42,6 +42,6 @@ urlpatterns = [
     path("api/", include(router.urls)),
 ]
 
-# Serve media files in development
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files (in production, consider using cloud storage like S3)
+# For now, we'll serve them directly for simplicity
+urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
