@@ -20,10 +20,16 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 # Production stage
 FROM python:3.11-slim
 
-# Install runtime dependencies only
+# Install runtime dependencies only (including weasyprint dependencies)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     libpq5 \
+    libpango-1.0-0 \
+    libpangoft2-1.0-0 \
+    libgobject-2.0-0 \
+    libgdk-pixbuf-2.0-0 \
+    libcairo2 \
+    libgirepository-1.0-1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy virtual environment from builder
