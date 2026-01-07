@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from decimal import Decimal
-from .models import Study, Visit, OrderItem
+from .models import Study, Visit, OrderItem, ReceiptSettings
 
 class OrderItemSerializer(serializers.ModelSerializer):
     service_name = serializers.CharField(source="service.name", read_only=True)
@@ -17,11 +17,19 @@ class VisitSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
     patient_name = serializers.CharField(source="patient.name", read_only=True)
     patient_mrn = serializers.CharField(source="patient.mrn", read_only=True)
+    receipt_pdf_url = serializers.SerializerMethodField()
     
     class Meta:
         model = Visit
         fields = "__all__"
-        read_only_fields = ["visit_number", "created_at", "finalized_at"]
+        read_only_fields = ["visit_number", "created_at", "finalized_at", "receipt_number", "receipt_pdf_path", "receipt_generated_at"]
+    
+    def get_receipt_pdf_url(self, obj):
+        if obj.receipt_pdf_path:
+            request = self.context.get("request")
+            if request:
+                return request.build_absolute_uri(f"/api/visits/{obj.id}/receipt/")
+        return None
 
 class StudySerializer(serializers.ModelSerializer):
     patient_name = serializers.CharField(source="patient.name", read_only=True)
@@ -168,3 +176,27 @@ class UnifiedIntakeSerializer(serializers.Serializer):
                 )
         
         return visit
+
+
+class ReceiptSettingsSerializer(serializers.ModelSerializer):
+    logo_image_url = serializers.SerializerMethodField()
+    header_image_url = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = ReceiptSettings
+        fields = ["header_text", "logo_image", "header_image", "logo_image_url", "header_image_url", "updated_at"]
+        read_only_fields = ["updated_at"]
+    
+    def get_logo_image_url(self, obj):
+        if obj.logo_image:
+            request = self.context.get("request")
+            if request:
+                return request.build_absolute_uri(obj.logo_image.url)
+        return None
+    
+    def get_header_image_url(self, obj):
+        if obj.header_image:
+            request = self.context.get("request")
+            if request:
+                return request.build_absolute_uri(obj.header_image.url)
+        return None
