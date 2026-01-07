@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Receipt {{ receipt_number }} - Dual Copy</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/receipt_print.css' %}">
+</head>
+<body class="a4-page">
+    <!-- Patient Copy (Top Half) -->
+    <div class="receipt-copy patient-copy">
+        {% include 'receipts/receipt_single.html' with copy_label='Patient copy' %}
+    </div>
+
+    <!-- Divider -->
+    <div class="page-divider">
+        <div class="divider-line"></div>
+        <div class="scissors-icon">✂</div>
+    </div>
+
+    <!-- Office Copy (Bottom Half) -->
+    <div class="receipt-copy office-copy">
+        {% include 'receipts/receipt_single.html' with copy_label='Office copy' %}
+    </div>
+
+    <!-- Print Button (only shown on screen, hidden when printing) -->
+    <div class="print-controls" style="text-align: center; padding: 20px; display: none;" id="printControls">
+        <button onclick="window.print()" style="padding: 10px 20px; font-size: 14px; background: #0B5ED7; color: white; border: none; border-radius: 4px; cursor: pointer;">
+            Print Receipt
+        </button>
+    </div>
+
+    <script>
+        // Show print button on screen preview
+        if (window.matchMedia) {
+            const mediaQuery = window.matchMedia('print');
+            mediaQuery.addListener(function(mq) {
+                if (!mq.matches) {
+                    // Not printing, show button
+                    document.getElementById('printControls').style.display = 'block';
+                } else {
+                    // Printing, hide button
+                    document.getElementById('printControls').style.display = 'none';
+                }
+            });
+            // Initial check
+            if (!mediaQuery.matches) {
+                document.getElementById('printControls').style.display = 'block';
+            }
+        } else {
+            // Fallback for older browsers
+            document.getElementById('printControls').style.display = 'block';
+        }
+    </script>
+</body>
+</html>

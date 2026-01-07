@@ -1,0 +1,137 @@
+<div class="receipt-container">
+        <!-- Header -->
+        <div class="receipt-header">
+            {% if logo_url %}
+            <div class="logo-container">
+                <img src="{{ logo_url }}" alt="Logo" class="logo" onerror="this.style.display='none';">
+            </div>
+            {% endif %}
+            <div class="clinic-name">Consultants Place Clinic</div>
+        </div>
+
+        <!-- Copy Label -->
+        <div class="copy-label">{{ copy_label }}</div>
+
+        <!-- Receipt Meta -->
+        <div class="receipt-meta">
+            <div class="meta-row">
+                <span class="meta-label">Receipt No:</span>
+                <span class="meta-value">{{ receipt_number }}</span>
+            </div>
+            <div class="meta-row">
+                <span class="meta-label">Date/Time:</span>
+                <span class="meta-value">{{ receipt_date|date:"Y-m-d H:i:s" }}</span>
+            </div>
+            {% if patient.mrn %}
+            <div class="meta-row">
+                <span class="meta-label">MR No:</span>
+                <span class="meta-value">{{ patient.mrn }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Patient Information -->
+        <div class="patient-info">
+            <div class="info-row">
+                <span class="info-label">Patient Name:</span>
+                <span class="info-value">{{ patient.name }}</span>
+            </div>
+            {% if patient.age or patient.gender %}
+            <div class="info-row">
+                <span class="info-label">Age/Gender:</span>
+                <span class="info-value">
+                    {% if patient.age %}{{ patient.age }}{% endif %}{% if patient.age and patient.gender %} / {% endif %}{% if patient.gender %}{{ patient.gender }}{% endif %}
+                </span>
+            </div>
+            {% endif %}
+            {% if patient.phone %}
+            <div class="info-row">
+                <span class="info-label">Mobile:</span>
+                <span class="info-value">{{ patient.phone }}</span>
+            </div>
+            {% endif %}
+            {% if consultant %}
+            <div class="info-row">
+                <span class="info-label">Consultant:</span>
+                <span class="info-value">{{ consultant }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Services Table -->
+        <div class="services-section">
+            <table class="services-table">
+                <thead>
+                    <tr>
+                        <th class="col-service">Service/Test</th>
+                        <th class="col-qty">Qty</th>
+                        <th class="col-rate">Rate</th>
+                        <th class="col-amount">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td class="col-service">
+                            {% if item.service.modality.code %}{{ item.service.modality.code }} - {% endif %}{{ item.service.name }}
+                            {% if item.indication %}
+                            <div class="indication">({{ item.indication }})</div>
+                            {% endif %}
+                        </td>
+                        <td class="col-qty">1</td>
+                        <td class="col-rate">Rs. {{ item.charge|floatformat:2 }}</td>
+                        <td class="col-amount">Rs. {{ item.charge|floatformat:2 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="no-items">No items</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Payment Summary -->
+        <div class="payment-summary">
+            <div class="summary-row">
+                <span class="summary-label">Subtotal:</span>
+                <span class="summary-value">Rs. {{ subtotal|floatformat:2 }}</span>
+            </div>
+            {% if discount_amount > 0 %}
+            <div class="summary-row">
+                <span class="summary-label">
+                    Discount{% if discount_percentage %} ({{ discount_percentage }}%){% endif %}:
+                </span>
+                <span class="summary-value">-Rs. {{ discount_amount|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            <div class="summary-row total-row">
+                <span class="summary-label">Total Payable:</span>
+                <span class="summary-value">Rs. {{ net_total|floatformat:2 }}</span>
+            </div>
+            <div class="summary-row">
+                <span class="summary-label">Paid:</span>
+                <span class="summary-value">Rs. {{ paid_amount|floatformat:2 }}</span>
+            </div>
+            {% if due_amount != 0 %}
+            <div class="summary-row">
+                <span class="summary-label">{% if due_amount > 0 %}Balance{% else %}Change{% endif %}:</span>
+                <span class="summary-value">Rs. {{ due_amount|abs|floatformat:2 }}</span>
+            </div>
+            {% endif %}
+            {% if payment_method %}
+            <div class="summary-row">
+                <span class="summary-label">Payment Method:</span>
+                <span class="summary-value">{{ payment_method|upper }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Footer -->
+        <div class="receipt-footer">
+            <div class="footer-text">
+                Adjust Excel Labs, Near Arman Pan Shop Faisalabad Road Jaranwala<br>
+                For information/Appointment: Tel: 041 4313 777 | WhatsApp: 0322 7972 958
+            </div>
+        </div>
+    </div>
