@@ -136,6 +136,49 @@ export default function FrontDeskIntake() {
     setShowPatientForm(true);
   };
   
+  const handleSavePatient = async () => {
+    if (!token) return;
+    
+    if (!patientForm.name.trim()) {
+      setError("Patient name is required");
+      return;
+    }
+    
+    setLoading(true);
+    setError("");
+    setSuccess("");
+    
+    try {
+      const payload: any = {
+        name: patientForm.name.trim(),
+        gender: patientForm.gender || undefined,
+        phone: patientForm.phone.trim() || undefined,
+        address: patientForm.address.trim() || undefined,
+      };
+      
+      if (patientForm.age) {
+        payload.age = parseInt(patientForm.age);
+      }
+      if (patientForm.date_of_birth) {
+        payload.date_of_birth = patientForm.date_of_birth;
+      }
+      
+      const newPatient = await apiPost("/patients/", token, payload);
+      
+      // Select the newly created patient
+      setSelectedPatient(newPatient);
+      setPatientSearch(`${newPatient.mrn} - ${newPatient.name}`);
+      setShowPatientForm(false);
+      setPatientForm({ name: "", age: "", date_of_birth: "", gender: "", phone: "", address: "" });
+      setSuccess(`Patient ${newPatient.mrn} created successfully!`);
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (e: any) {
+      setError(e.message || "Failed to create patient");
+    } finally {
+      setLoading(false);
+    }
+  };
+  
   const handleAddToCart = (service: Service) => {
     const cartItem: CartItem = {
       service_id: service.id,
@@ -399,8 +442,36 @@ export default function FrontDeskIntake() {
                 style={{ width: "100%", padding: 8 }}
               />
             </div>
-            <div style={{ gridColumn: "1 / -1" }}>
-              <button onClick={() => setShowPatientForm(false)} style={{ padding: "8px 16px", marginRight: 10 }}>
+            <div style={{ gridColumn: "1 / -1", display: "flex", gap: 10 }}>
+              <button
+                onClick={handleSavePatient}
+                disabled={loading || !patientForm.name.trim()}
+                style={{
+                  padding: "8px 16px",
+                  background: loading || !patientForm.name.trim() ? "#ccc" : "#007bff",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: loading || !patientForm.name.trim() ? "not-allowed" : "pointer",
+                }}
+              >
+                {loading ? "Saving..." : "Save Patient"}
+              </button>
+              <button
+                onClick={() => {
+                  setShowPatientForm(false);
+                  setPatientForm({ name: "", age: "", date_of_birth: "", gender: "", phone: "", address: "" });
+                }}
+                disabled={loading}
+                style={{
+                  padding: "8px 16px",
+                  background: loading ? "#ccc" : "#6c757d",
+                  color: "white",
+                  border: "none",
+                  borderRadius: 4,
+                  cursor: loading ? "not-allowed" : "pointer",
+                }}
+              >
                 Cancel
               </button>
             </div>
