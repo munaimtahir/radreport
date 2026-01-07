@@ -1,0 +1,68 @@
+# =========================
+# RIMS (Radiology Information Management System) - React + Django
+# Domain: rims.alshifalab.pk
+# Frontend container: 127.0.0.1:8081 (nginx serving built React app)
+# Backend: 127.0.0.1:8015
+# =========================
+rims.alshifalab.pk {
+	encode gzip zstd
+
+	# ---- Static + media (served directly by Caddy for production) ----
+	handle /static/* {
+		root * /home/munaim/srv/apps/radreport/backend/staticfiles
+		file_server
+	}
+	handle /media/* {
+		root * /home/munaim/srv/apps/radreport/backend/media
+		file_server
+	}
+
+	# ---- Backend routes ----
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8015 {
+			header_up Host {host}
+			header_up X-Real-IP {remote}
+		}
+	}
+
+	handle /admin/* {
+		reverse_proxy 127.0.0.1:8015 {
+			header_up Host {host}
+			header_up X-Real-IP {remote}
+		}
+	}
+
+	# Health endpoints
+	handle /health* {
+		reverse_proxy 127.0.0.1:8015
+	}
+	handle /healthz* {
+		reverse_proxy 127.0.0.1:8015
+	}
+
+	# Optional API docs / schema
+	handle_path /docs* {
+		reverse_proxy 127.0.0.1:8015
+	}
+	handle_path /schema* {
+		reverse_proxy 127.0.0.1:8015
+	}
+
+	# ---- Frontend SPA (proxied to frontend container) ----
+	@notBackend {
+		not path /api/*
+		not path /admin/*
+		not path /health*
+		not path /healthz*
+		not path /static/*
+		not path /media/*
+		not path /docs*
+		not path /schema*
+	}
+	handle @notBackend {
+		reverse_proxy 127.0.0.1:8081 {
+			header_up Host {host}
+			header_up X-Real-IP {remote}
+		}
+	}
+}

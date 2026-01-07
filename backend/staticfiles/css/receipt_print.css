@@ -1,0 +1,366 @@
+/* Receipt Print CSS - A4 Portrait Dual Copy Layout */
+
+@page {
+    size: A4 portrait;
+    margin: 10mm;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Inter', 'Roboto', 'Arial', sans-serif;
+    font-size: 10pt;
+    color: #2E2E2E;
+    background: #FFFFFF;
+    line-height: 1.4;
+}
+
+/* A4 Page Container */
+.a4-page {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto;
+    background: #FFFFFF;
+    position: relative;
+}
+
+/* Each Receipt Copy Container */
+.receipt-copy {
+    width: 100%;
+    height: 138mm; /* Approximately half of A4 after margins */
+    overflow: hidden;
+    position: relative;
+    padding: 8mm 10mm;
+    page-break-inside: avoid;
+}
+
+.patient-copy {
+    border-bottom: none;
+}
+
+.office-copy {
+    border-top: none;
+}
+
+/* Receipt Container */
+.receipt-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+/* Header Section */
+.receipt-header {
+    text-align: center;
+    margin-bottom: 6mm;
+}
+
+.logo-container {
+    margin-bottom: 3mm;
+    text-align: center;
+}
+
+.logo {
+    max-height: 25mm;
+    max-width: 60mm;
+    object-fit: contain;
+    display: inline-block;
+}
+
+.clinic-name {
+    font-size: 16pt;
+    font-weight: bold;
+    color: #0B5ED7;
+    margin-top: 2mm;
+}
+
+/* Copy Label */
+.copy-label {
+    text-align: center;
+    font-size: 11pt;
+    font-weight: bold;
+    color: #0B5ED7;
+    margin-bottom: 4mm;
+    padding-bottom: 2mm;
+    border-bottom: 1px solid #E5E7EB;
+}
+
+/* Receipt Meta */
+.receipt-meta {
+    margin-bottom: 4mm;
+    font-size: 9pt;
+}
+
+.meta-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2mm;
+}
+
+.meta-label {
+    color: #9AA0A6;
+    font-weight: 500;
+}
+
+.meta-value {
+    color: #2E2E2E;
+    font-weight: 600;
+}
+
+/* Patient Information */
+.patient-info {
+    margin-bottom: 4mm;
+    font-size: 9pt;
+    padding: 3mm;
+    background: #F9FAFB;
+    border-left: 3px solid #0B5ED7;
+}
+
+.info-row {
+    display: flex;
+    margin-bottom: 2mm;
+}
+
+.info-row:last-child {
+    margin-bottom: 0;
+}
+
+.info-label {
+    color: #9AA0A6;
+    min-width: 80px;
+    font-weight: 500;
+}
+
+.info-value {
+    color: #2E2E2E;
+    flex: 1;
+}
+
+/* Services Table */
+.services-section {
+    flex: 1;
+    margin-bottom: 4mm;
+    overflow: hidden;
+}
+
+.services-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 9pt;
+}
+
+.services-table thead {
+    background: #0B5ED7;
+    color: #FFFFFF;
+}
+
+.services-table th {
+    padding: 3mm 2mm;
+    text-align: left;
+    font-weight: 600;
+    font-size: 9pt;
+}
+
+.services-table th.col-service {
+    width: 50%;
+}
+
+.services-table th.col-qty {
+    width: 10%;
+    text-align: center;
+}
+
+.services-table th.col-rate {
+    width: 20%;
+    text-align: right;
+}
+
+.services-table th.col-amount {
+    width: 20%;
+    text-align: right;
+}
+
+.services-table tbody tr {
+    border-bottom: 1px solid #E5E7EB;
+}
+
+.services-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.services-table td {
+    padding: 2.5mm 2mm;
+    vertical-align: top;
+}
+
+.services-table td.col-service {
+    word-wrap: break-word;
+    word-break: break-word;
+}
+
+.services-table td.col-qty {
+    text-align: center;
+}
+
+.services-table td.col-rate,
+.services-table td.col-amount {
+    text-align: right;
+    font-weight: 500;
+}
+
+.indication {
+    font-size: 8pt;
+    color: #9AA0A6;
+    font-style: italic;
+    margin-top: 1mm;
+}
+
+.no-items {
+    text-align: center;
+    color: #9AA0A6;
+    padding: 5mm;
+    font-style: italic;
+}
+
+/* Payment Summary */
+.payment-summary {
+    margin-top: auto;
+    margin-bottom: 3mm;
+    padding-top: 3mm;
+    border-top: 2px solid #E5E7EB;
+    font-size: 9pt;
+}
+
+.summary-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 2mm;
+    padding: 1mm 0;
+}
+
+.summary-row:last-child {
+    margin-bottom: 0;
+}
+
+.summary-label {
+    color: #2E2E2E;
+    font-weight: 500;
+}
+
+.summary-value {
+    color: #2E2E2E;
+    font-weight: 600;
+    text-align: right;
+    min-width: 60px;
+}
+
+.summary-row.total-row {
+    border-top: 1px solid #E5E7EB;
+    border-bottom: 1px solid #E5E7EB;
+    padding: 2mm 0;
+    margin-top: 2mm;
+    margin-bottom: 2mm;
+}
+
+.summary-row.total-row .summary-label,
+.summary-row.total-row .summary-value {
+    font-size: 11pt;
+    font-weight: bold;
+    color: #F39C12;
+}
+
+/* Footer */
+.receipt-footer {
+    margin-top: auto;
+    padding-top: 3mm;
+    border-top: 1px solid #E5E7EB;
+    text-align: center;
+}
+
+.footer-text {
+    font-size: 8pt;
+    color: #9AA0A6;
+    line-height: 1.5;
+}
+
+/* Page Divider */
+.page-divider {
+    width: 100%;
+    height: 8mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin: 2mm 0;
+    page-break-inside: avoid;
+}
+
+.divider-line {
+    width: 100%;
+    border-top: 1px dotted #9AA0A6;
+    position: absolute;
+    top: 50%;
+    left: 0;
+}
+
+.scissors-icon {
+    background: #FFFFFF;
+    padding: 0 4mm;
+    color: #9AA0A6;
+    font-size: 10pt;
+    position: relative;
+    z-index: 1;
+}
+
+/* Print Styles */
+@media print {
+    body {
+        margin: 0;
+        padding: 0;
+    }
+
+    .a4-page {
+        width: 210mm;
+        height: 297mm;
+        margin: 0;
+        padding: 0;
+    }
+
+    .receipt-copy {
+        height: 138mm;
+        page-break-inside: avoid;
+        overflow: visible;
+    }
+
+    .page-divider {
+        page-break-inside: avoid;
+    }
+
+    .print-controls {
+        display: none !important;
+    }
+
+    @page {
+        margin: 10mm;
+    }
+}
+
+/* Screen Preview Styles */
+@media screen {
+    body {
+        background: #F3F4F6;
+        padding: 20px;
+    }
+
+    .a4-page {
+        background: #FFFFFF;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        margin: 0 auto;
+    }
+}
