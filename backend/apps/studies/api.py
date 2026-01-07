@@ -129,32 +129,35 @@ class VisitViewSet(viewsets.ModelViewSet):
         return response
 
 
-class ReceiptSettingsViewSet(viewsets.ModelViewSet):
-    """ViewSet for managing receipt branding settings"""
+class ReceiptSettingsViewSet(viewsets.ViewSet):
+    """ViewSet for managing receipt branding settings (singleton)"""
     serializer_class = ReceiptSettingsSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
-    def get_queryset(self):
-        # Return singleton
-        return ReceiptSettings.objects.filter(pk=1)
-    
-    def get_object(self):
-        return ReceiptSettings.get_settings()
     
     def list(self, request):
         """Get current receipt settings"""
         settings_obj = ReceiptSettings.get_settings()
-        serializer = self.get_serializer(settings_obj, context={"request": request})
+        serializer = self.serializer_class(settings_obj, context={"request": request})
+        return Response(serializer.data)
+    
+    def retrieve(self, request, pk=None):
+        """Get current receipt settings (same as list for singleton)"""
+        settings_obj = ReceiptSettings.get_settings()
+        serializer = self.serializer_class(settings_obj, context={"request": request})
         return Response(serializer.data)
     
     def update(self, request, pk=None):
         """Update receipt settings (partial update supported)"""
         settings_obj = ReceiptSettings.get_settings()
-        serializer = self.get_serializer(settings_obj, data=request.data, partial=True, context={"request": request})
+        serializer = self.serializer_class(settings_obj, data=request.data, partial=True, context={"request": request})
         if serializer.is_valid():
             serializer.save(updated_by=request.user)
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def partial_update(self, request, pk=None):
+        """Partial update receipt settings"""
+        return self.update(request, pk)
     
     @action(detail=False, methods=["post"], url_path="logo")
     def upload_logo(self, request):

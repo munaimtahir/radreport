@@ -8,6 +8,7 @@ import Studies from "../views/Studies";
 import Templates from "../views/Templates";
 import ReportEditor from "../views/ReportEditor";
 import FrontDeskIntake from "../views/FrontDeskIntake";
+import ReceiptSettings from "../views/ReceiptSettings";
 
 function Shell() {
   const { token, logout } = useAuth();
@@ -23,6 +24,7 @@ function Shell() {
           <Link to="/patients">Patients</Link>
           <Link to="/studies">Studies</Link>
           <Link to="/templates">Templates</Link>
+          <Link to="/receipt-settings">Receipt Settings</Link>
         </nav>
         <button style={{ marginTop: 16 }} onClick={logout}>Logout</button>
       </aside>
@@ -33,6 +35,7 @@ function Shell() {
           <Route path="/patients" element={<Patients />} />
           <Route path="/studies" element={<Studies />} />
           <Route path="/templates" element={<Templates />} />
+          <Route path="/receipt-settings" element={<ReceiptSettings />} />
           <Route path="/reports/:reportId/edit" element={<ReportEditor />} />
         </Routes>
       </main>
