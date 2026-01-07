@@ -94,6 +94,8 @@ STATICFILES_DIRS = [
 ]
 
 # WhiteNoise configuration for production static file serving
+# This replaces the need for a separate web server to serve static files
+# CompressedManifestStaticFilesStorage adds compression and cache-busting hashes
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",
