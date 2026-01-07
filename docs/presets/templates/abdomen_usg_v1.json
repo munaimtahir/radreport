@@ -1,0 +1,775 @@
+{
+  "name": "Ultrasound Abdomen (Structured)",
+  "modality_code": "USG",
+  "is_active": true,
+  "sections": [
+    {
+      "title": "Clinical history",
+      "order": 0,
+      "fields": [
+        {
+          "label": "Clinical history",
+          "key": "clinical_history",
+          "field_type": "paragraph",
+          "required": false,
+          "help_text": "",
+          "placeholder": "e.g., RUQ pain, fever, vomiting, jaundice, renal colic...",
+          "unit": "",
+          "order": 0,
+          "options": []
+        }
+      ]
+    },
+    {
+      "title": "Liver",
+      "order": 1,
+      "fields": [
+        {
+          "label": "Size",
+          "key": "liver_size",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / Enlarged / Reduced (or cm)",
+          "unit": "",
+          "order": 0,
+          "options": []
+        },
+        {
+          "label": "Echotexture",
+          "key": "liver_echotexture",
+          "field_type": "dropdown",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 1,
+          "options": [
+            {
+              "label": "Normal",
+              "value": "normal",
+              "order": 0
+            },
+            {
+              "label": "Increased echogenicity (fatty change)",
+              "value": "increased_echogenicity",
+              "order": 1
+            },
+            {
+              "label": "Coarse",
+              "value": "coarse",
+              "order": 2
+            },
+            {
+              "label": "Heterogeneous",
+              "value": "heterogeneous",
+              "order": 3
+            }
+          ]
+        },
+        {
+          "label": "Focal lesion present",
+          "key": "liver_focal_lesion",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 2,
+          "options": []
+        },
+        {
+          "label": "Intrahepatic biliary radicles (IHBR)",
+          "key": "liver_ihbr",
+          "field_type": "dropdown",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 3,
+          "options": [
+            {
+              "label": "Normal",
+              "value": "normal",
+              "order": 0
+            },
+            {
+              "label": "Dilated",
+              "value": "dilated",
+              "order": 1
+            }
+          ]
+        },
+        {
+          "label": "Portal vein",
+          "key": "liver_portal_vein",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / Dilated / Thrombosed...",
+          "unit": "",
+          "order": 4,
+          "options": []
+        },
+        {
+          "label": "Comments",
+          "key": "liver_comments",
+          "field_type": "paragraph",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Any additional liver findings",
+          "unit": "",
+          "order": 5,
+          "options": []
+        }
+      ]
+    },
+    {
+      "title": "Gallbladder & biliary tree",
+      "order": 2,
+      "fields": [
+        {
+          "label": "Wall thickness",
+          "key": "gb_wall_thickness",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "e.g., Normal / 3 mm / Thickened",
+          "unit": "",
+          "order": 0,
+          "options": []
+        },
+        {
+          "label": "Lumen",
+          "key": "gb_lumen",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / Distended / Contracted",
+          "unit": "",
+          "order": 1,
+          "options": []
+        },
+        {
+          "label": "Calculi present",
+          "key": "gb_calculi",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 2,
+          "options": []
+        },
+        {
+          "label": "Sludge present",
+          "key": "gb_sludge",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 3,
+          "options": []
+        },
+        {
+          "label": "Sonographic Murphy sign",
+          "key": "gb_murphy",
+          "field_type": "dropdown",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 4,
+          "options": [
+            {
+              "label": "Not assessed",
+              "value": "na",
+              "order": 0
+            },
+            {
+              "label": "Negative",
+              "value": "negative",
+              "order": 1
+            },
+            {
+              "label": "Positive",
+              "value": "positive",
+              "order": 2
+            }
+          ]
+        },
+        {
+          "label": "Common bile duct (CBD) diameter",
+          "key": "cbd_diameter",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "e.g., 4 mm / Dilated",
+          "unit": "",
+          "order": 5,
+          "options": []
+        },
+        {
+          "label": "Comments",
+          "key": "gb_comments",
+          "field_type": "paragraph",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Any additional biliary findings",
+          "unit": "",
+          "order": 6,
+          "options": []
+        }
+      ]
+    },
+    {
+      "title": "Pancreas",
+      "order": 3,
+      "fields": [
+        {
+          "label": "Visualization",
+          "key": "pancreas_visualization",
+          "field_type": "dropdown",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 0,
+          "options": [
+            {
+              "label": "Adequate",
+              "value": "adequate",
+              "order": 0
+            },
+            {
+              "label": "Limited",
+              "value": "limited",
+              "order": 1
+            },
+            {
+              "label": "Not visualized",
+              "value": "not_visualized",
+              "order": 2
+            }
+          ]
+        },
+        {
+          "label": "Size",
+          "key": "pancreas_size",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / Bulky",
+          "unit": "",
+          "order": 1,
+          "options": []
+        },
+        {
+          "label": "Echotexture",
+          "key": "pancreas_echotexture",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / Heterogeneous...",
+          "unit": "",
+          "order": 2,
+          "options": []
+        },
+        {
+          "label": "Focal lesion present",
+          "key": "pancreas_focal_lesion",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 3,
+          "options": []
+        },
+        {
+          "label": "Comments",
+          "key": "pancreas_comments",
+          "field_type": "paragraph",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Any additional pancreas findings",
+          "unit": "",
+          "order": 4,
+          "options": []
+        }
+      ]
+    },
+    {
+      "title": "Spleen",
+      "order": 4,
+      "fields": [
+        {
+          "label": "Size",
+          "key": "spleen_size",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / Enlarged (or cm)",
+          "unit": "",
+          "order": 0,
+          "options": []
+        },
+        {
+          "label": "Echotexture",
+          "key": "spleen_echotexture",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / Heterogeneous...",
+          "unit": "",
+          "order": 1,
+          "options": []
+        },
+        {
+          "label": "Focal lesion present",
+          "key": "spleen_focal_lesion",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 2,
+          "options": []
+        },
+        {
+          "label": "Comments",
+          "key": "spleen_comments",
+          "field_type": "paragraph",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Any additional spleen findings",
+          "unit": "",
+          "order": 3,
+          "options": []
+        }
+      ]
+    },
+    {
+      "title": "Right kidney",
+      "order": 5,
+      "fields": [
+        {
+          "label": "Size",
+          "key": "rk_size",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / cm",
+          "unit": "",
+          "order": 0,
+          "options": []
+        },
+        {
+          "label": "Corticomedullary differentiation (CMD)",
+          "key": "rk_cmd",
+          "field_type": "dropdown",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 1,
+          "options": [
+            {
+              "label": "Preserved",
+              "value": "preserved",
+              "order": 0
+            },
+            {
+              "label": "Reduced",
+              "value": "reduced",
+              "order": 1
+            },
+            {
+              "label": "Lost",
+              "value": "lost",
+              "order": 2
+            }
+          ]
+        },
+        {
+          "label": "Hydronephrosis present",
+          "key": "rk_hydronephrosis",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 2,
+          "options": []
+        },
+        {
+          "label": "Calculi present",
+          "key": "rk_calculi",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 3,
+          "options": []
+        },
+        {
+          "label": "Comments",
+          "key": "rk_comments",
+          "field_type": "paragraph",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Any additional right kidney findings",
+          "unit": "",
+          "order": 4,
+          "options": []
+        }
+      ]
+    },
+    {
+      "title": "Left kidney",
+      "order": 6,
+      "fields": [
+        {
+          "label": "Size",
+          "key": "lk_size",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / cm",
+          "unit": "",
+          "order": 0,
+          "options": []
+        },
+        {
+          "label": "Corticomedullary differentiation (CMD)",
+          "key": "lk_cmd",
+          "field_type": "dropdown",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 1,
+          "options": [
+            {
+              "label": "Preserved",
+              "value": "preserved",
+              "order": 0
+            },
+            {
+              "label": "Reduced",
+              "value": "reduced",
+              "order": 1
+            },
+            {
+              "label": "Lost",
+              "value": "lost",
+              "order": 2
+            }
+          ]
+        },
+        {
+          "label": "Hydronephrosis present",
+          "key": "lk_hydronephrosis",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 2,
+          "options": []
+        },
+        {
+          "label": "Calculi present",
+          "key": "lk_calculi",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 3,
+          "options": []
+        },
+        {
+          "label": "Comments",
+          "key": "lk_comments",
+          "field_type": "paragraph",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Any additional left kidney findings",
+          "unit": "",
+          "order": 4,
+          "options": []
+        }
+      ]
+    },
+    {
+      "title": "Urinary bladder",
+      "order": 7,
+      "fields": [
+        {
+          "label": "Wall thickness",
+          "key": "ub_wall",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / Thickened",
+          "unit": "",
+          "order": 0,
+          "options": []
+        },
+        {
+          "label": "Lumen",
+          "key": "ub_lumen",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / Debris",
+          "unit": "",
+          "order": 1,
+          "options": []
+        },
+        {
+          "label": "Calculus or mass present",
+          "key": "ub_mass_or_calculus",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 2,
+          "options": []
+        },
+        {
+          "label": "Comments",
+          "key": "ub_comments",
+          "field_type": "paragraph",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Any additional bladder findings",
+          "unit": "",
+          "order": 3,
+          "options": []
+        }
+      ]
+    },
+    {
+      "title": "Prostate (male)",
+      "order": 8,
+      "fields": [
+        {
+          "label": "Size",
+          "key": "prostate_size",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / Enlarged",
+          "unit": "",
+          "order": 0,
+          "options": []
+        },
+        {
+          "label": "Volume",
+          "key": "prostate_volume",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "e.g., 35 cc",
+          "unit": "",
+          "order": 1,
+          "options": []
+        },
+        {
+          "label": "Echotexture",
+          "key": "prostate_echotexture",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Homogeneous / Heterogeneous",
+          "unit": "",
+          "order": 2,
+          "options": []
+        },
+        {
+          "label": "Median lobe enlargement",
+          "key": "prostate_median_lobe",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 3,
+          "options": []
+        }
+      ]
+    },
+    {
+      "title": "Uterus & adnexa (female)",
+      "order": 9,
+      "fields": [
+        {
+          "label": "Uterus size",
+          "key": "uterus_size",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / cm",
+          "unit": "",
+          "order": 0,
+          "options": []
+        },
+        {
+          "label": "Endometrial thickness",
+          "key": "endometrial_thickness",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "e.g., 6 mm",
+          "unit": "",
+          "order": 1,
+          "options": []
+        },
+        {
+          "label": "Adnexa",
+          "key": "adnexa",
+          "field_type": "paragraph",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Normal / cyst / mass...",
+          "unit": "",
+          "order": 2,
+          "options": []
+        },
+        {
+          "label": "Free fluid present",
+          "key": "free_fluid",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 3,
+          "options": []
+        }
+      ]
+    },
+    {
+      "title": "Bladder volumes (if assessed)",
+      "order": 10,
+      "fields": [
+        {
+          "label": "Pre-void volume",
+          "key": "pre_void_volume",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "e.g., 250 ml",
+          "unit": "",
+          "order": 0,
+          "options": []
+        },
+        {
+          "label": "Post-void residual volume (PVR)",
+          "key": "post_void_residual",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "e.g., 30 ml",
+          "unit": "",
+          "order": 1,
+          "options": []
+        }
+      ]
+    },
+    {
+      "title": "Additional findings",
+      "order": 11,
+      "fields": [
+        {
+          "label": "Ascites present",
+          "key": "ascites",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 0,
+          "options": []
+        },
+        {
+          "label": "Pleural effusion present",
+          "key": "pleural_effusion",
+          "field_type": "boolean",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 1,
+          "options": []
+        },
+        {
+          "label": "Other",
+          "key": "other_findings",
+          "field_type": "paragraph",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Any other relevant findings",
+          "unit": "",
+          "order": 2,
+          "options": []
+        }
+      ]
+    },
+    {
+      "title": "Impression",
+      "order": 12,
+      "fields": [
+        {
+          "label": "Impression (line 1)",
+          "key": "impression_1",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 0,
+          "options": []
+        },
+        {
+          "label": "Impression (line 2)",
+          "key": "impression_2",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 1,
+          "options": []
+        },
+        {
+          "label": "Impression (line 3)",
+          "key": "impression_3",
+          "field_type": "short_text",
+          "required": false,
+          "help_text": "",
+          "placeholder": "",
+          "unit": "",
+          "order": 2,
+          "options": []
+        },
+        {
+          "label": "Recommendation",
+          "key": "recommendation",
+          "field_type": "paragraph",
+          "required": false,
+          "help_text": "",
+          "placeholder": "Clinical correlation / follow-up imaging if needed",
+          "unit": "",
+          "order": 3,
+          "options": []
+        }
+      ]
+    }
+  ]
+}
