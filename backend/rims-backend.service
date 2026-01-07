@@ -1,0 +1,33 @@
+[Unit]
+Description=RIMS Backend Gunicorn Service
+After=network.target
+
+[Service]
+Type=notify
+User=munaim
+Group=munaim
+WorkingDirectory=/home/munaim/srv/apps/radreport/backend
+Environment="PATH=/home/munaim/srv/apps/radreport/backend/venv/bin"
+Environment="DJANGO_SECRET_KEY=rims-production-secret-key-change-in-production-2024"
+Environment="DJANGO_DEBUG=0"
+Environment="DJANGO_ALLOWED_HOSTS=rims.alshifalab.pk,localhost,127.0.0.1"
+Environment="CORS_ALLOWED_ORIGINS=https://rims.alshifalab.pk"
+Environment="DB_ENGINE=postgresql"
+Environment="DB_NAME=rims"
+Environment="DB_USER=rims"
+Environment="DB_PASSWORD=rims"
+Environment="DB_HOST=127.0.0.1"
+Environment="DB_PORT=5434"
+ExecStart=/home/munaim/srv/apps/radreport/backend/venv/bin/gunicorn \
+    rims_backend.wsgi:application \
+    --bind 127.0.0.1:8015 \
+    --workers 3 \
+    --timeout 120 \
+    --access-logfile - \
+    --error-logfile - \
+    --log-level info
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
