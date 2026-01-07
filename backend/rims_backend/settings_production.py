@@ -53,7 +53,7 @@ if not SECRET_KEY or len(SECRET_KEY) < 50:
     )
 
 # Warn if SECRET_KEY appears to be weak (simple patterns)
-if SECRET_KEY and (len(set(SECRET_KEY)) < 20 or SECRET_KEY == SECRET_KEY[0] * len(SECRET_KEY)):
+if SECRET_KEY and (len(set(SECRET_KEY)) < 20 or all(c == SECRET_KEY[0] for c in SECRET_KEY)):
     warnings.warn(
         "SECRET_KEY appears to use simple patterns. Ensure it's randomly generated.",
         UserWarning
@@ -120,7 +120,7 @@ SECURE_HSTS_PRELOAD = True
 
 # Ensure logs directory exists
 logs_dir = BASE_DIR / "logs"
-logs_dir.mkdir(exist_ok=True)
+logs_dir.mkdir(parents=True, exist_ok=True)
 
 # Logging Configuration
 LOGGING = {
