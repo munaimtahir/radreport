@@ -14,10 +14,13 @@ from apps.workflow.api import (
     ServiceCatalogViewSet, ServiceVisitViewSet, ServiceVisitItemViewSet,
     USGReportViewSet, OPDVitalsViewSet, OPDConsultViewSet, PDFViewSet
 )
+from apps.workflow.models import ServiceVisit, Invoice
+from apps.workflow.pdf import build_service_visit_receipt_pdf
+from django.http import HttpResponse, JsonResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from django.conf import settings
 from django.conf.urls.static import static
-from django.http import JsonResponse
-from rest_framework.decorators import api_view, permission_classes
 
 router = DefaultRouter()
 router.register(r"patients", PatientViewSet, basename="patients")
@@ -87,6 +90,40 @@ def health(request):
     http_status = 200 if status["status"] == "ok" else 503
     return JsonResponse(status, status=http_status)
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def receipt_pdf_alt(request, visit_id):
+    """Alternative receipt PDF route: /api/pdf/receipt/{visit_id}/ - for compatibility with frontend"""
+    try:
+        service_visit = ServiceVisit.objects.get(id=visit_id)
+    except ServiceVisit.DoesNotExist:
+        from rest_framework.response import Response
+        from rest_framework import status
+        return Response({"detail": "Service visit not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    try:
+        invoice = service_visit.invoice
+    except Invoice.DoesNotExist:
+        from rest_framework.response import Response
+        from rest_framework import status
+        return Response({"detail": "Invoice not found"}, status=status.HTTP_404_NOT_FOUND)
+    
+    # Generate receipt number if not exists
+    if not invoice.receipt_number:
+        from apps.studies.models import ReceiptSequence
+        from django.db import transaction
+        with transaction.atomic():
+            invoice.refresh_from_db()
+            if not invoice.receipt_number:
+                invoice.receipt_number = ReceiptSequence.get_next_receipt_number()
+                invoice.save()
+    
+    # Generate receipt PDF
+    pdf_file = build_service_visit_receipt_pdf(service_visit, invoice)
+    response = HttpResponse(pdf_file.read(), content_type="application/pdf")
+    response["Content-Disposition"] = f'inline; filename="receipt_{invoice.receipt_number or service_visit.visit_id}.pdf"'
+    return response
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", health),
@@ -94,6 +131,7 @@ urlpatterns = [
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
+    path("api/pdf/receipt/<uuid:visit_id>/", receipt_pdf_alt, name="receipt-pdf-alt"),  # Alternative route for compatibility
     path("api/", include(router.urls)),
 ]
 

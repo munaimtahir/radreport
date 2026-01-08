@@ -65,9 +65,9 @@ class ServiceVisitViewSet(viewsets.ModelViewSet):
     ).all()
     serializer_class = ServiceVisitSerializer
     permission_classes = [permissions.IsAuthenticated]
-    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    filter_backends = [SearchFilter, OrderingFilter]  # Removed DjangoFilterBackend - status filtering handled in get_queryset
     search_fields = ["visit_id", "patient__name", "patient__patient_reg_no", "patient__mrn", "items__service__name", "items__service_name_snapshot"]
-    filterset_fields = ["status"]
+    # Removed filterset_fields - status filtering with comma-separated values handled in get_queryset
     ordering_fields = ["registered_at", "visit_id", "status"]
     
     def get_queryset(self):
@@ -943,7 +943,7 @@ class PDFViewSet(viewsets.ViewSet):
     
     @action(detail=True, methods=["get"], url_path="receipt")
     def receipt(self, request, pk=None):
-        """Get receipt PDF for service visit"""
+        """Get receipt PDF for service visit - route: /api/pdf/{pk}/receipt/"""
         try:
             service_visit = ServiceVisit.objects.get(id=pk)
         except ServiceVisit.DoesNotExist:
