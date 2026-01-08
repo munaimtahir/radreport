@@ -5,19 +5,22 @@ from django.http import HttpResponse
 from django.utils import timezone
 from django.conf import settings
 from django.db import transaction
+from django.db import models
 from pathlib import Path
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
 from .models import (
-    ServiceCatalog, ServiceVisit, Invoice, Payment,
+    ServiceCatalog, ServiceVisit, ServiceVisitItem, Invoice, Payment,
     USGReport, OPDVitals, OPDConsult, StatusAuditLog
 )
 from .serializers import (
-    ServiceCatalogSerializer, ServiceVisitSerializer, InvoiceSerializer,
+    ServiceCatalogSerializer, ServiceVisitSerializer, ServiceVisitItemSerializer, InvoiceSerializer,
     PaymentSerializer, USGReportSerializer, OPDVitalsSerializer,
     OPDConsultSerializer, ServiceVisitCreateSerializer, StatusTransitionSerializer
 )
+from apps.catalog.models import Service as CatalogService
+from apps.catalog.serializers import ServiceSerializer
 from .permissions import (
     IsRegistrationDesk, IsPerformanceDesk, IsVerificationDesk,
     IsRegistrationOrPerformanceDesk, IsPerformanceOrVerificationDesk, IsAnyDesk
@@ -37,25 +40,30 @@ except ImportError:
             return f"{yymm}-001"
 
 
-class ServiceCatalogViewSet(viewsets.ModelViewSet):
-    """Service catalog management"""
-    queryset = ServiceCatalog.objects.filter(is_active=True)
-    serializer_class = ServiceCatalogSerializer
+class ServiceCatalogViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    DEPRECATED: Use /api/services/ instead.
+    This endpoint is kept for backward compatibility only (read-only).
+    """
+    queryset = CatalogService.objects.filter(is_active=True)
+    serializer_class = ServiceSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ["code", "name"]
-    filterset_fields = ["is_active"]
-    ordering_fields = ["name", "code"]
+    search_fields = ["code", "name", "modality__code"]
+    filterset_fields = ["is_active", "category", "modality"]
+    ordering_fields = ["name", "code", "price"]
 
 
 class ServiceVisitViewSet(viewsets.ModelViewSet):
     """Service visit management"""
-    queryset = ServiceVisit.objects.select_related("patient", "service", "created_by", "assigned_to").prefetch_related("status_audit_logs__changed_by").all()
+    queryset = ServiceVisit.objects.select_related("patient", "service", "created_by", "assigned_to").prefetch_related(
+        "items__service", "items__service__modality", "status_audit_logs__changed_by"
+    ).all()
     serializer_class = ServiceVisitSerializer
     permission_classes = [permissions.IsAuthenticated]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
-    search_fields = ["visit_id", "patient__name", "patient__patient_reg_no", "patient__mrn", "service__name"]
-    filterset_fields = ["status", "service"]
+    search_fields = ["visit_id", "patient__name", "patient__patient_reg_no", "patient__mrn", "items__service__name", "items__service_name_snapshot"]
+    filterset_fields = ["status"]
     ordering_fields = ["registered_at", "visit_id", "status"]
     
     def get_queryset(self):
@@ -66,9 +74,15 @@ class ServiceVisitViewSet(viewsets.ModelViewSet):
         
         if workflow:
             if workflow == "USG":
-                queryset = queryset.filter(service__code="USG")
+                # Filter by items with USG category or modality
+                queryset = queryset.filter(
+                    items__service__category="Radiology",
+                    items__service__modality__code="USG"
+                ).distinct()
             elif workflow == "OPD":
-                queryset = queryset.filter(service__code="OPD")
+                queryset = queryset.filter(
+                    items__service__category="OPD"
+                ).distinct()
         
         if status_filter:
             queryset = queryset.filter(status=status_filter)
@@ -134,19 +148,33 @@ class ServiceVisitViewSet(viewsets.ModelViewSet):
 
 class USGReportViewSet(viewsets.ModelViewSet):
     """USG report management"""
-    queryset = USGReport.objects.select_related("service_visit", "created_by", "updated_by", "verifier").all()
+    queryset = USGReport.objects.select_related(
+        "service_visit_item", "service_visit_item__service", "service_visit_item__service_visit",
+        "service_visit", "created_by", "updated_by", "verifier"
+    ).all()
     serializer_class = USGReportSerializer
     permission_classes = [IsPerformanceOrVerificationDesk]
     
     def get_queryset(self):
         visit_id = self.request.query_params.get("visit_id") or self.kwargs.get("pk")
         if visit_id:
-            return self.queryset.filter(service_visit_id=visit_id)
+            return self.queryset.filter(
+                models.Q(service_visit_id=visit_id) | models.Q(service_visit_item__service_visit_id=visit_id)
+            )
         return self.queryset.all()
     
     def get_object(self):
         visit_id = self.kwargs.get("pk")
         try:
+            # Try to find via ServiceVisitItem first
+            item = ServiceVisitItem.objects.filter(
+                service_visit_id=visit_id,
+                service__category="Radiology",
+                service__modality__code="USG"
+            ).first()
+            if item and hasattr(item, 'usg_report'):
+                return item.usg_report
+            # Fallback to legacy
             return self.queryset.get(service_visit_id=visit_id)
         except USGReport.DoesNotExist:
             from rest_framework.exceptions import NotFound
@@ -163,14 +191,42 @@ class USGReportViewSet(viewsets.ModelViewSet):
         except ServiceVisit.DoesNotExist:
             return Response({"detail": "Service visit not found"}, status=status.HTTP_404_NOT_FOUND)
         
-        # Check if report exists
-        report, created = USGReport.objects.get_or_create(
-            service_visit=service_visit,
-            defaults={
-                "created_by": request.user,
-                "updated_by": request.user,
-            }
-        )
+        # Find or create USG ServiceVisitItem
+        usg_item = service_visit.items.filter(
+            service__category="Radiology",
+            service__modality__code="USG"
+        ).first()
+        
+        if not usg_item:
+            return Response({"detail": "No USG service found in this visit"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if report exists (prefer item-based, fallback to legacy)
+        report = None
+        if hasattr(usg_item, 'usg_report'):
+            report = usg_item.usg_report
+            created = False
+        else:
+            # Try legacy
+            report = USGReport.objects.filter(service_visit=service_visit).first()
+            if report:
+                # Migrate to item-based
+                report.service_visit_item = usg_item
+                report.save()
+                created = False
+            else:
+                # Create new
+                report = USGReport.objects.create(
+                    service_visit_item=usg_item,
+                    service_visit=service_visit,  # Keep for backward compatibility
+                    created_by=request.user,
+                    updated_by=request.user,
+                )
+                created = True
+        
+        if not created:
+            report.updated_by = request.user
+            report.report_json = request.data.get("report_json", report.report_json)
+            report.save()
         
         if not created:
             report.updated_by = request.user
@@ -304,19 +360,32 @@ class USGReportViewSet(viewsets.ModelViewSet):
 
 class OPDVitalsViewSet(viewsets.ModelViewSet):
     """OPD vitals management"""
-    queryset = OPDVitals.objects.select_related("service_visit", "entered_by").all()
+    queryset = OPDVitals.objects.select_related(
+        "service_visit_item", "service_visit_item__service", "service_visit_item__service_visit",
+        "service_visit", "entered_by"
+    ).all()
     serializer_class = OPDVitalsSerializer
     permission_classes = [IsPerformanceDesk]
     
     def get_queryset(self):
         visit_id = self.request.query_params.get("visit_id") or self.kwargs.get("pk")
         if visit_id:
-            return self.queryset.filter(service_visit_id=visit_id)
+            return self.queryset.filter(
+                models.Q(service_visit_id=visit_id) | models.Q(service_visit_item__service_visit_id=visit_id)
+            )
         return self.queryset.all()
     
     def get_object(self):
         visit_id = self.kwargs.get("pk")
         try:
+            # Try to find via ServiceVisitItem first
+            item = ServiceVisitItem.objects.filter(
+                service_visit_id=visit_id,
+                service__category="OPD"
+            ).first()
+            if item and hasattr(item, 'opd_vitals'):
+                return item.opd_vitals
+            # Fallback to legacy
             return self.queryset.get(service_visit_id=visit_id)
         except OPDVitals.DoesNotExist:
             from rest_framework.exceptions import NotFound
@@ -333,11 +402,33 @@ class OPDVitalsViewSet(viewsets.ModelViewSet):
         except ServiceVisit.DoesNotExist:
             return Response({"detail": "Service visit not found"}, status=status.HTTP_404_NOT_FOUND)
         
-        # Check if vitals exist
-        vitals, created = OPDVitals.objects.get_or_create(
-            service_visit=service_visit,
-            defaults={"entered_by": request.user}
-        )
+        # Find or create OPD ServiceVisitItem
+        opd_item = service_visit.items.filter(service__category="OPD").first()
+        
+        if not opd_item:
+            return Response({"detail": "No OPD service found in this visit"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if vitals exist (prefer item-based, fallback to legacy)
+        vitals = None
+        if hasattr(opd_item, 'opd_vitals'):
+            vitals = opd_item.opd_vitals
+            created = False
+        else:
+            # Try legacy
+            vitals = OPDVitals.objects.filter(service_visit=service_visit).first()
+            if vitals:
+                # Migrate to item-based
+                vitals.service_visit_item = opd_item
+                vitals.save()
+                created = False
+            else:
+                # Create new
+                vitals = OPDVitals.objects.create(
+                    service_visit_item=opd_item,
+                    service_visit=service_visit,  # Keep for backward compatibility
+                    entered_by=request.user
+                )
+                created = True
         
         if not created:
             # Update vitals
@@ -364,19 +455,32 @@ class OPDVitalsViewSet(viewsets.ModelViewSet):
 
 class OPDConsultViewSet(viewsets.ModelViewSet):
     """OPD consultation management"""
-    queryset = OPDConsult.objects.select_related("service_visit", "consultant").all()
+    queryset = OPDConsult.objects.select_related(
+        "service_visit_item", "service_visit_item__service", "service_visit_item__service_visit",
+        "service_visit", "consultant"
+    ).all()
     serializer_class = OPDConsultSerializer
     permission_classes = [IsPerformanceDesk]
     
     def get_queryset(self):
         visit_id = self.request.query_params.get("visit_id") or self.kwargs.get("pk")
         if visit_id:
-            return self.queryset.filter(service_visit_id=visit_id)
+            return self.queryset.filter(
+                models.Q(service_visit_id=visit_id) | models.Q(service_visit_item__service_visit_id=visit_id)
+            )
         return self.queryset.all()
     
     def get_object(self):
         visit_id = self.kwargs.get("pk")
         try:
+            # Try to find via ServiceVisitItem first
+            item = ServiceVisitItem.objects.filter(
+                service_visit_id=visit_id,
+                service__category="OPD"
+            ).first()
+            if item and hasattr(item, 'opd_consult'):
+                return item.opd_consult
+            # Fallback to legacy
             return self.queryset.get(service_visit_id=visit_id)
         except OPDConsult.DoesNotExist:
             from rest_framework.exceptions import NotFound
@@ -393,11 +497,33 @@ class OPDConsultViewSet(viewsets.ModelViewSet):
         except ServiceVisit.DoesNotExist:
             return Response({"detail": "Service visit not found"}, status=status.HTTP_404_NOT_FOUND)
         
-        # Check if consult exists
-        consult, created = OPDConsult.objects.get_or_create(
-            service_visit=service_visit,
-            defaults={"consultant": request.user}
-        )
+        # Find or create OPD ServiceVisitItem
+        opd_item = service_visit.items.filter(service__category="OPD").first()
+        
+        if not opd_item:
+            return Response({"detail": "No OPD service found in this visit"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Check if consult exists (prefer item-based, fallback to legacy)
+        consult = None
+        if hasattr(opd_item, 'opd_consult'):
+            consult = opd_item.opd_consult
+            created = False
+        else:
+            # Try legacy
+            consult = OPDConsult.objects.filter(service_visit=service_visit).first()
+            if consult:
+                # Migrate to item-based
+                consult.service_visit_item = opd_item
+                consult.save()
+                created = False
+            else:
+                # Create new
+                consult = OPDConsult.objects.create(
+                    service_visit_item=opd_item,
+                    service_visit=service_visit,  # Keep for backward compatibility
+                    consultant=request.user
+                )
+                created = True
         
         if not created:
             # Update consult
@@ -475,16 +601,22 @@ class PDFViewSet(viewsets.ViewSet):
         except Invoice.DoesNotExist:
             return Response({"detail": "Invoice not found"}, status=status.HTTP_404_NOT_FOUND)
         
+        # Generate receipt number if not exists (idempotent - only on first payment)
+        if not invoice.receipt_number:
+            from apps.studies.models import ReceiptSequence
+            with transaction.atomic():
+                # Double-check in transaction to avoid race condition
+                invoice.refresh_from_db()
+                if not invoice.receipt_number:
+                    invoice.receipt_number = ReceiptSequence.get_next_receipt_number()
+                    invoice.save()
+        
         # Generate receipt PDF
         from .pdf import build_service_visit_receipt_pdf
-        from apps.studies.models import ReceiptSequence
-        
-        # Generate receipt number if not exists
-        receipt_number = ReceiptSequence.get_next_receipt_number()
         pdf_file = build_service_visit_receipt_pdf(service_visit, invoice)
         
         response = HttpResponse(pdf_file.read(), content_type="application/pdf")
-        response["Content-Disposition"] = f'inline; filename="receipt_{service_visit.visit_id}.pdf"'
+        response["Content-Disposition"] = f'inline; filename="receipt_{invoice.receipt_number or service_visit.visit_id}.pdf"'
         return response
     
     @action(detail=True, methods=["get"], url_path="report")
@@ -492,8 +624,22 @@ class PDFViewSet(viewsets.ViewSet):
         """Get USG report PDF"""
         try:
             service_visit = ServiceVisit.objects.get(id=pk)
-            report = service_visit.usg_report
+            # Try to find USG report via ServiceVisitItem first, then fallback to legacy
+            report = None
+            for item in service_visit.items.filter(service__category="Radiology", service__modality__code="USG"):
+                if hasattr(item, 'usg_report'):
+                    report = item.usg_report
+                    break
+            if not report:
+                # Legacy: try direct relationship
+                try:
+                    report = service_visit.usg_reports.first()
+                except:
+                    pass
         except (ServiceVisit.DoesNotExist, USGReport.DoesNotExist):
+            return Response({"detail": "Report not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        if not report:
             return Response({"detail": "Report not found"}, status=status.HTTP_404_NOT_FOUND)
         
         if not report.published_pdf_path:
@@ -513,8 +659,22 @@ class PDFViewSet(viewsets.ViewSet):
         """Get OPD prescription PDF"""
         try:
             service_visit = ServiceVisit.objects.get(id=pk)
-            consult = service_visit.opd_consult
+            # Try to find OPD consult via ServiceVisitItem first, then fallback to legacy
+            consult = None
+            for item in service_visit.items.filter(service__category="OPD"):
+                if hasattr(item, 'opd_consult'):
+                    consult = item.opd_consult
+                    break
+            if not consult:
+                # Legacy: try direct relationship
+                try:
+                    consult = service_visit.opd_consults.first()
+                except:
+                    pass
         except (ServiceVisit.DoesNotExist, OPDConsult.DoesNotExist):
+            return Response({"detail": "Prescription not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        if not consult:
             return Response({"detail": "Prescription not found"}, status=status.HTTP_404_NOT_FOUND)
         
         if not consult.published_pdf_path:

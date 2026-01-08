@@ -1,29 +1,45 @@
 from django.contrib import admin
 from .models import (
-    ServiceCatalog, ServiceVisit, Invoice, Payment,
+    ServiceCatalog, ServiceVisit, ServiceVisitItem, Invoice, Payment,
     USGReport, OPDVitals, OPDConsult, StatusAuditLog
 )
 
 
 @admin.register(ServiceCatalog)
 class ServiceCatalogAdmin(admin.ModelAdmin):
+    """
+    DEPRECATED: Use catalog.Service instead.
+    This model is kept for migration compatibility only.
+    """
     list_display = ["code", "name", "default_price", "turnaround_time", "is_active"]
     list_filter = ["is_active"]
     search_fields = ["code", "name"]
+    readonly_fields = ["id", "created_at", "updated_at"]
+
+
+@admin.register(ServiceVisitItem)
+class ServiceVisitItemAdmin(admin.ModelAdmin):
+    list_display = ["service_visit", "service", "service_name_snapshot", "price_snapshot", "status", "created_at"]
+    list_filter = ["status", "department_snapshot", "created_at"]
+    search_fields = ["service_visit__visit_id", "service__name", "service_name_snapshot"]
+    readonly_fields = ["created_at", "updated_at"]
 
 
 @admin.register(ServiceVisit)
 class ServiceVisitAdmin(admin.ModelAdmin):
-    list_display = ["visit_id", "patient", "service", "status", "registered_at", "created_by"]
-    list_filter = ["status", "service", "registered_at"]
+    list_display = ["visit_id", "patient", "status", "registered_at", "created_by"]
+    list_filter = ["status", "registered_at"]
     search_fields = ["visit_id", "patient__name", "patient__patient_reg_no", "patient__mrn"]
     readonly_fields = ["visit_id", "registered_at", "updated_at"]
+    filter_horizontal = []  # Remove service filter since it's now via items
 
 
 @admin.register(Invoice)
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display = ["service_visit", "total_amount", "net_amount", "balance_amount"]
-    search_fields = ["service_visit__visit_id"]
+    list_display = ["service_visit", "subtotal", "discount", "total_amount", "net_amount", "balance_amount", "receipt_number"]
+    list_filter = ["created_at"]
+    search_fields = ["service_visit__visit_id", "receipt_number"]
+    readonly_fields = ["receipt_number", "created_at", "updated_at"]
 
 
 @admin.register(Payment)

@@ -18,12 +18,17 @@ interface Patient {
   address: string;
 }
 
-interface ServiceCatalog {
+interface Service {
   id: string;
   code: string;
   name: string;
-  default_price: number;
-  turnaround_time: number;
+  price: number;
+  charges: number;
+  category: string;
+  modality: {
+    code: string;
+    name: string;
+  };
   is_active: boolean;
 }
 
@@ -48,8 +53,8 @@ export default function RegistrationPage() {
   });
   
   // Service registration state
-  const [services, setServices] = useState<ServiceCatalog[]>([]);
-  const [selectedService, setSelectedService] = useState<ServiceCatalog | null>(null);
+  const [services, setServices] = useState<Service[]>([]);
+  const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [servicePrice, setServicePrice] = useState("");
   const [discount, setDiscount] = useState("");
   const [amountPaid, setAmountPaid] = useState("");
@@ -64,11 +69,27 @@ export default function RegistrationPage() {
   const loadServices = async () => {
     if (!token) return;
     try {
-      const data = await apiGet("/workflow/service-catalog/", token);
+      // Use unified catalog API
+      const data = await apiGet("/services/", token);
       setServices(data.results || data || []);
     } catch (err: any) {
       setError(err.message || "Failed to load services");
     }
+  };
+  
+  const toggleServiceSelection = (service: Service) => {
+    setSelectedServices(prev => {
+      const exists = prev.find(s => s.id === service.id);
+      if (exists) {
+        return prev.filter(s => s.id !== service.id);
+      } else {
+        const updated = [...prev, service];
+        // Recalculate price from selected services
+        const totalPrice = updated.reduce((sum, s) => sum + (s.price || s.charges || 0), 0);
+        setServicePrice(totalPrice.toString());
+        return updated;
+      }
+    });
   };
   
   const searchPatients = async () => {
@@ -132,17 +153,19 @@ export default function RegistrationPage() {
   };
   
   const calculateTotals = () => {
-    const total = parseFloat(servicePrice) || 0;
+    // Calculate subtotal from selected services
+    const subtotal = selectedServices.reduce((sum, s) => sum + (s.price || s.charges || 0), 0);
+    const total = parseFloat(servicePrice) || subtotal;
     const disc = parseFloat(discount) || 0;
     const net = total - disc;
     const paid = parseFloat(amountPaid) || net;
     const balance = net - paid;
-    return { total, discount: disc, net, paid, balance };
+    return { subtotal, total, discount: disc, net, paid, balance };
   };
   
   const saveVisit = async (printReceipt: boolean = false) => {
-    if (!token || !selectedPatient || !selectedService) {
-      setError("Please select a patient and service");
+    if (!token || !selectedPatient || selectedServices.length === 0) {
+      setError("Please select a patient and at least one service");
       return;
     }
     
@@ -152,11 +175,11 @@ export default function RegistrationPage() {
       const totals = calculateTotals();
       const visitData = {
         patient_id: selectedPatient.id,
-        service_id: selectedService.id,
+        service_ids: selectedServices.map(s => s.id), // Multiple services
+        subtotal: totals.subtotal,
         total_amount: totals.total,
         discount: totals.discount,
         net_amount: totals.net,
-        balance_amount: totals.balance,
         amount_paid: totals.paid,
         payment_method: paymentMethod,
       };
@@ -165,7 +188,7 @@ export default function RegistrationPage() {
       setSuccess(`Service visit created: ${visit.visit_id}`);
       
       // Reset form
-      setSelectedService(null);
+      setSelectedServices([]);
       setServicePrice("");
       setDiscount("");
       setAmountPaid("");
@@ -383,44 +406,48 @@ export default function RegistrationPage() {
           <h2>Service Registration</h2>
           
           <div style={{ marginBottom: 16 }}>
-            <label>Select Service:</label>
-            <select
-              value={selectedService?.id || ""}
-              onChange={(e) => {
-                const service = services.find(s => s.id === e.target.value);
-                setSelectedService(service || null);
-                if (service) {
-                  setServicePrice(service.default_price.toString());
-                  setAmountPaid(service.default_price.toString());
-                }
-              }}
-              style={{ width: "100%", padding: 8, fontSize: 14 }}
-            >
-              <option value="">-- Select Service --</option>
-              {services.filter(s => s.is_active).map(s => (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.code}) - Rs. {s.default_price}
-                </option>
-              ))}
-            </select>
+            <label>Select Services (multiple allowed):</label>
+            <div style={{ border: "1px solid #ddd", borderRadius: 4, maxHeight: 200, overflowY: "auto", padding: 8 }}>
+              {services.filter(s => s.is_active).map(s => {
+                const isSelected = selectedServices.find(sel => sel.id === s.id);
+                return (
+                  <div
+                    key={s.id}
+                    onClick={() => toggleServiceSelection(s)}
+                    style={{
+                      padding: 8,
+                      marginBottom: 4,
+                      border: isSelected ? "2px solid #007bff" : "1px solid #eee",
+                      borderRadius: 4,
+                      cursor: "pointer",
+                      backgroundColor: isSelected ? "#e7f3ff" : "white",
+                    }}
+                  >
+                    <strong>{s.name}</strong> ({s.code || s.modality?.code || ""}) - Rs. {s.price || s.charges || 0}
+                    {isSelected && <span style={{ float: "right", color: "#007bff" }}>✓</span>}
+                  </div>
+                );
+              })}
+            </div>
+            {selectedServices.length > 0 && (
+              <div style={{ marginTop: 8, padding: 8, backgroundColor: "#f0f0f0", borderRadius: 4 }}>
+                <strong>Selected ({selectedServices.length}):</strong> {selectedServices.map(s => s.name).join(", ")}
+              </div>
+            )}
           </div>
           
-          {selectedService && (
+          {selectedServices.length > 0 && (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-                <div>
-                  <label>Service Price:</label>
+                  <div>
+                  <label>Subtotal (from services):</label>
                   <input
                     type="number"
                     value={servicePrice}
-                    onChange={(e) => {
-                      setServicePrice(e.target.value);
-                      const price = parseFloat(e.target.value) || 0;
-                      const disc = parseFloat(discount) || 0;
-                      setAmountPaid((price - disc).toString());
-                    }}
-                    style={{ width: "100%", padding: 8 }}
+                    readOnly
+                    style={{ width: "100%", padding: 8, backgroundColor: "#f5f5f5" }}
                   />
+                  <small>Auto-calculated from selected services</small>
                 </div>
                 <div>
                   <label>Discount:</label>

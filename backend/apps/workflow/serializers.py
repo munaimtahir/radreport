@@ -2,16 +2,29 @@ from rest_framework import serializers
 from django.utils import timezone
 from decimal import Decimal
 from .models import (
-    ServiceCatalog, ServiceVisit, Invoice, Payment,
+    ServiceCatalog, ServiceVisit, ServiceVisitItem, Invoice, Payment,
     USGReport, OPDVitals, OPDConsult, StatusAuditLog
 )
 from apps.patients.models import Patient
 from apps.patients.serializers import PatientSerializer
+from apps.catalog.models import Service as CatalogService
 
 
+# DEPRECATED: Use catalog.Service API instead
 class ServiceCatalogSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceCatalog
+        fields = "__all__"
+        read_only_fields = ["created_at", "updated_at"]
+
+
+class ServiceVisitItemSerializer(serializers.ModelSerializer):
+    service_name = serializers.CharField(source="service.name", read_only=True)
+    service_code = serializers.CharField(source="service.code", read_only=True)
+    service_category = serializers.CharField(source="service.category", read_only=True)
+    
+    class Meta:
+        model = ServiceVisitItem
         fields = "__all__"
         read_only_fields = ["created_at", "updated_at"]
 
@@ -29,8 +42,11 @@ class ServiceVisitSerializer(serializers.ModelSerializer):
     patient_name = serializers.CharField(source="patient.name", read_only=True)
     patient_reg_no = serializers.CharField(source="patient.patient_reg_no", read_only=True)
     patient_mrn = serializers.CharField(source="patient.mrn", read_only=True)
-    service_name = serializers.CharField(source="service.name", read_only=True)
-    service_code = serializers.CharField(source="service.code", read_only=True)
+    # Legacy fields (for backward compatibility)
+    service_name = serializers.SerializerMethodField()
+    service_code = serializers.SerializerMethodField()
+    # New: items relationship
+    items = ServiceVisitItemSerializer(many=True, read_only=True)
     created_by_name = serializers.CharField(source="created_by.username", read_only=True)
     assigned_to_name = serializers.CharField(source="assigned_to.username", read_only=True)
     status_audit_logs = StatusAuditLogSerializer(many=True, read_only=True)
@@ -39,6 +55,18 @@ class ServiceVisitSerializer(serializers.ModelSerializer):
         model = ServiceVisit
         fields = "__all__"
         read_only_fields = ["visit_id", "registered_at", "updated_at"]
+    
+    def get_service_name(self, obj):
+        """Return first item's service name, or legacy service name"""
+        if obj.items.exists():
+            return obj.items.first().service_name_snapshot
+        return obj.service.name if obj.service else None
+    
+    def get_service_code(self, obj):
+        """Return first item's service code, or legacy service code"""
+        if obj.items.exists():
+            return obj.items.first().service.code if obj.items.first().service else None
+        return obj.service.code if obj.service else None
 
 
 class InvoiceSerializer(serializers.ModelSerializer):
@@ -63,8 +91,8 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 
 class USGReportSerializer(serializers.ModelSerializer):
-    service_visit_id = serializers.UUIDField(source="service_visit.id", read_only=True)
-    visit_id = serializers.CharField(source="service_visit.visit_id", read_only=True)
+    service_visit_id = serializers.SerializerMethodField()
+    visit_id = serializers.SerializerMethodField()
     created_by_name = serializers.CharField(source="created_by.username", read_only=True)
     updated_by_name = serializers.CharField(source="updated_by.username", read_only=True)
     verifier_name = serializers.CharField(source="verifier.username", read_only=True)
@@ -75,17 +103,35 @@ class USGReportSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["saved_at", "published_pdf_path", "verified_at"]
     
+    def get_service_visit_id(self, obj):
+        sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
+        return str(sv.id) if sv else None
+    
+    def get_visit_id(self, obj):
+        sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
+        return sv.visit_id if sv else None
+    
     def get_published_pdf_url(self, obj):
         if obj.published_pdf_path:
             request = self.context.get("request")
             if request:
-                return request.build_absolute_uri(f"/api/pdf/report/{obj.service_visit.id}/")
+                sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
+                if sv:
+                    return request.build_absolute_uri(f"/api/pdf/report/{sv.id}/")
         return None
 
 
 class OPDVitalsSerializer(serializers.ModelSerializer):
-    service_visit_id = serializers.UUIDField(source="service_visit.id", read_only=True)
-    visit_id = serializers.CharField(source="service_visit.visit_id", read_only=True)
+    service_visit_id = serializers.SerializerMethodField()
+    visit_id = serializers.SerializerMethodField()
+    
+    def get_service_visit_id(self, obj):
+        sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
+        return str(sv.id) if sv else None
+    
+    def get_visit_id(self, obj):
+        sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
+        return sv.visit_id if sv else None
     entered_by_name = serializers.CharField(source="entered_by.username", read_only=True)
     
     class Meta:
@@ -95,8 +141,16 @@ class OPDVitalsSerializer(serializers.ModelSerializer):
 
 
 class OPDConsultSerializer(serializers.ModelSerializer):
-    service_visit_id = serializers.UUIDField(source="service_visit.id", read_only=True)
-    visit_id = serializers.CharField(source="service_visit.visit_id", read_only=True)
+    service_visit_id = serializers.SerializerMethodField()
+    visit_id = serializers.SerializerMethodField()
+    
+    def get_service_visit_id(self, obj):
+        sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
+        return str(sv.id) if sv else None
+    
+    def get_visit_id(self, obj):
+        sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
+        return sv.visit_id if sv else None
     consultant_name = serializers.CharField(source="consultant.username", read_only=True)
     published_pdf_url = serializers.SerializerMethodField()
     
@@ -109,12 +163,14 @@ class OPDConsultSerializer(serializers.ModelSerializer):
         if obj.published_pdf_path:
             request = self.context.get("request")
             if request:
-                return request.build_absolute_uri(f"/api/pdf/prescription/{obj.service_visit.id}/")
+                sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
+                if sv:
+                    return request.build_absolute_uri(f"/api/pdf/prescription/{sv.id}/")
         return None
 
 
 class ServiceVisitCreateSerializer(serializers.Serializer):
-    """Serializer for creating service visit at registration"""
+    """Serializer for creating service visit at registration with multiple services"""
     patient_id = serializers.UUIDField(required=False, allow_null=True)
     # Patient fields (if creating new)
     name = serializers.CharField(max_length=200, required=False)
@@ -124,12 +180,22 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
     phone = serializers.CharField(max_length=30, required=False, allow_blank=True)
     address = serializers.CharField(max_length=300, required=False, allow_blank=True)
     
-    # Service visit fields
-    service_id = serializers.UUIDField(required=True)
-    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=True)
+    # Service fields - NEW: supports multiple services
+    service_ids = serializers.ListField(
+        child=serializers.UUIDField(),
+        required=True,
+        min_length=1,
+        help_text="List of catalog.Service IDs to order"
+    )
+    # Legacy single service_id (for backward compatibility)
+    service_id = serializers.UUIDField(required=False, allow_null=True)
+    
+    # Billing fields
+    subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, required=True)
     discount = serializers.DecimalField(max_digits=10, decimal_places=2, default=0)
-    net_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=True)
-    balance_amount = serializers.DecimalField(max_digits=10, decimal_places=2, default=0)
+    discount_percentage = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+    total_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=True)
+    net_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     
     # Payment fields
     amount_paid = serializers.DecimalField(max_digits=10, decimal_places=2, required=True)
@@ -143,59 +209,112 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
         if not patient_id and not any(data.get(field) for field in patient_fields):
             raise serializers.ValidationError("Either patient_id or patient name must be provided")
         
+        # Ensure service_ids or service_id is provided
+        service_ids = data.get("service_ids", [])
+        service_id = data.get("service_id")
+        if not service_ids and not service_id:
+            raise serializers.ValidationError("Either service_ids or service_id must be provided")
+        
         return data
     
     def create(self, validated_data):
+        from django.db import transaction
         request = self.context.get("request")
         
-        # Get or create patient
-        patient_id = validated_data.pop("patient_id", None)
-        if patient_id:
-            patient = Patient.objects.get(id=patient_id)
-        else:
-            patient_data = {
-                k: v for k, v in validated_data.items()
-                if k in ["name", "age", "date_of_birth", "gender", "phone", "address"]
-            }
-            patient = Patient.objects.create(**patient_data)
-        
-        # Get service
-        service = ServiceCatalog.objects.get(id=validated_data["service_id"])
-        
-        # Create service visit
-        service_visit = ServiceVisit.objects.create(
-            patient=patient,
-            service=service,
-            status="REGISTERED",
-            created_by=request.user if request else None,
-        )
-        
-        # Create invoice
-        invoice = Invoice.objects.create(
-            service_visit=service_visit,
-            total_amount=validated_data["total_amount"],
-            discount=validated_data.get("discount", Decimal("0")),
-            net_amount=validated_data["net_amount"],
-            balance_amount=validated_data.get("balance_amount", Decimal("0")),
-        )
-        
-        # Create payment
-        payment = Payment.objects.create(
-            service_visit=service_visit,
-            amount_paid=validated_data["amount_paid"],
-            method=validated_data.get("payment_method", "cash"),
-            received_by=request.user if request else None,
-        )
-        
-        # Log status transition
-        StatusAuditLog.objects.create(
-            service_visit=service_visit,
-            from_status="REGISTERED",
-            to_status="REGISTERED",
-            changed_by=request.user if request else None,
-        )
-        
-        return service_visit
+        with transaction.atomic():
+            # Get or create patient
+            patient_id = validated_data.pop("patient_id", None)
+            if patient_id:
+                patient = Patient.objects.get(id=patient_id)
+            else:
+                patient_data = {
+                    k: v for k, v in validated_data.items()
+                    if k in ["name", "age", "date_of_birth", "gender", "phone", "address"]
+                }
+                patient = Patient.objects.create(**patient_data)
+            
+            # Get services - support both new (service_ids) and legacy (service_id) formats
+            service_ids = validated_data.get("service_ids", [])
+            legacy_service_id = validated_data.get("service_id")
+            
+            if not service_ids and legacy_service_id:
+                service_ids = [legacy_service_id]
+            
+            services = CatalogService.objects.filter(id__in=service_ids, is_active=True)
+            if services.count() != len(service_ids):
+                raise serializers.ValidationError("One or more services not found or inactive")
+            
+            # Create service visit (without legacy service FK)
+            service_visit = ServiceVisit.objects.create(
+                patient=patient,
+                status="REGISTERED",
+                created_by=request.user if request else None,
+            )
+            
+            # Create ServiceVisitItems with snapshots
+            items = []
+            subtotal = Decimal("0")
+            for service in services:
+                item = ServiceVisitItem.objects.create(
+                    service_visit=service_visit,
+                    service=service,
+                    service_name_snapshot=service.name,
+                    department_snapshot=service.category or (service.modality.code if service.modality else ""),
+                    price_snapshot=service.price,
+                    status="REGISTERED",
+                )
+                items.append(item)
+                subtotal += service.price
+            
+            # Calculate amounts
+            subtotal_calc = validated_data.get("subtotal", subtotal)
+            discount = validated_data.get("discount", Decimal("0"))
+            discount_percentage = validated_data.get("discount_percentage")
+            
+            # Apply discount percentage if provided
+            if discount_percentage:
+                discount = subtotal_calc * (discount_percentage / Decimal("100"))
+            
+            total_amount = validated_data.get("total_amount", subtotal_calc - discount)
+            net_amount = validated_data.get("net_amount", total_amount)
+            amount_paid = validated_data.get("amount_paid", Decimal("0"))
+            balance_amount = net_amount - amount_paid
+            
+            # Create invoice
+            invoice = Invoice.objects.create(
+                service_visit=service_visit,
+                subtotal=subtotal_calc,
+                discount=discount,
+                discount_percentage=discount_percentage,
+                total_amount=total_amount,
+                net_amount=net_amount,
+                balance_amount=max(Decimal("0"), balance_amount),
+            )
+            
+            # Create payment if amount_paid > 0
+            if amount_paid > 0:
+                payment = Payment.objects.create(
+                    service_visit=service_visit,
+                    amount_paid=amount_paid,
+                    method=validated_data.get("payment_method", "cash"),
+                    received_by=request.user if request else None,
+                )
+                
+                # Generate receipt number on first payment
+                if not invoice.receipt_number:
+                    from apps.studies.models import ReceiptSequence
+                    invoice.receipt_number = ReceiptSequence.get_next_receipt_number()
+                    invoice.save()
+            
+            # Log status transition
+            StatusAuditLog.objects.create(
+                service_visit=service_visit,
+                from_status="REGISTERED",
+                to_status="REGISTERED",
+                changed_by=request.user if request else None,
+            )
+            
+            return service_visit
 
 
 class StatusTransitionSerializer(serializers.Serializer):

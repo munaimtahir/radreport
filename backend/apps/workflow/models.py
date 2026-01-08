@@ -3,6 +3,7 @@ from django.db import models
 from django.conf import settings
 from django.utils import timezone
 from django.db import transaction
+from decimal import Decimal
 
 # ServiceVisit Status Choices
 SERVICE_VISIT_STATUS = (
@@ -23,8 +24,10 @@ PAYMENT_METHOD_CHOICES = [
 ]
 
 
+# ServiceCatalog is DEPRECATED - use catalog.Service instead
+# Keeping for migration compatibility only
 class ServiceCatalog(models.Model):
-    """Service catalog for USG, OPD, etc."""
+    """DEPRECATED: Use catalog.Service instead. This model is kept for migration compatibility only."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     code = models.CharField(max_length=50, unique=True)
     name = models.CharField(max_length=150)
@@ -40,9 +43,11 @@ class ServiceCatalog(models.Model):
             models.Index(fields=["code"]),
             models.Index(fields=["is_active"]),
         ]
+        verbose_name = "Service Catalog (Deprecated)"
+        verbose_name_plural = "Service Catalogs (Deprecated)"
 
     def __str__(self):
-        return f"{self.code} - {self.name}"
+        return f"{self.code} - {self.name} (DEPRECATED)"
 
 
 class ServiceVisit(models.Model):
@@ -50,7 +55,8 @@ class ServiceVisit(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     visit_id = models.CharField(max_length=30, unique=True, editable=False, db_index=True)
     patient = models.ForeignKey("patients.Patient", on_delete=models.PROTECT, related_name="service_visits")
-    service = models.ForeignKey(ServiceCatalog, on_delete=models.PROTECT, related_name="service_visits")
+    # DEPRECATED: service field kept for migration compatibility. Use items relationship instead.
+    service = models.ForeignKey(ServiceCatalog, on_delete=models.PROTECT, related_name="service_visits", null=True, blank=True)
     status = models.CharField(max_length=30, choices=SERVICE_VISIT_STATUS, default="REGISTERED", db_index=True)
     
     # Assignment
@@ -95,19 +101,84 @@ class ServiceVisit(models.Model):
         super().save(*args, **kwargs)
 
     def __str__(self):
-        return f"{self.visit_id} - {self.patient.name} - {self.service.name}"
+        service_name = self.service.name if self.service else "Multiple Services"
+        return f"{self.visit_id} - {self.patient.name} - {service_name}"
+
+
+class ServiceVisitItem(models.Model):
+    """Line item for a service visit - supports multiple services per visit"""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    service_visit = models.ForeignKey(ServiceVisit, on_delete=models.CASCADE, related_name="items")
+    service = models.ForeignKey("catalog.Service", on_delete=models.PROTECT, related_name="service_visit_items")
+    
+    # Snapshots at time of billing
+    service_name_snapshot = models.CharField(max_length=150, help_text="Service name at time of order")
+    department_snapshot = models.CharField(max_length=50, help_text="Department/category at time of order (USG/OPD/etc)")
+    price_snapshot = models.DecimalField(max_digits=10, decimal_places=2, help_text="Price at time of order")
+    
+    # Per-item status (can differ from service_visit.status for multi-item visits)
+    status = models.CharField(max_length=30, choices=SERVICE_VISIT_STATUS, default="REGISTERED", db_index=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["created_at"]
+        indexes = [
+            models.Index(fields=["service_visit"]),
+            models.Index(fields=["service"]),
+            models.Index(fields=["status"]),
+        ]
+
+    def save(self, *args, **kwargs):
+        """Auto-populate snapshots from service if not set"""
+        if not self.service_name_snapshot and self.service:
+            self.service_name_snapshot = self.service.name
+        if not self.department_snapshot and self.service:
+            # Use category or modality code as department
+            self.department_snapshot = self.service.category or (self.service.modality.code if self.service.modality else "")
+        if not self.price_snapshot and self.service:
+            self.price_snapshot = self.service.price
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.service_visit.visit_id} - {self.service_name_snapshot}"
 
 
 class Invoice(models.Model):
     """Invoice for a service visit"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     service_visit = models.OneToOneField(ServiceVisit, on_delete=models.CASCADE, related_name="invoice")
-    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    net_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
-    balance_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    
+    # Billing amounts
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Sum of line items before discount")
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Discount amount (fixed)")
+    discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True, help_text="Discount percentage (if applicable)")
+    total_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Subtotal - discount")
+    net_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Alias for total_amount")
+    balance_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Amount still due after payments")
+    
+    # Receipt number (generated when first payment is made)
+    receipt_number = models.CharField(max_length=20, unique=True, null=True, blank=True, editable=False, db_index=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    def calculate_balance(self):
+        """Calculate balance from payments"""
+        total_paid = sum(p.amount_paid for p in self.service_visit.payments.all())
+        self.balance_amount = max(Decimal('0'), self.net_amount - total_paid)
+        return self.balance_amount
+    
+    def save(self, *args, **kwargs):
+        """Auto-calculate net_amount and balance"""
+        # Ensure net_amount = total_amount (for consistency)
+        if not self.net_amount:
+            self.net_amount = self.total_amount
+        # Calculate balance if not explicitly set
+        if self.balance_amount == 0 and self.service_visit_id:
+            self.calculate_balance()
+        super().save(*args, **kwargs)
 
     class Meta:
         ordering = ["-created_at"]
@@ -135,7 +206,9 @@ class Payment(models.Model):
 class USGReport(models.Model):
     """USG report data"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    service_visit = models.OneToOneField(ServiceVisit, on_delete=models.CASCADE, related_name="usg_report")
+    # Link to ServiceVisitItem for the USG service (preferred) or ServiceVisit (fallback for legacy)
+    service_visit_item = models.OneToOneField("ServiceVisitItem", on_delete=models.CASCADE, related_name="usg_report", null=True, blank=True)
+    service_visit = models.ForeignKey(ServiceVisit, on_delete=models.CASCADE, related_name="usg_reports", null=True, blank=True, help_text="Legacy field - use service_visit_item instead")
     report_json = models.JSONField(default=dict, help_text="Structured report data")
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_usg_reports")
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="updated_usg_reports")
@@ -149,13 +222,16 @@ class USGReport(models.Model):
         ordering = ["-saved_at"]
 
     def __str__(self):
-        return f"USG Report for {self.service_visit.visit_id}"
+        visit_id = self.service_visit_item.service_visit.visit_id if self.service_visit_item else (self.service_visit.visit_id if self.service_visit else "Unknown")
+        return f"USG Report for {visit_id}"
 
 
 class OPDVitals(models.Model):
     """OPD vitals data"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    service_visit = models.OneToOneField(ServiceVisit, on_delete=models.CASCADE, related_name="opd_vitals")
+    # Link to ServiceVisitItem for the OPD service (preferred) or ServiceVisit (fallback for legacy)
+    service_visit_item = models.OneToOneField("ServiceVisitItem", on_delete=models.CASCADE, related_name="opd_vitals", null=True, blank=True)
+    service_visit = models.ForeignKey(ServiceVisit, on_delete=models.CASCADE, related_name="opd_vitals_list", null=True, blank=True, help_text="Legacy field - use service_visit_item instead")
     bp_systolic = models.PositiveIntegerField(null=True, blank=True)
     bp_diastolic = models.PositiveIntegerField(null=True, blank=True)
     pulse = models.PositiveIntegerField(null=True, blank=True)
@@ -172,13 +248,16 @@ class OPDVitals(models.Model):
         ordering = ["-entered_at"]
 
     def __str__(self):
-        return f"OPD Vitals for {self.service_visit.visit_id}"
+        visit_id = self.service_visit_item.service_visit.visit_id if self.service_visit_item else (self.service_visit.visit_id if self.service_visit else "Unknown")
+        return f"OPD Vitals for {visit_id}"
 
 
 class OPDConsult(models.Model):
     """OPD consultation data"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    service_visit = models.OneToOneField(ServiceVisit, on_delete=models.CASCADE, related_name="opd_consult")
+    # Link to ServiceVisitItem for the OPD service (preferred) or ServiceVisit (fallback for legacy)
+    service_visit_item = models.OneToOneField("ServiceVisitItem", on_delete=models.CASCADE, related_name="opd_consult", null=True, blank=True)
+    service_visit = models.ForeignKey(ServiceVisit, on_delete=models.CASCADE, related_name="opd_consults", null=True, blank=True, help_text="Legacy field - use service_visit_item instead")
     diagnosis = models.TextField(blank=True, default="")
     notes = models.TextField(blank=True, default="")
     medicines_json = models.JSONField(default=list, help_text="List of medicines prescribed")
@@ -193,7 +272,8 @@ class OPDConsult(models.Model):
         ordering = ["-consult_at"]
 
     def __str__(self):
-        return f"OPD Consult for {self.service_visit.visit_id}"
+        visit_id = self.service_visit_item.service_visit.visit_id if self.service_visit_item else (self.service_visit.visit_id if self.service_visit else "Unknown")
+        return f"OPD Consult for {visit_id}"
 
 
 class StatusAuditLog(models.Model):

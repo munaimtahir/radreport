@@ -11,11 +11,22 @@ from apps.studies.models import Study
 from apps.audit.models import AuditLog
 
 class ReportViewSet(viewsets.ModelViewSet):
+    """
+    LEGACY: Report model is deprecated. Use USGReport/OPDConsult workflow instead.
+    Write operations (POST/PUT/PATCH/DELETE) are blocked for non-admin users.
+    Read operations are allowed for backward compatibility.
+    """
     queryset = Report.objects.select_related("study","study__patient","study__service","template_version").all()
     serializer_class = ReportSerializer
     permission_classes = [permissions.IsAuthenticated]
     search_fields = ["study__accession", "study__patient__name", "study__service__name"]
     filterset_fields = ["status", "study__service__modality__code"]
+    
+    def get_permissions(self):
+        """Block write operations for non-admin users"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'create_for_study', 'save_draft', 'finalize']:
+            return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticated()]
 
     @action(detail=False, methods=["post"])
     def create_for_study(self, request):

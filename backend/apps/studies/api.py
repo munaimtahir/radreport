@@ -11,6 +11,11 @@ from .models import Study, Visit, OrderItem, ReceiptSequence, ReceiptSettings
 from .serializers import StudySerializer, VisitSerializer, OrderItemSerializer, UnifiedIntakeSerializer, ReceiptSettingsSerializer
 
 class StudyViewSet(viewsets.ModelViewSet):
+    """
+    LEGACY: Study model is deprecated. Use ServiceVisit workflow instead.
+    Write operations (POST/PUT/PATCH/DELETE) are blocked for non-admin users.
+    Read operations are allowed for backward compatibility.
+    """
     queryset = Study.objects.select_related("patient","service","service__modality").all()
     serializer_class = StudySerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -18,18 +23,35 @@ class StudyViewSet(viewsets.ModelViewSet):
     filterset_fields = ["status", "service__modality__code", "service"]
     ordering_fields = ["created_at", "accession", "status"]
 
+    def get_permissions(self):
+        """Block write operations for non-admin users"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticated()]
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
         context["request"] = self.request
         return context
 
 class VisitViewSet(viewsets.ModelViewSet):
+    """
+    LEGACY: Visit model is deprecated. Use ServiceVisit workflow instead.
+    Write operations (POST/PUT/PATCH/DELETE) are blocked for non-admin users.
+    Read operations are allowed for backward compatibility.
+    """
     queryset = Visit.objects.select_related("patient", "created_by").prefetch_related("items__service", "items__service__modality").all()
     serializer_class = VisitSerializer
     permission_classes = [permissions.IsAuthenticated]
     search_fields = ["visit_number", "patient__name", "patient__mrn"]
     filterset_fields = ["is_finalized", "patient"]
     ordering_fields = ["created_at", "visit_number"]
+    
+    def get_permissions(self):
+        """Block write operations for non-admin users"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy', 'unified_intake', 'finalize']:
+            return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticated()]
     
     @action(detail=False, methods=["post"], url_path="unified-intake")
     def unified_intake(self, request):
