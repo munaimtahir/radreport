@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet, apiPost, apiPatch } from "../ui/api";
 import { Link } from "react-router-dom";
+import PageHeader from "../ui/components/PageHeader";
+import ErrorAlert from "../ui/components/ErrorAlert";
+import Button from "../ui/components/Button";
 
 interface Patient {
   id: string;
@@ -136,42 +139,49 @@ export default function Studies() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h1>Studies</h1>
-        <div style={{ display: "flex", gap: 10 }}>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            style={{ padding: 8, fontSize: 14 }}
-          >
-            <option value="">All Statuses</option>
-            <option value="registered">Registered</option>
-            <option value="in_progress">In Progress</option>
-            <option value="draft">Draft</option>
-            <option value="final">Final</option>
-            <option value="delivered">Delivered</option>
-          </select>
-          <button
-            onClick={() => {
-              setEditing(null);
-              setFormData({
-                patient: "",
-                service: "",
-                indication: "",
-                status: "registered",
-                performed_by: "",
-                reported_by: "",
-              });
-              setShowForm(!showForm);
-            }}
-            style={{ padding: "8px 16px", fontSize: 14 }}
-          >
-            {showForm ? "Cancel" : "Add Study"}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Studies"
+        actions={
+          <>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              style={{
+                padding: "8px 12px",
+                fontSize: 14,
+                border: "1px solid #ddd",
+                borderRadius: 6,
+              }}
+            >
+              <option value="">All Statuses</option>
+              <option value="registered">Registered</option>
+              <option value="in_progress">In Progress</option>
+              <option value="draft">Draft</option>
+              <option value="final">Final</option>
+              <option value="delivered">Delivered</option>
+            </select>
+            <Button
+              variant={showForm ? "secondary" : "primary"}
+              onClick={() => {
+                setEditing(null);
+                setFormData({
+                  patient: "",
+                  service: "",
+                  indication: "",
+                  status: "registered",
+                  performed_by: "",
+                  reported_by: "",
+                });
+                setShowForm(!showForm);
+              }}
+            >
+              {showForm ? "Cancel" : "Add Study"}
+            </Button>
+          </>
+        }
+      />
 
-      {error && <div style={{ color: "red", marginBottom: 10 }}>{error}</div>}
+      {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
 
       {showForm && (
         <form
@@ -260,73 +270,80 @@ export default function Studies() {
             />
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
-            <button type="submit" style={{ padding: "10px 20px", fontSize: 14 }}>
+            <Button type="submit">
               {editing ? "Update" : "Create"} Study
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
       {loading ? (
-        <div>Loading...</div>
+        <div style={{ textAlign: "center", padding: 40, color: "#666" }}>Loading...</div>
+      ) : studies.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 40, color: "#999", border: "1px solid #e0e0e0", borderRadius: 8 }}>
+          No studies found.
+        </div>
       ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ padding: 10, textAlign: "left", border: "1px solid #ddd" }}>Accession</th>
-              <th style={{ padding: 10, textAlign: "left", border: "1px solid #ddd" }}>Patient</th>
-              <th style={{ padding: 10, textAlign: "left", border: "1px solid #ddd" }}>Service</th>
-              <th style={{ padding: 10, textAlign: "left", border: "1px solid #ddd" }}>Status</th>
-              <th style={{ padding: 10, textAlign: "left", border: "1px solid #ddd" }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {studies.map((s) => (
-              <tr key={s.id}>
-                <td style={{ padding: 10, border: "1px solid #ddd" }}>{s.accession}</td>
-                <td style={{ padding: 10, border: "1px solid #ddd" }}>{s.patient_name}</td>
-                <td style={{ padding: 10, border: "1px solid #ddd" }}>{s.service_name}</td>
-                <td style={{ padding: 10, border: "1px solid #ddd" }}>
-                  <span
-                    style={{
-                      padding: "4px 8px",
-                      borderRadius: 4,
-                      background: statusColors[s.status] || "#ccc",
-                      color: "white",
-                      fontSize: 12,
-                    }}
-                  >
-                    {s.status}
-                  </span>
-                </td>
-                <td style={{ padding: 10, border: "1px solid #ddd" }}>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <button onClick={() => handleEdit(s)} style={{ fontSize: 12 }}>
-                      Edit
-                    </button>
-                    {s.report && (
-                      <Link
-                        to={`/reports/${s.report.id}/edit`}
-                        style={{
-                          fontSize: 12,
-                          padding: "4px 8px",
-                          background: "#007bff",
-                          color: "white",
-                          textDecoration: "none",
-                          borderRadius: 4,
-                        }}
-                      >
-                        {s.report.status === "final" ? "View Report" : "Edit Report"}
-                      </Link>
-                    )}
-                  </div>
-                </td>
+        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "#f5f5f5" }}>
+                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Accession</th>
+                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Patient</th>
+                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Service</th>
+                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Status</th>
+                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {studies.map((s) => (
+                <tr key={s.id} style={{ borderBottom: "1px solid #eee" }}>
+                  <td style={{ padding: 12 }}>{s.accession}</td>
+                  <td style={{ padding: 12 }}>{s.patient_name}</td>
+                  <td style={{ padding: 12 }}>{s.service_name}</td>
+                  <td style={{ padding: 12 }}>
+                    <span
+                      style={{
+                        padding: "4px 8px",
+                        borderRadius: 4,
+                        background: statusColors[s.status] || "#ccc",
+                        color: "white",
+                        fontSize: 12,
+                        fontWeight: 500,
+                      }}
+                    >
+                      {s.status}
+                    </span>
+                  </td>
+                  <td style={{ padding: 12 }}>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Button variant="secondary" onClick={() => handleEdit(s)} style={{ padding: "4px 12px", fontSize: 12 }}>
+                        Edit
+                      </Button>
+                      {s.report && (
+                        <Link
+                          to={`/reports/${s.report.id}/edit`}
+                          style={{
+                            fontSize: 12,
+                            padding: "4px 12px",
+                            background: "#0B5ED7",
+                            color: "white",
+                            textDecoration: "none",
+                            borderRadius: 6,
+                            fontWeight: 500,
+                          }}
+                        >
+                          {s.report.status === "final" ? "View Report" : "Edit Report"}
+                        </Link>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-      {!loading && studies.length === 0 && <div style={{ marginTop: 20 }}>No studies found.</div>}
     </div>
   );
 }

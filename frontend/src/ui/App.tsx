@@ -23,6 +23,14 @@ function Shell() {
   const location = useLocation();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
+  // Helper function to check if a route is active (handles sub-routes)
+  const isActiveRoute = (path: string) => {
+    if (path === "/") {
+      return location.pathname === "/";
+    }
+    return location.pathname === path || location.pathname.startsWith(path + "/");
+  };
+
   useEffect(() => {
     if (token) {
       // Try to fetch logo from receipt settings
@@ -77,11 +85,11 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: location.pathname === "/" ? "#0B5ED7" : "#555",
-                backgroundColor: location.pathname === "/" ? "#f0f7ff" : "transparent",
+                color: isActiveRoute("/") ? "#0B5ED7" : "#555",
+                backgroundColor: isActiveRoute("/") ? "#f0f7ff" : "transparent",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: location.pathname === "/" ? 500 : 400,
+                fontWeight: isActiveRoute("/") ? 500 : 400,
               }}
             >
               Dashboard
@@ -96,11 +104,11 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: location.pathname === "/registration" ? "#0B5ED7" : "#555",
-                backgroundColor: location.pathname === "/registration" ? "#f0f7ff" : "transparent",
+                color: isActiveRoute("/registration") ? "#0B5ED7" : "#555",
+                backgroundColor: isActiveRoute("/registration") ? "#f0f7ff" : "transparent",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: location.pathname === "/registration" ? 500 : 400,
+                fontWeight: isActiveRoute("/registration") ? 500 : 400,
               }}
             >
               Registration
@@ -110,11 +118,11 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: location.pathname === "/worklists/usg" ? "#0B5ED7" : "#555",
-                backgroundColor: location.pathname === "/worklists/usg" ? "#f0f7ff" : "transparent",
+                color: isActiveRoute("/worklists/usg") ? "#0B5ED7" : "#555",
+                backgroundColor: isActiveRoute("/worklists/usg") ? "#f0f7ff" : "transparent",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: location.pathname === "/worklists/usg" ? 500 : 400,
+                fontWeight: isActiveRoute("/worklists/usg") ? 500 : 400,
               }}
             >
               USG Worklist
@@ -124,11 +132,11 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: location.pathname === "/worklists/opd-vitals" ? "#0B5ED7" : "#555",
-                backgroundColor: location.pathname === "/worklists/opd-vitals" ? "#f0f7ff" : "transparent",
+                color: isActiveRoute("/worklists/opd-vitals") ? "#0B5ED7" : "#555",
+                backgroundColor: isActiveRoute("/worklists/opd-vitals") ? "#f0f7ff" : "transparent",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: location.pathname === "/worklists/opd-vitals" ? 500 : 400,
+                fontWeight: isActiveRoute("/worklists/opd-vitals") ? 500 : 400,
               }}
             >
               OPD Vitals
@@ -138,11 +146,11 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: location.pathname === "/worklists/consultant" ? "#0B5ED7" : "#555",
-                backgroundColor: location.pathname === "/worklists/consultant" ? "#f0f7ff" : "transparent",
+                color: isActiveRoute("/worklists/consultant") ? "#0B5ED7" : "#555",
+                backgroundColor: isActiveRoute("/worklists/consultant") ? "#f0f7ff" : "transparent",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: location.pathname === "/worklists/consultant" ? 500 : 400,
+                fontWeight: isActiveRoute("/worklists/consultant") ? 500 : 400,
               }}
             >
               Consultant
@@ -152,11 +160,11 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: location.pathname === "/worklists/verification" ? "#0B5ED7" : "#555",
-                backgroundColor: location.pathname === "/worklists/verification" ? "#f0f7ff" : "transparent",
+                color: isActiveRoute("/worklists/verification") ? "#0B5ED7" : "#555",
+                backgroundColor: isActiveRoute("/worklists/verification") ? "#f0f7ff" : "transparent",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: location.pathname === "/worklists/verification" ? 500 : 400,
+                fontWeight: isActiveRoute("/worklists/verification") ? 500 : 400,
               }}
             >
               Verification
@@ -166,11 +174,11 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: location.pathname === "/reports" ? "#0B5ED7" : "#555",
-                backgroundColor: location.pathname === "/reports" ? "#f0f7ff" : "transparent",
+                color: isActiveRoute("/reports") ? "#0B5ED7" : "#555",
+                backgroundColor: isActiveRoute("/reports") ? "#f0f7ff" : "transparent",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: location.pathname === "/reports" ? 500 : 400,
+                fontWeight: isActiveRoute("/reports") ? 500 : 400,
               }}
             >
               Final Reports
@@ -185,11 +193,11 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: location.pathname === "/intake" ? "#0B5ED7" : "#555",
-                backgroundColor: location.pathname === "/intake" ? "#f0f7ff" : "transparent",
+                color: isActiveRoute("/intake") ? "#0B5ED7" : "#555",
+                backgroundColor: isActiveRoute("/intake") ? "#f0f7ff" : "transparent",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: location.pathname === "/intake" ? 500 : 400,
+                fontWeight: isActiveRoute("/intake") ? 500 : 400,
               }}
             >
               Front Desk Intake
@@ -199,11 +207,11 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: location.pathname === "/patients" ? "#0B5ED7" : "#555",
-                backgroundColor: location.pathname === "/patients" ? "#f0f7ff" : "transparent",
+                color: isActiveRoute("/patients") ? "#0B5ED7" : "#555",
+                backgroundColor: isActiveRoute("/patients") ? "#f0f7ff" : "transparent",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: location.pathname === "/patients" ? 500 : 400,
+                fontWeight: isActiveRoute("/patients") ? 500 : 400,
               }}
             >
               Patients
@@ -213,11 +221,11 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: location.pathname === "/studies" ? "#0B5ED7" : "#555",
-                backgroundColor: location.pathname === "/studies" ? "#f0f7ff" : "transparent",
+                color: isActiveRoute("/studies") ? "#0B5ED7" : "#555",
+                backgroundColor: isActiveRoute("/studies") ? "#f0f7ff" : "transparent",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: location.pathname === "/studies" ? 500 : 400,
+                fontWeight: isActiveRoute("/studies") ? 500 : 400,
               }}
             >
               Studies
@@ -227,11 +235,11 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: location.pathname === "/templates" ? "#0B5ED7" : "#555",
-                backgroundColor: location.pathname === "/templates" ? "#f0f7ff" : "transparent",
+                color: isActiveRoute("/templates") ? "#0B5ED7" : "#555",
+                backgroundColor: isActiveRoute("/templates") ? "#f0f7ff" : "transparent",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: location.pathname === "/templates" ? 500 : 400,
+                fontWeight: isActiveRoute("/templates") ? 500 : 400,
               }}
             >
               Templates
@@ -241,11 +249,11 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: location.pathname === "/receipt-settings" ? "#0B5ED7" : "#555",
-                backgroundColor: location.pathname === "/receipt-settings" ? "#f0f7ff" : "transparent",
+                color: isActiveRoute("/receipt-settings") ? "#0B5ED7" : "#555",
+                backgroundColor: isActiveRoute("/receipt-settings") ? "#f0f7ff" : "transparent",
                 borderRadius: 6,
                 fontSize: 14,
-                fontWeight: location.pathname === "/receipt-settings" ? 500 : 400,
+                fontWeight: isActiveRoute("/receipt-settings") ? 500 : 400,
               }}
             >
               Receipt Settings

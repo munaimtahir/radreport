@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet } from "../ui/api";
 import { Link } from "react-router-dom";
+import PageHeader from "../ui/components/PageHeader";
 
 export default function Dashboard() {
   const { token } = useAuth();
@@ -28,44 +29,51 @@ export default function Dashboard() {
     });
   }, [token]);
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return (
+      <div>
+        <PageHeader title="Dashboard" />
+        <div style={{ textAlign: "center", padding: 40, color: "#666" }}>Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div>
-      <h1>Dashboard</h1>
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20, marginTop: 20 }}>
-        <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 20, background: "white" }}>
-          <h3 style={{ margin: "0 0 10px 0", color: "#666" }}>Patients</h3>
-          <div style={{ fontSize: 32, fontWeight: "bold", color: "#007bff" }}>{stats?.patients || 0}</div>
-          <Link to="/patients" style={{ fontSize: 14, color: "#007bff", textDecoration: "none" }}>
+      <PageHeader title="Dashboard" />
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: 20 }}>
+        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: 20, background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <h3 style={{ margin: "0 0 10px 0", color: "#666", fontSize: 14, fontWeight: 500 }}>Patients</h3>
+          <div style={{ fontSize: 32, fontWeight: "bold", color: "#0B5ED7", marginBottom: 8 }}>{stats?.patients || 0}</div>
+          <Link to="/patients" style={{ fontSize: 13, color: "#0B5ED7", textDecoration: "none", fontWeight: 500 }}>
             View all →
           </Link>
         </div>
-        <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 20, background: "white" }}>
-          <h3 style={{ margin: "0 0 10px 0", color: "#666" }}>Registered Studies</h3>
-          <div style={{ fontSize: 32, fontWeight: "bold", color: "#6c757d" }}>{stats?.registered || 0}</div>
-          <Link to="/studies" style={{ fontSize: 14, color: "#007bff", textDecoration: "none" }}>
+        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: 20, background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <h3 style={{ margin: "0 0 10px 0", color: "#666", fontSize: 14, fontWeight: 500 }}>Registered Studies</h3>
+          <div style={{ fontSize: 32, fontWeight: "bold", color: "#6c757d", marginBottom: 8 }}>{stats?.registered || 0}</div>
+          <Link to="/studies" style={{ fontSize: 13, color: "#0B5ED7", textDecoration: "none", fontWeight: 500 }}>
             View all →
           </Link>
         </div>
-        <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 20, background: "white" }}>
-          <h3 style={{ margin: "0 0 10px 0", color: "#666" }}>Draft Reports</h3>
-          <div style={{ fontSize: 32, fontWeight: "bold", color: "#17a2b8" }}>{stats?.draft || 0}</div>
-          <Link to="/studies" style={{ fontSize: 14, color: "#007bff", textDecoration: "none" }}>
+        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: 20, background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <h3 style={{ margin: "0 0 10px 0", color: "#666", fontSize: 14, fontWeight: 500 }}>Draft Reports</h3>
+          <div style={{ fontSize: 32, fontWeight: "bold", color: "#17a2b8", marginBottom: 8 }}>{stats?.draft || 0}</div>
+          <Link to="/studies" style={{ fontSize: 13, color: "#0B5ED7", textDecoration: "none", fontWeight: 500 }}>
             View all →
           </Link>
         </div>
-        <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 20, background: "white" }}>
-          <h3 style={{ margin: "0 0 10px 0", color: "#666" }}>Final Reports</h3>
-          <div style={{ fontSize: 32, fontWeight: "bold", color: "#28a745" }}>{stats?.final || 0}</div>
-          <Link to="/studies" style={{ fontSize: 14, color: "#007bff", textDecoration: "none" }}>
+        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: 20, background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <h3 style={{ margin: "0 0 10px 0", color: "#666", fontSize: 14, fontWeight: 500 }}>Final Reports</h3>
+          <div style={{ fontSize: 32, fontWeight: "bold", color: "#28a745", marginBottom: 8 }}>{stats?.final || 0}</div>
+          <Link to="/reports" style={{ fontSize: 13, color: "#0B5ED7", textDecoration: "none", fontWeight: 500 }}>
             View all →
           </Link>
         </div>
-        <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 20, background: "white" }}>
-          <h3 style={{ margin: "0 0 10px 0", color: "#666" }}>Templates</h3>
-          <div style={{ fontSize: 32, fontWeight: "bold", color: "#ffc107" }}>{stats?.templates || 0}</div>
-          <Link to="/templates" style={{ fontSize: 14, color: "#007bff", textDecoration: "none" }}>
+        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: 20, background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+          <h3 style={{ margin: "0 0 10px 0", color: "#666", fontSize: 14, fontWeight: 500 }}>Templates</h3>
+          <div style={{ fontSize: 32, fontWeight: "bold", color: "#ffc107", marginBottom: 8 }}>{stats?.templates || 0}</div>
+          <Link to="/templates" style={{ fontSize: 13, color: "#0B5ED7", textDecoration: "none", fontWeight: 500 }}>
             View all →
           </Link>
         </div>

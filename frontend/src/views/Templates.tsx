@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet, apiPost, apiPatch, apiDelete } from "../ui/api";
+import PageHeader from "../ui/components/PageHeader";
+import ErrorAlert from "../ui/components/ErrorAlert";
+import Button from "../ui/components/Button";
 
 interface FieldOption {
   id?: string;
@@ -202,21 +205,23 @@ export default function Templates() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h1>Templates</h1>
-        <button
-          onClick={() => {
-            setEditing(null);
-            setFormData({ name: "", modality_code: "", is_active: true, sections: [] });
-            setShowForm(!showForm);
-          }}
-          style={{ padding: "8px 16px", fontSize: 14 }}
-        >
-          {showForm ? "Cancel" : "Create Template"}
-        </button>
-      </div>
+      <PageHeader
+        title="Templates"
+        actions={
+          <Button
+            variant={showForm ? "secondary" : "primary"}
+            onClick={() => {
+              setEditing(null);
+              setFormData({ name: "", modality_code: "", is_active: true, sections: [] });
+              setShowForm(!showForm);
+            }}
+          >
+            {showForm ? "Cancel" : "Create Template"}
+          </Button>
+        }
+      />
 
-      {error && <div style={{ color: "red", marginBottom: 10 }}>{error}</div>}
+      {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
 
       {showForm && (
         <form
@@ -254,9 +259,9 @@ export default function Templates() {
           <div style={{ marginBottom: 20 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
               <h3>Sections</h3>
-              <button type="button" onClick={addSection} style={{ padding: "6px 12px", fontSize: 14 }}>
+              <Button type="button" variant="secondary" onClick={addSection} style={{ padding: "6px 12px", fontSize: 14 }}>
                 Add Section
-              </button>
+              </Button>
             </div>
 
             {formData.sections.map((section, secIdx) => (
@@ -416,9 +421,9 @@ export default function Templates() {
             ))}
           </div>
 
-          <button type="submit" style={{ padding: "10px 20px", fontSize: 14 }}>
+          <Button type="submit">
             {editing ? "Update" : "Create"} Template
-          </button>
+          </Button>
         </form>
       )}
 

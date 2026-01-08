@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet, apiPost, apiPatch, apiDelete } from "../ui/api";
+import PageHeader from "../ui/components/PageHeader";
+import ErrorAlert from "../ui/components/ErrorAlert";
+import Button from "../ui/components/Button";
 
 interface Patient {
   id: string;
@@ -110,39 +113,47 @@ export default function Patients() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <h1>Patients</h1>
-        <div style={{ display: "flex", gap: 10 }}>
-          <input
-            type="text"
-            placeholder="Search patients..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            style={{ padding: 8, fontSize: 14, width: 250 }}
-          />
-          <button
-            onClick={() => {
-              setEditing(null);
-              setFormData({
-                mrn: "",
-                name: "",
-                age: "",
-                gender: "",
-                phone: "",
-                address: "",
-                referrer: "",
-                notes: "",
-              });
-              setShowForm(!showForm);
-            }}
-            style={{ padding: "8px 16px", fontSize: 14 }}
-          >
-            {showForm ? "Cancel" : "Add Patient"}
-          </button>
-        </div>
-      </div>
+      <PageHeader
+        title="Patients"
+        actions={
+          <>
+            <input
+              type="text"
+              placeholder="Search patients..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{
+                padding: "8px 12px",
+                fontSize: 14,
+                width: 250,
+                border: "1px solid #ddd",
+                borderRadius: 6,
+              }}
+            />
+            <Button
+              variant={showForm ? "secondary" : "primary"}
+              onClick={() => {
+                setEditing(null);
+                setFormData({
+                  mrn: "",
+                  name: "",
+                  age: "",
+                  gender: "",
+                  phone: "",
+                  address: "",
+                  referrer: "",
+                  notes: "",
+                });
+                setShowForm(!showForm);
+              }}
+            >
+              {showForm ? "Cancel" : "Add Patient"}
+            </Button>
+          </>
+        }
+      />
 
-      {error && <div style={{ color: "red", marginBottom: 10 }}>{error}</div>}
+      {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
 
       {showForm && (
         <form
@@ -235,49 +246,56 @@ export default function Patients() {
             />
           </div>
           <div style={{ gridColumn: "1 / -1" }}>
-            <button type="submit" style={{ padding: "10px 20px", fontSize: 14 }}>
+            <Button type="submit">
               {editing ? "Update" : "Create"} Patient
-            </button>
+            </Button>
           </div>
         </form>
       )}
 
       {loading ? (
-        <div>Loading...</div>
+        <div style={{ textAlign: "center", padding: 40, color: "#666" }}>Loading...</div>
+      ) : patients.length === 0 ? (
+        <div style={{ textAlign: "center", padding: 40, color: "#999", border: "1px solid #e0e0e0", borderRadius: 8 }}>
+          No patients found.
+        </div>
       ) : (
-        <table style={{ width: "100%", borderCollapse: "collapse" }}>
-          <thead>
-            <tr style={{ background: "#f0f0f0" }}>
-              <th style={{ padding: 10, textAlign: "left", border: "1px solid #ddd" }}>MRN</th>
-              <th style={{ padding: 10, textAlign: "left", border: "1px solid #ddd" }}>Name</th>
-              <th style={{ padding: 10, textAlign: "left", border: "1px solid #ddd" }}>Age</th>
-              <th style={{ padding: 10, textAlign: "left", border: "1px solid #ddd" }}>Gender</th>
-              <th style={{ padding: 10, textAlign: "left", border: "1px solid #ddd" }}>Phone</th>
-              <th style={{ padding: 10, textAlign: "left", border: "1px solid #ddd" }}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {patients.map((p) => (
-              <tr key={p.id}>
-                <td style={{ padding: 10, border: "1px solid #ddd" }}>{p.mrn}</td>
-                <td style={{ padding: 10, border: "1px solid #ddd" }}>{p.name}</td>
-                <td style={{ padding: 10, border: "1px solid #ddd" }}>{p.age || "-"}</td>
-                <td style={{ padding: 10, border: "1px solid #ddd" }}>{p.gender || "-"}</td>
-                <td style={{ padding: 10, border: "1px solid #ddd" }}>{p.phone || "-"}</td>
-                <td style={{ padding: 10, border: "1px solid #ddd" }}>
-                  <button onClick={() => handleEdit(p)} style={{ marginRight: 8, fontSize: 12 }}>
-                    Edit
-                  </button>
-                  <button onClick={() => handleDelete(p.id)} style={{ fontSize: 12, color: "red" }}>
-                    Delete
-                  </button>
-                </td>
+        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, overflow: "hidden" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse" }}>
+            <thead>
+              <tr style={{ background: "#f5f5f5" }}>
+                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>MRN</th>
+                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Name</th>
+                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Age</th>
+                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Gender</th>
+                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Phone</th>
+                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {patients.map((p) => (
+                <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
+                  <td style={{ padding: 12 }}>{p.mrn}</td>
+                  <td style={{ padding: 12 }}>{p.name}</td>
+                  <td style={{ padding: 12 }}>{p.age || "-"}</td>
+                  <td style={{ padding: 12 }}>{p.gender || "-"}</td>
+                  <td style={{ padding: 12 }}>{p.phone || "-"}</td>
+                  <td style={{ padding: 12 }}>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <Button variant="secondary" onClick={() => handleEdit(p)} style={{ padding: "4px 12px", fontSize: 12 }}>
+                        Edit
+                      </Button>
+                      <Button variant="danger" onClick={() => handleDelete(p.id)} style={{ padding: "4px 12px", fontSize: 12 }}>
+                        Delete
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
-      {!loading && patients.length === 0 && <div style={{ marginTop: 20 }}>No patients found.</div>}
     </div>
   );
 }

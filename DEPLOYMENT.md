@@ -19,9 +19,8 @@ Repository Setup
 ----------------
 On the VPS:
 1) Clone or update repo safely
-   - Configure a consistent pull strategy:
-     - Preferred: fast-forward only
-       git config pull.ff only
+   - Configure a consistent pull strategy (LOCKED):
+     git config pull.rebase true
    - Safe update steps:
      git fetch --all --prune
      git status
@@ -94,15 +93,15 @@ Smoke Tests
 API smoke:
   RIMS_HOST=rims.alshifalab.pk bash scripts/smoke_api.sh
 
-PDF runtime (inside backend container):
-  docker compose exec backend python scripts/smoke_pdf_selftest.py
-  # Output: OK and /tmp/weasyprint_selftest.pdf created
+PDF generation (inside backend container):
+  docker compose exec backend python scripts/smoke_pdf.py
+  # Tests all PDF types: receipts, reports, prescriptions
+  # Validates PDF output starts with %PDF and has reasonable size
 
-Workflow smoke (requires user creds with API access):
-  BASE_URL=https://rims.alshifalab.pk \
-  RIMS_USER=admin \
-  RIMS_PASS='password' \
-  python scripts/smoke_workflow.py
+Workflow end-to-end (inside backend container):
+  docker compose exec backend python scripts/smoke_workflow.py
+  # Tests complete workflows: patient → visit → invoice → PDF generation
+  # Creates test data and validates USG and OPD workflows
 
 Common Production Failure Modes
 -------------------------------
@@ -112,8 +111,11 @@ Common Production Failure Modes
 - PDFs fail to render:
   - Ensure backend image rebuilt after Dockerfile changes:
     docker compose build --no-cache backend && docker compose up -d
-  - Run container self-test:
-    docker compose exec backend python scripts/smoke_pdf_selftest.py
+  - Run PDF smoke test:
+    docker compose exec backend python scripts/smoke_pdf.py
+  - Verify ReportLab is installed:
+    docker compose exec backend python -c "import reportlab; print(reportlab.Version)"
+  - All PDFs use ReportLab (WeasyPrint removed)
 - Static 404 or mismatched hashes:
   - Restart backend to force `collectstatic`:
     docker compose restart backend
@@ -121,6 +123,18 @@ Common Production Failure Modes
 - Media 404:
   - Ensure uploads exist under `/app/media` and volume `media_data` is attached.
   - Access via `https://rims.alshifalab.pk/media/<path>`.
+
+PDF Architecture
+----------------
+All PDF generation uses ReportLab for deterministic, print-safe output:
+- Location: `backend/apps/reporting/pdf_engine/`
+- Modules:
+  - `base.py` - Common styles, page templates, utilities
+  - `receipt.py` - Payment receipts (Visit and ServiceVisit models)
+  - `clinical_report.py` - USG reports and diagnostic reports
+  - `prescription.py` - OPD prescriptions
+- Output: A4 format, all PDFs start with `%PDF` header
+- WeasyPrint completely removed (no HTML-to-PDF conversion)
 
 VPS-Specific Notes
 ------------------

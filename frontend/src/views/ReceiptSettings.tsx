@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet, apiPost } from "../ui/api";
+import PageHeader from "../ui/components/PageHeader";
+import ErrorAlert from "../ui/components/ErrorAlert";
+import SuccessAlert from "../ui/components/SuccessAlert";
+import Button from "../ui/components/Button";
 
 interface ReceiptSettings {
   header_text: string;
@@ -149,20 +153,11 @@ export default function ReceiptSettings() {
   };
 
   return (
-    <div style={{ maxWidth: 800, margin: "0 auto", padding: 20 }}>
-      <h1>Receipt Branding Settings</h1>
+    <div style={{ maxWidth: 800, margin: "0 auto" }}>
+      <PageHeader title="Receipt Branding Settings" />
 
-      {error && (
-        <div style={{ background: "#fee", color: "#c00", padding: 12, borderRadius: 4, marginBottom: 20 }}>
-          {error}
-        </div>
-      )}
-
-      {success && (
-        <div style={{ background: "#efe", color: "#060", padding: 12, borderRadius: 4, marginBottom: 20 }}>
-          {success}
-        </div>
-      )}
+      {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
+      {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
 
       <div style={{ background: "#f9f9f9", padding: 20, borderRadius: 8, marginBottom: 20 }}>
         <h2 style={{ marginTop: 0 }}>Header Text</h2>
@@ -176,20 +171,9 @@ export default function ReceiptSettings() {
             placeholder="Consultants Clinic Place"
           />
         </div>
-        <button
-          onClick={handleUpdateHeaderText}
-          disabled={loading}
-          style={{
-            padding: "10px 20px",
-            background: loading ? "#ccc" : "#007bff",
-            color: "white",
-            border: "none",
-            borderRadius: 4,
-            cursor: loading ? "not-allowed" : "pointer",
-          }}
-        >
+        <Button onClick={handleUpdateHeaderText} disabled={loading}>
           {loading ? "Saving..." : "Save Header Text"}
-        </button>
+        </Button>
       </div>
 
       <div style={{ background: "#f9f9f9", padding: 20, borderRadius: 8, marginBottom: 20 }}>
