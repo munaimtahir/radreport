@@ -195,7 +195,7 @@ export default function RegistrationPage() {
       
       if (printReceipt) {
         // Open receipt PDF in new window
-        window.open(`/api/pdf/receipt/${visit.id}/`, "_blank");
+        window.open(`/api/pdf/${visit.id}/receipt/`, "_blank");
       }
     } catch (err: any) {
       setError(err.message || "Failed to create service visit");

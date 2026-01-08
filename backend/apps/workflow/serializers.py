@@ -366,11 +366,14 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
                 invoice.calculate_balance()
                 invoice.save()
             
+            # PHASE C: Update derived status after creating items
+            service_visit.update_derived_status()
+            
             # Log status transition
             StatusAuditLog.objects.create(
                 service_visit=service_visit,
                 from_status="REGISTERED",
-                to_status="REGISTERED",
+                to_status=service_visit.status,
                 changed_by=request.user if request else None,
             )
             

@@ -90,7 +90,12 @@ class ServiceVisitViewSet(viewsets.ModelViewSet):
                 ).distinct()
         
         if status_filter:
-            queryset = queryset.filter(status=status_filter)
+            # Support multiple statuses (comma-separated) for worklist filtering
+            if "," in status_filter:
+                statuses = [s.strip() for s in status_filter.split(",")]
+                queryset = queryset.filter(status__in=statuses)
+            else:
+                queryset = queryset.filter(status=status_filter)
         
         return queryset
     
