@@ -18,7 +18,7 @@ from decimal import Decimal
 from datetime import datetime
 
 # Configuration
-API_BASE = "http://localhost:8000/api"
+API_BASE = "http://localhost:8015/api"  # Backend is mapped to port 8015
 USERNAME = "admin"
 PASSWORD = "admin"
 
@@ -90,7 +90,7 @@ def test_1_create_patient_and_visit(token):
     # Create visit with USG + OPD
     service_ids = [usg_services[0]["id"], opd_services[0]["id"]]
     selected_services = [s for s in services if s["id"] in service_ids]
-    subtotal = sum(Decimal(str(s.get("price") or s.get("charges") or 0))) for s in selected_services)
+    subtotal = sum(Decimal(str(s.get("price") or s.get("charges") or 0)) for s in selected_services)
     
     visit_data = {
         "patient_id": patient["id"],

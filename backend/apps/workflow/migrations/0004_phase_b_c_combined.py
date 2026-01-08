@@ -9,7 +9,7 @@ import uuid
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('workflow', '0002_rename_workflow_se_code_idx_workflow_se_code_ecae7f_idx_and_more'),
+        ('workflow', '0001_initial'),
         ('catalog', '0001_initial'),
         ('templates', '0001_initial'),
     ]
