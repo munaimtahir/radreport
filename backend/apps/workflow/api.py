@@ -23,8 +23,11 @@ from apps.catalog.models import Service as CatalogService
 from apps.catalog.serializers import ServiceSerializer
 from .permissions import (
     IsRegistrationDesk, IsPerformanceDesk, IsVerificationDesk,
-    IsRegistrationOrPerformanceDesk, IsPerformanceOrVerificationDesk, IsAnyDesk
+    IsRegistrationOrPerformanceDesk, IsPerformanceOrVerificationDesk, IsAnyDesk,
+    IsUSGOperator, IsVerifier, IsOPDOperator, IsDoctor, IsReception
 )
+from .transitions import transition_item_status, get_allowed_transitions
+from django.core.exceptions import ValidationError
 from apps.patients.models import Patient
 try:
     from apps.studies.models import ReceiptSequence
@@ -147,6 +150,93 @@ class ServiceVisitViewSet(viewsets.ModelViewSet):
         return Response(response_serializer.data)
 
 
+class ServiceVisitItemViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    PHASE C: Item-centric API for ServiceVisitItems.
+    This is the primary interface for worklists and item operations.
+    """
+    queryset = ServiceVisitItem.objects.select_related(
+        "service_visit", "service_visit__patient", "service", "service__modality"
+    ).prefetch_related(
+        "status_audit_logs__changed_by"
+    ).all()
+    serializer_class = ServiceVisitItemSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
+    search_fields = ["service_name_snapshot", "service_visit__visit_id", "service_visit__patient__name", "service_visit__patient__mrn"]
+    filterset_fields = ["status", "department_snapshot"]
+    ordering_fields = ["created_at", "updated_at", "status"]
+    
+    def get_queryset(self):
+        """PHASE C: Item-centric worklist filtering"""
+        queryset = super().get_queryset()
+        
+        # Filter by department (workflow)
+        department = self.request.query_params.get("department", None)
+        if department:
+            queryset = queryset.filter(department_snapshot=department)
+        
+        # Filter by status
+        status_filter = self.request.query_params.get("status", None)
+        if status_filter:
+            # Support multiple statuses (comma-separated)
+            if "," in status_filter:
+                statuses = [s.strip() for s in status_filter.split(",")]
+                queryset = queryset.filter(status__in=statuses)
+            else:
+                queryset = queryset.filter(status=status_filter)
+        
+        return queryset
+    
+    @action(detail=True, methods=["post"], permission_classes=[IsAnyDesk])
+    def transition_status(self, request, pk=None):
+        """
+        PHASE C: Transition item status using transition service.
+        This is the ONLY way to change item status - enforces valid transitions and permissions.
+        """
+        item = self.get_object()
+        to_status = request.data.get("to_status")
+        reason = request.data.get("reason", "")
+        
+        if not to_status:
+            return Response(
+                {"detail": "to_status is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            transition_item_status(item, to_status, request.user, reason)
+            item.refresh_from_db()
+            serializer = self.get_serializer(item, context={"request": request})
+            return Response(serializer.data)
+        except ValidationError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except PermissionDenied as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_403_FORBIDDEN
+            )
+    
+    @action(detail=False, methods=["get"], permission_classes=[IsAnyDesk])
+    def worklist(self, request):
+        """
+        PHASE C: Item-centric worklist endpoint.
+        Returns items filtered by department and status.
+        
+        Query params:
+        - department: USG or OPD
+        - status: comma-separated list of statuses (e.g., "REGISTERED,IN_PROGRESS")
+        """
+        queryset = self.get_queryset()
+        
+        # Serialize with visit and patient info
+        serializer = self.get_serializer(queryset, many=True, context={"request": request})
+        return Response(serializer.data)
+
+
 class USGReportViewSet(viewsets.ModelViewSet):
     """USG report management"""
     queryset = USGReport.objects.select_related(
@@ -215,10 +305,18 @@ class USGReportViewSet(viewsets.ModelViewSet):
                 report.save()
                 created = False
             else:
+                # PHASE C: Assign template_version if service has default_template
+                template_version = None
+                if usg_item.service and usg_item.service.default_template:
+                    # Get latest published template version
+                    template = usg_item.service.default_template
+                    template_version = template.versions.filter(is_published=True).order_by("-version").first()
+                
                 # Create new
                 report = USGReport.objects.create(
                     service_visit_item=usg_item,
                     service_visit=service_visit,  # Keep for backward compatibility
+                    template_version=template_version,  # PHASE C: Template bridge
                     created_by=request.user,
                     updated_by=request.user,
                 )
@@ -237,61 +335,84 @@ class USGReportViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
     
-    @action(detail=True, methods=["post"], permission_classes=[IsPerformanceDesk])
+    @action(detail=True, methods=["post"], permission_classes=[IsUSGOperator])
     def save_draft(self, request, pk=None):
-        """Save USG report draft"""
+        """PHASE C: Save USG report draft and transition item to IN_PROGRESS if needed"""
         report = self.get_object()
         report.report_json = request.data.get("report_json", {})
         report.updated_by = request.user
         report.save()
         
-        # Transition to IN_PROGRESS if still REGISTERED
-        if report.service_visit.status == "REGISTERED":
-            report.service_visit.status = "IN_PROGRESS"
-            report.service_visit.save()
-            StatusAuditLog.objects.create(
-                service_visit=report.service_visit,
-                from_status="REGISTERED",
-                to_status="IN_PROGRESS",
-                changed_by=request.user,
-            )
+        # PHASE C: Get the item and transition if needed
+        item = report.service_visit_item
+        if not item:
+            # Fallback: try to find item from service_visit
+            item = report.service_visit.items.filter(department_snapshot="USG").first()
+        
+        if item and item.status == "REGISTERED":
+            try:
+                transition_item_status(item, "IN_PROGRESS", request.user)
+            except (ValidationError, PermissionDenied) as e:
+                # Log but don't fail - draft save should succeed even if transition fails
+                pass
         
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data)
     
-    @action(detail=True, methods=["post"], permission_classes=[IsPerformanceDesk])
+    @action(detail=True, methods=["post"], permission_classes=[IsUSGOperator])
     def submit_for_verification(self, request, pk=None):
-        """Submit USG report for verification"""
+        """PHASE C: Submit USG report for verification - uses transition service"""
         report = self.get_object()
         report.report_json = request.data.get("report_json", report.report_json)
         report.updated_by = request.user
         report.save()
         
-        # Transition to PENDING_VERIFICATION
-        service_visit = report.service_visit
-        from_status = service_visit.status
-        service_visit.status = "PENDING_VERIFICATION"
-        service_visit.save()
+        # PHASE C: Get the item and transition using transition service
+        item = report.service_visit_item
+        if not item:
+            item = report.service_visit.items.filter(department_snapshot="USG").first()
         
-        StatusAuditLog.objects.create(
-            service_visit=service_visit,
-            from_status=from_status,
-            to_status="PENDING_VERIFICATION",
-            changed_by=request.user,
-        )
+        if not item:
+            return Response(
+                {"detail": "No USG item found for this report"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            transition_item_status(item, "PENDING_VERIFICATION", request.user)
+        except ValidationError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except PermissionDenied as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_403_FORBIDDEN
+            )
         
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data)
     
-    @action(detail=True, methods=["post"], permission_classes=[IsVerificationDesk])
+    @action(detail=True, methods=["post"], permission_classes=[IsVerifier])
     def publish(self, request, pk=None):
-        """Publish USG report (verification desk)"""
+        """PHASE C: Publish USG report - uses transition service"""
         report = self.get_object()
-        service_visit = report.service_visit
         
-        if service_visit.status != "PENDING_VERIFICATION":
+        # PHASE C: Get the item
+        item = report.service_visit_item
+        if not item:
+            item = report.service_visit.items.filter(department_snapshot="USG").first()
+        
+        if not item:
             return Response(
-                {"detail": "Report must be in PENDING_VERIFICATION status"},
+                {"detail": "No USG item found for this report"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if item.status != "PENDING_VERIFICATION":
+            return Response(
+                {"detail": f"Item must be in PENDING_VERIFICATION status, current: {item.status}"},
                 status=status.HTTP_400_BAD_REQUEST
             )
         
@@ -306,6 +427,7 @@ class USGReportViewSet(viewsets.ModelViewSet):
         pdf_dir = Path(settings.MEDIA_ROOT) / "pdfs" / "reports" / "usg" / year / month
         pdf_dir.mkdir(parents=True, exist_ok=True)
         
+        service_visit = item.service_visit
         pdf_filename = f"{service_visit.visit_id}.pdf"
         pdf_path = pdf_dir / pdf_filename
         
@@ -318,42 +440,56 @@ class USGReportViewSet(viewsets.ModelViewSet):
         report.verified_at = timezone.now()
         report.save()
         
-        # Transition to PUBLISHED
-        service_visit.status = "PUBLISHED"
-        service_visit.save()
-        
-        StatusAuditLog.objects.create(
-            service_visit=service_visit,
-            from_status="PENDING_VERIFICATION",
-            to_status="PUBLISHED",
-            changed_by=request.user,
-        )
+        # PHASE C: Transition using transition service
+        try:
+            transition_item_status(item, "PUBLISHED", request.user)
+        except (ValidationError, PermissionDenied) as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST if isinstance(e, ValidationError) else status.HTTP_403_FORBIDDEN
+            )
         
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data)
     
-    @action(detail=True, methods=["post"], permission_classes=[IsVerificationDesk])
+    @action(detail=True, methods=["post"], permission_classes=[IsVerifier])
     def return_for_correction(self, request, pk=None):
-        """Return USG report for correction"""
+        """PHASE C: Return USG report for correction - uses transition service"""
         report = self.get_object()
         reason = request.data.get("reason", "")
+        
+        if not reason:
+            return Response(
+                {"detail": "Reason is required when returning for correction"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         
         report.return_reason = reason
         report.save()
         
-        # Transition to RETURNED_FOR_CORRECTION
-        service_visit = report.service_visit
-        from_status = service_visit.status
-        service_visit.status = "RETURNED_FOR_CORRECTION"
-        service_visit.save()
+        # PHASE C: Get the item and transition
+        item = report.service_visit_item
+        if not item:
+            item = report.service_visit.items.filter(department_snapshot="USG").first()
         
-        StatusAuditLog.objects.create(
-            service_visit=service_visit,
-            from_status=from_status,
-            to_status="RETURNED_FOR_CORRECTION",
-            reason=reason,
-            changed_by=request.user,
-        )
+        if not item:
+            return Response(
+                {"detail": "No USG item found for this report"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            transition_item_status(item, "RETURNED_FOR_CORRECTION", request.user, reason=reason)
+        except ValidationError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        except PermissionDenied as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_403_FORBIDDEN
+            )
         
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data)

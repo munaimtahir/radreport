@@ -192,9 +192,12 @@ function Shell() {
             >
               Final Reports
             </Link>
+            {/* PHASE C: Legacy routes hidden from navigation - accessible via direct URL for admin only */}
+            {/* Uncomment below to show legacy routes (admin-only in production) */}
+            {/*
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e0e0e0" }}>
               <div style={{ fontSize: 11, color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
-                LEGACY
+                LEGACY (ADMIN ONLY)
               </div>
             </div>
             <Link
@@ -207,9 +210,10 @@ function Shell() {
                 borderRadius: 6,
                 fontSize: 14,
                 fontWeight: isActiveRoute("/intake") ? 500 : 400,
+                opacity: 0.5,
               }}
             >
-              Front Desk Intake
+              Front Desk Intake (LEGACY)
             </Link>
             <Link
               to="/patients"
@@ -221,9 +225,10 @@ function Shell() {
                 borderRadius: 6,
                 fontSize: 14,
                 fontWeight: isActiveRoute("/patients") ? 500 : 400,
+                opacity: 0.5,
               }}
             >
-              Patients
+              Patients (LEGACY)
             </Link>
             <Link
               to="/studies"
@@ -235,9 +240,10 @@ function Shell() {
                 borderRadius: 6,
                 fontSize: 14,
                 fontWeight: isActiveRoute("/studies") ? 500 : 400,
+                opacity: 0.5,
               }}
             >
-              Studies
+              Studies (LEGACY)
             </Link>
             <Link
               to="/templates"
@@ -267,6 +273,7 @@ function Shell() {
             >
               Receipt Settings
             </Link>
+            */}
           </nav>
           <button
             onClick={logout}

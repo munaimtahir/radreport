@@ -11,6 +11,7 @@ SERVICE_VISIT_STATUS = (
     ("IN_PROGRESS", "In Progress"),
     ("PENDING_VERIFICATION", "Pending Verification"),
     ("RETURNED_FOR_CORRECTION", "Returned for Correction"),
+    ("FINALIZED", "Finalized"),  # PHASE C: For OPD workflow
     ("PUBLISHED", "Published"),
     ("CANCELLED", "Cancelled"),
 )
@@ -51,13 +52,18 @@ class ServiceCatalog(models.Model):
 
 
 class ServiceVisit(models.Model):
-    """Core workflow model - represents a service visit that moves through desks"""
+    """Core workflow model - represents a service visit that moves through desks
+    
+    PHASE C: status is now DERIVED from ServiceVisitItem.status values.
+    This field is kept for backward compatibility and is auto-updated when items change.
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     visit_id = models.CharField(max_length=30, unique=True, editable=False, db_index=True)
     patient = models.ForeignKey("patients.Patient", on_delete=models.PROTECT, related_name="service_visits")
     # DEPRECATED: service field kept for migration compatibility. Use items relationship instead.
     service = models.ForeignKey(ServiceCatalog, on_delete=models.PROTECT, related_name="service_visits", null=True, blank=True)
-    status = models.CharField(max_length=30, choices=SERVICE_VISIT_STATUS, default="REGISTERED", db_index=True)
+    # PHASE C: status is DERIVED from items - do not set manually
+    status = models.CharField(max_length=30, choices=SERVICE_VISIT_STATUS, default="REGISTERED", db_index=True, editable=False, help_text="DERIVED: Auto-calculated from ServiceVisitItem.status values")
     
     # Assignment
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_service_visits")
@@ -66,6 +72,47 @@ class ServiceVisit(models.Model):
     # Timestamps
     registered_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    def derive_status(self):
+        """
+        PHASE C: Derive visit status from item statuses.
+        Rule:
+        - If any item is PENDING_VERIFICATION => PENDING_VERIFICATION
+        - Else if any item is IN_PROGRESS => IN_PROGRESS
+        - Else if any item is RETURNED_FOR_CORRECTION => RETURNED_FOR_CORRECTION
+        - Else if any item is FINALIZED => FINALIZED
+        - Else if all items are PUBLISHED => PUBLISHED
+        - Else if all items are CANCELLED => CANCELLED
+        - Else REGISTERED
+        """
+        items = self.items.all()
+        if not items.exists():
+            return "REGISTERED"
+        
+        statuses = [item.status for item in items]
+        
+        # Priority order (highest first)
+        if "PENDING_VERIFICATION" in statuses:
+            return "PENDING_VERIFICATION"
+        elif "IN_PROGRESS" in statuses:
+            return "IN_PROGRESS"
+        elif "RETURNED_FOR_CORRECTION" in statuses:
+            return "RETURNED_FOR_CORRECTION"
+        elif "FINALIZED" in statuses:
+            return "FINALIZED"
+        elif all(s == "PUBLISHED" for s in statuses):
+            return "PUBLISHED"
+        elif all(s == "CANCELLED" for s in statuses):
+            return "CANCELLED"
+        else:
+            return "REGISTERED"
+    
+    def update_derived_status(self):
+        """Update the derived status field (called after item status changes)"""
+        new_status = self.derive_status()
+        if self.status != new_status:
+            self.status = new_status
+            self.save(update_fields=['status'])
 
     class Meta:
         ordering = ["-registered_at"]
@@ -106,7 +153,11 @@ class ServiceVisit(models.Model):
 
 
 class ServiceVisitItem(models.Model):
-    """Line item for a service visit - supports multiple services per visit"""
+    """Line item for a service visit - supports multiple services per visit
+    
+    PHASE C: status is the PRIMARY source of truth for workflow state.
+    ServiceVisit.status is derived from item statuses.
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     service_visit = models.ForeignKey(ServiceVisit, on_delete=models.CASCADE, related_name="items")
     service = models.ForeignKey("catalog.Service", on_delete=models.PROTECT, related_name="service_visit_items")
@@ -116,8 +167,14 @@ class ServiceVisitItem(models.Model):
     department_snapshot = models.CharField(max_length=50, help_text="Department/category at time of order (USG/OPD/etc)")
     price_snapshot = models.DecimalField(max_digits=10, decimal_places=2, help_text="Price at time of order")
     
-    # Per-item status (can differ from service_visit.status for multi-item visits)
+    # PHASE C: Per-item status is PRIMARY - drives worklists, permissions, actions
     status = models.CharField(max_length=30, choices=SERVICE_VISIT_STATUS, default="REGISTERED", db_index=True)
+    
+    # Timestamps for workflow tracking
+    started_at = models.DateTimeField(null=True, blank=True, help_text="When item moved to IN_PROGRESS")
+    submitted_at = models.DateTimeField(null=True, blank=True, help_text="When item moved to PENDING_VERIFICATION")
+    verified_at = models.DateTimeField(null=True, blank=True, help_text="When item was verified")
+    published_at = models.DateTimeField(null=True, blank=True, help_text="When item was published")
     
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -142,7 +199,23 @@ class ServiceVisitItem(models.Model):
                 self.department_snapshot = self.service.category
         if not self.price_snapshot and self.service:
             self.price_snapshot = self.service.price
+        
+        # Track if status changed
+        status_changed = False
+        if self.pk:
+            try:
+                old_item = ServiceVisitItem.objects.get(pk=self.pk)
+                status_changed = old_item.status != self.status
+            except ServiceVisitItem.DoesNotExist:
+                status_changed = True
+        else:
+            status_changed = True
+        
         super().save(*args, **kwargs)
+        
+        # PHASE C: Update derived visit status when item status changes
+        if status_changed and self.service_visit_id:
+            self.service_visit.update_derived_status()
 
     def __str__(self):
         return f"{self.service_visit.visit_id} - {self.service_name_snapshot}"
@@ -220,6 +293,9 @@ class USGReport(models.Model):
     verifier = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="verified_usg_reports")
     verified_at = models.DateTimeField(null=True, blank=True)
     return_reason = models.TextField(blank=True, default="")
+    
+    # PHASE C: Template bridge (preparation for dynamic templates)
+    template_version = models.ForeignKey("templates.TemplateVersion", on_delete=models.SET_NULL, null=True, blank=True, help_text="Template version used for this report (bridge to template system)")
 
     class Meta:
         ordering = ["-saved_at"]
@@ -280,12 +356,19 @@ class OPDConsult(models.Model):
 
 
 class StatusAuditLog(models.Model):
-    """Audit log for status transitions"""
+    """Audit log for status transitions
+    
+    PHASE C: Now tracks item-level transitions (service_visit_item is primary).
+    service_visit is kept for backward compatibility and visit-level queries.
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    service_visit = models.ForeignKey(ServiceVisit, on_delete=models.CASCADE, related_name="status_audit_logs")
+    # PHASE C: Item-level tracking (primary)
+    service_visit_item = models.ForeignKey("ServiceVisitItem", on_delete=models.CASCADE, related_name="status_audit_logs", null=True, blank=True, help_text="Item that transitioned (PHASE C: primary)")
+    # Backward compatibility - kept for visit-level queries
+    service_visit = models.ForeignKey(ServiceVisit, on_delete=models.CASCADE, related_name="status_audit_logs", null=True, blank=True, help_text="Visit containing the item (for backward compatibility)")
     from_status = models.CharField(max_length=30, choices=SERVICE_VISIT_STATUS)
     to_status = models.CharField(max_length=30, choices=SERVICE_VISIT_STATUS)
-    reason = models.TextField(blank=True, default="", null=True)
+    reason = models.TextField(blank=True, default="", null=True, help_text="Required when RETURNED")
     changed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     changed_at = models.DateTimeField(auto_now_add=True)
 

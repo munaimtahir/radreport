@@ -21,13 +21,13 @@ class PDFStyles:
     @staticmethod
     def get_styles():
         """Get paragraph styles for PDF documents"""
-        styles = getSampleStyleSheet()
+        base_styles = getSampleStyleSheet()
         
         # Custom styles
         custom_styles = {
             'title': ParagraphStyle(
                 'CustomTitle',
-                parent=styles['Heading1'],
+                parent=base_styles['Heading1'],
                 fontSize=18,
                 textColor=black,
                 spaceAfter=12,
@@ -36,7 +36,7 @@ class PDFStyles:
             ),
             'heading': ParagraphStyle(
                 'CustomHeading',
-                parent=styles['Heading2'],
+                parent=base_styles['Heading2'],
                 fontSize=14,
                 textColor=black,
                 spaceAfter=10,
@@ -45,7 +45,7 @@ class PDFStyles:
             ),
             'subheading': ParagraphStyle(
                 'CustomSubheading',
-                parent=styles['Heading3'],
+                parent=base_styles['Heading3'],
                 fontSize=12,
                 textColor=black,
                 spaceAfter=8,
@@ -54,7 +54,7 @@ class PDFStyles:
             ),
             'body': ParagraphStyle(
                 'CustomBody',
-                parent=styles['Normal'],
+                parent=base_styles['Normal'],
                 fontSize=10,
                 textColor=black,
                 spaceAfter=6,
@@ -62,7 +62,7 @@ class PDFStyles:
             ),
             'small': ParagraphStyle(
                 'CustomSmall',
-                parent=styles['Normal'],
+                parent=base_styles['Normal'],
                 fontSize=9,
                 textColor=black,
                 spaceAfter=4,
@@ -70,7 +70,7 @@ class PDFStyles:
             ),
             'label': ParagraphStyle(
                 'CustomLabel',
-                parent=styles['Normal'],
+                parent=base_styles['Normal'],
                 fontSize=10,
                 textColor=black,
                 spaceAfter=4,
@@ -78,7 +78,7 @@ class PDFStyles:
             ),
             'footer': ParagraphStyle(
                 'CustomFooter',
-                parent=styles['Normal'],
+                parent=base_styles['Normal'],
                 fontSize=8,
                 textColor=HexColor('#666666'),
                 spaceAfter=0,
@@ -87,7 +87,9 @@ class PDFStyles:
             ),
         }
         
-        return {**styles, **custom_styles}
+        # Convert StyleSheet to dict and merge with custom styles
+        styles_dict = {name: base_styles.byName[name] for name in base_styles.byName}
+        return {**styles_dict, **custom_styles}
 
 
 class PDFBase:

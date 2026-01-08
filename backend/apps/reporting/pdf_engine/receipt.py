@@ -165,8 +165,7 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
     """
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=PDFBase.PAGE_SIZE)
-    styles = PDFStyles.get_styles()
-    base = PDFBase()
+    styles = PDFStyles.get_styles()  # Use static method
     
     # Use existing receipt number from invoice (idempotent - should already be set)
     receipt_number = invoice.receipt_number or service_visit.visit_id

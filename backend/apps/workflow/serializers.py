@@ -19,14 +19,30 @@ class ServiceCatalogSerializer(serializers.ModelSerializer):
 
 
 class ServiceVisitItemSerializer(serializers.ModelSerializer):
+    """PHASE C: Item-centric serializer - primary source of truth for workflow status"""
     service_name = serializers.CharField(source="service.name", read_only=True)
     service_code = serializers.CharField(source="service.code", read_only=True)
     service_category = serializers.CharField(source="service.category", read_only=True)
     
+    # Visit and patient info for worklists
+    visit_id = serializers.CharField(source="service_visit.visit_id", read_only=True)
+    service_visit_id = serializers.UUIDField(source="service_visit.id", read_only=True)
+    patient_name = serializers.CharField(source="service_visit.patient.name", read_only=True)
+    patient_mrn = serializers.CharField(source="service_visit.patient.mrn", read_only=True)
+    patient_reg_no = serializers.CharField(source="service_visit.patient.patient_reg_no", read_only=True)
+    
+    # Audit logs
+    status_audit_logs = serializers.SerializerMethodField()
+    
     class Meta:
         model = ServiceVisitItem
         fields = "__all__"
-        read_only_fields = ["created_at", "updated_at"]
+        read_only_fields = ["created_at", "updated_at", "started_at", "submitted_at", "verified_at", "published_at"]
+    
+    def get_status_audit_logs(self, obj):
+        """Get audit logs for this item"""
+        logs = obj.status_audit_logs.all()[:10]  # Last 10 logs
+        return StatusAuditLogSerializer(logs, many=True, context=self.context).data
 
 
 class StatusAuditLogSerializer(serializers.ModelSerializer):
@@ -47,6 +63,7 @@ class ServiceVisitSerializer(serializers.ModelSerializer):
     service_code = serializers.SerializerMethodField()
     # New: items relationship
     items = ServiceVisitItemSerializer(many=True, read_only=True)
+    invoice = serializers.SerializerMethodField()
     created_by_name = serializers.CharField(source="created_by.username", read_only=True)
     assigned_to_name = serializers.CharField(source="assigned_to.username", read_only=True)
     status_audit_logs = StatusAuditLogSerializer(many=True, read_only=True)
@@ -67,6 +84,13 @@ class ServiceVisitSerializer(serializers.ModelSerializer):
         if obj.items.exists():
             return obj.items.first().service.code if obj.items.first().service else None
         return obj.service.code if obj.service else None
+    
+    def get_invoice(self, obj):
+        """Return invoice if exists"""
+        try:
+            return InvoiceSerializer(obj.invoice).data
+        except:
+            return None
 
 
 class InvoiceSerializer(serializers.ModelSerializer):
@@ -91,12 +115,17 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 
 class USGReportSerializer(serializers.ModelSerializer):
+    """PHASE C: USG Report serializer with template bridge support"""
     service_visit_id = serializers.SerializerMethodField()
     visit_id = serializers.SerializerMethodField()
+    item_id = serializers.UUIDField(source="service_visit_item.id", read_only=True)
+    item_status = serializers.CharField(source="service_visit_item.status", read_only=True)
     created_by_name = serializers.CharField(source="created_by.username", read_only=True)
     updated_by_name = serializers.CharField(source="updated_by.username", read_only=True)
     verifier_name = serializers.CharField(source="verifier.username", read_only=True)
     published_pdf_url = serializers.SerializerMethodField()
+    template_version_id = serializers.UUIDField(source="template_version.id", read_only=True)
+    template_version_number = serializers.IntegerField(source="template_version.version", read_only=True)
     
     class Meta:
         model = USGReport

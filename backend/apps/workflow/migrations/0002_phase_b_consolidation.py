@@ -39,10 +39,7 @@ class Migration(migrations.Migration):
             model_name='servicevisititem',
             index=models.Index(fields=['service'], name='workflow_se_service_2_idx'),
         ),
-        migrations.AddIndex(
-            model_name='servicevisititem',
-            index=models.Index(fields=['status'], name='workflow_se_status_idx'),
-        ),
+        # Note: status index is created automatically by db_index=True on the field, so we don't need explicit AddIndex
         
         # Make ServiceVisit.service nullable (for backward compatibility)
         migrations.AlterField(
