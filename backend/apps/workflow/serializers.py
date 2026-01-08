@@ -255,11 +255,19 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
             items = []
             subtotal = Decimal("0")
             for service in services:
+                # Set department_snapshot: prefer modality code (USG, CT, etc.) for workflow filtering
+                # Fallback to category (Radiology, OPD, etc.) if no modality
+                dept_snapshot = ""
+                if service.modality and service.modality.code:
+                    dept_snapshot = service.modality.code  # USG, CT, XRAY, etc.
+                elif service.category:
+                    dept_snapshot = service.category  # Radiology, OPD, etc.
+                
                 item = ServiceVisitItem.objects.create(
                     service_visit=service_visit,
                     service=service,
                     service_name_snapshot=service.name,
-                    department_snapshot=service.category or (service.modality.code if service.modality else ""),
+                    department_snapshot=dept_snapshot,
                     price_snapshot=service.price,
                     status="REGISTERED",
                 )
@@ -291,6 +299,14 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
                 balance_amount=max(Decimal("0"), balance_amount),
             )
             
+            # Generate receipt number on invoice creation (idempotent - can be regenerated on print)
+            # Receipt number is generated when invoice is created OR when receipt is printed
+            # This ensures receipt number exists even if paid=0
+            if not invoice.receipt_number:
+                from apps.studies.models import ReceiptSequence
+                invoice.receipt_number = ReceiptSequence.get_next_receipt_number()
+                invoice.save()
+            
             # Create payment if amount_paid > 0
             if amount_paid > 0:
                 payment = Payment.objects.create(
@@ -299,12 +315,9 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
                     method=validated_data.get("payment_method", "cash"),
                     received_by=request.user if request else None,
                 )
-                
-                # Generate receipt number on first payment
-                if not invoice.receipt_number:
-                    from apps.studies.models import ReceiptSequence
-                    invoice.receipt_number = ReceiptSequence.get_next_receipt_number()
-                    invoice.save()
+                # Recalculate balance after payment
+                invoice.calculate_balance()
+                invoice.save()
             
             # Log status transition
             StatusAuditLog.objects.create(

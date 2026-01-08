@@ -74,14 +74,15 @@ class ServiceVisitViewSet(viewsets.ModelViewSet):
         
         if workflow:
             if workflow == "USG":
-                # Filter by items with USG category or modality
+                # Filter by items with department_snapshot == "USG" (set from modality.code)
+                # Use department_snapshot (snapshot at time of order) for correct filtering
                 queryset = queryset.filter(
-                    items__service__category="Radiology",
-                    items__service__modality__code="USG"
+                    items__department_snapshot="USG"
                 ).distinct()
             elif workflow == "OPD":
+                # Filter by items with department_snapshot == "OPD"
                 queryset = queryset.filter(
-                    items__service__category="OPD"
+                    items__department_snapshot="OPD"
                 ).distinct()
         
         if status_filter:
@@ -601,7 +602,8 @@ class PDFViewSet(viewsets.ViewSet):
         except Invoice.DoesNotExist:
             return Response({"detail": "Invoice not found"}, status=status.HTTP_404_NOT_FOUND)
         
-        # Generate receipt number if not exists (idempotent - only on first payment)
+        # Generate receipt number if not exists (idempotent - generated on invoice creation or print)
+        # This ensures receipt number exists even if paid=0
         if not invoice.receipt_number:
             from apps.studies.models import ReceiptSequence
             with transaction.atomic():

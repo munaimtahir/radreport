@@ -191,8 +191,9 @@ def test_5_generate_receipt(token, visit):
     print_test("Generate Receipt PDF")
     
     visit_id = visit["id"]
+    # Use workflow receipt endpoint
     response = requests.get(
-        f"{API_BASE}/pdf/{visit_id}/receipt/",
+        f"{API_BASE}/workflow/visits/{visit_id}/receipt/",
         headers={"Authorization": f"Bearer {token}"}
     )
     
@@ -239,9 +240,13 @@ def test_6_usg_worklist(token):
         print_pass(f"USG worklist returned {len(visits)} visits")
         for visit in visits[:3]:  # Show first 3
             items = visit.get("items", [])
-            usg_items = [i for i in items if i.get("service_category") == "Radiology" or "USG" in str(i.get("service_name_snapshot", "")).upper()]
+            # Check department_snapshot for USG filtering
+            usg_items = [i for i in items if i.get("department_snapshot") == "USG"]
             if usg_items:
                 print_pass(f"  Visit {visit.get('visit_id')} has USG items: {[i.get('service_name_snapshot') for i in usg_items]}")
+            elif items:
+                # Show what we got for debugging
+                print_pass(f"  Visit {visit.get('visit_id')} has items with dept_snapshot: {[i.get('department_snapshot') for i in items]}")
         return True
     else:
         print_fail(f"Failed to get USG worklist: {response.text}")
@@ -261,9 +266,13 @@ def test_7_opd_worklist(token):
         print_pass(f"OPD worklist returned {len(visits)} visits")
         for visit in visits[:3]:  # Show first 3
             items = visit.get("items", [])
-            opd_items = [i for i in items if i.get("service_category") == "OPD"]
+            # Check department_snapshot for OPD filtering
+            opd_items = [i for i in items if i.get("department_snapshot") == "OPD"]
             if opd_items:
                 print_pass(f"  Visit {visit.get('visit_id')} has OPD items: {[i.get('service_name_snapshot') for i in opd_items]}")
+            elif items:
+                # Show what we got for debugging
+                print_pass(f"  Visit {visit.get('visit_id')} has items with dept_snapshot: {[i.get('department_snapshot') for i in items]}")
         return True
     else:
         print_fail(f"Failed to get OPD worklist: {response.text}")

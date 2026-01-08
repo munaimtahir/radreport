@@ -163,15 +163,13 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
     Generate receipt PDF for ServiceVisit (workflow) using ReportLab.
     Replaces WeasyPrint-based build_service_visit_receipt_pdf.
     """
-    from apps.studies.models import ReceiptSequence
-    
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=PDFBase.PAGE_SIZE)
     styles = PDFStyles.get_styles()
     base = PDFBase()
     
-    # Get receipt number
-    receipt_number = ReceiptSequence.get_next_receipt_number()
+    # Use existing receipt number from invoice (idempotent - should already be set)
+    receipt_number = invoice.receipt_number or service_visit.visit_id
     
     # Get payment
     payment = service_visit.payments.first()
@@ -225,19 +223,42 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
     story.append(patient_table)
     story.append(Spacer(1, 8 * mm))
     
-    # Service Information
+    # Service Information - use items (multiple services supported)
     story.append(Paragraph("Service Information", styles['heading']))
-    service_data = [
-        ['Service:', service_visit.service.name],
-        ['Code:', service_visit.service.code],
-    ]
-    service_table = Table(service_data, colWidths=[80 * mm, 100 * mm])
-    service_table.setStyle(TableStyle([
-        ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
-        ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-        ('FONTSIZE', (0, 0), (-1, -1), 10),
-    ]))
-    story.append(service_table)
+    items = service_visit.items.all()
+    if items:
+        service_rows = []
+        for item in items:
+            service_rows.append([item.service_name_snapshot, f"Rs. {item.price_snapshot:.2f}"])
+        service_table = Table(
+            [['Service', 'Amount']] + service_rows,
+            colWidths=[120 * mm, 60 * mm]
+        )
+        service_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('BACKGROUND', (0, 0), (-1, 0), HexColor('#E0E0E0')),
+            ('GRID', (0, 0), (-1, -1), 1, black),
+        ]))
+        story.append(service_table)
+    else:
+        # Fallback for legacy data
+        if service_visit.service:
+            service_data = [
+                ['Service:', service_visit.service.name],
+                ['Code:', service_visit.service.code],
+            ]
+        else:
+            service_data = [['Service:', 'Multiple Services']]
+        service_table = Table(service_data, colWidths=[80 * mm, 100 * mm])
+        service_table.setStyle(TableStyle([
+            ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
+            ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ]))
+        story.append(service_table)
     story.append(Spacer(1, 8 * mm))
     
     # Amounts

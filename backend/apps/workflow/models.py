@@ -135,8 +135,11 @@ class ServiceVisitItem(models.Model):
         if not self.service_name_snapshot and self.service:
             self.service_name_snapshot = self.service.name
         if not self.department_snapshot and self.service:
-            # Use category or modality code as department
-            self.department_snapshot = self.service.category or (self.service.modality.code if self.service.modality else "")
+            # Prefer modality code (USG, CT, etc.) for workflow filtering, fallback to category
+            if self.service.modality and self.service.modality.code:
+                self.department_snapshot = self.service.modality.code
+            elif self.service.category:
+                self.department_snapshot = self.service.category
         if not self.price_snapshot and self.service:
             self.price_snapshot = self.service.price
         super().save(*args, **kwargs)
