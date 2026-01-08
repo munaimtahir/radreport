@@ -76,8 +76,31 @@ export default function VerificationWorklistPage() {
       await apiPost(`/workflow/usg/${report.id}/publish/`, token, {});
       setSuccess("Report published successfully!");
       
-      // Open PDF in new window
-      window.open(`/api/pdf/report/${selectedVisit.id}/`, "_blank");
+      // Fetch PDF with auth token and open in new window
+      const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
+      const reportUrl = `${API_BASE}/pdf/${selectedVisit.id}/report/`;
+      
+      fetch(reportUrl, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch report PDF");
+          return res.blob();
+        })
+        .then((blob) => {
+          const url = window.URL.createObjectURL(blob);
+          const win = window.open(url, "_blank");
+          if (win) {
+            // Clean up blob URL after a delay
+            setTimeout(() => window.URL.revokeObjectURL(url), 100);
+          }
+        })
+        .catch((err) => {
+          console.error("Failed to load report:", err);
+          setError("Failed to load report PDF. Please try again.");
+        });
       
       setSelectedVisit(null);
       setReport(null);

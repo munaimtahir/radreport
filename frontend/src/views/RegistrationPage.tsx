@@ -194,8 +194,31 @@ export default function RegistrationPage() {
       setAmountPaid("");
       
       if (printReceipt) {
-        // Open receipt PDF in new window
-        window.open(`/api/pdf/${visit.id}/receipt/`, "_blank");
+        // Fetch receipt PDF with auth token and open in new window
+        const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
+        const receiptUrl = `${API_BASE}/pdf/${visit.id}/receipt/`;
+        
+        fetch(receiptUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error("Failed to fetch receipt PDF");
+            return res.blob();
+          })
+          .then((blob) => {
+            const url = window.URL.createObjectURL(blob);
+            const win = window.open(url, "_blank");
+            if (win) {
+              // Clean up blob URL after a delay
+              setTimeout(() => window.URL.revokeObjectURL(url), 100);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to load receipt:", err);
+            setError("Failed to load receipt. Please try again.");
+          });
       }
     } catch (err: any) {
       setError(err.message || "Failed to create service visit");

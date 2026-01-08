@@ -74,6 +74,9 @@ class ServiceVisitViewSet(viewsets.ModelViewSet):
         """Filter by workflow and status if provided"""
         queryset = super().get_queryset()
         workflow = self.request.query_params.get("workflow", None)
+        
+        # Support both repeated query params and comma-separated values for status
+        status_list = self.request.query_params.getlist("status")
         status_filter = self.request.query_params.get("status", None)
         
         if workflow:
@@ -89,8 +92,12 @@ class ServiceVisitViewSet(viewsets.ModelViewSet):
                     items__department_snapshot="OPD"
                 ).distinct()
         
-        if status_filter:
-            # Support multiple statuses (comma-separated) for worklist filtering
+        # Handle status filtering: prefer repeated params, fallback to comma-separated
+        if status_list:
+            # Multiple status values from repeated query params (e.g., ?status=REGISTERED&status=RETURNED_FOR_CORRECTION)
+            queryset = queryset.filter(status__in=status_list)
+        elif status_filter:
+            # Support comma-separated values for backward compatibility (e.g., ?status=REGISTERED,RETURNED_FOR_CORRECTION)
             if "," in status_filter:
                 statuses = [s.strip() for s in status_filter.split(",")]
                 queryset = queryset.filter(status__in=statuses)

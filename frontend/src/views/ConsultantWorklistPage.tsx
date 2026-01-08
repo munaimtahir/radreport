@@ -136,9 +136,36 @@ export default function ConsultantWorklistPage() {
       const result = await apiPost(`/workflow/opd/consult/${selectedVisit.id}/save_and_print/`, token, consultPayload);
       setSuccess("Prescription saved and printed successfully!");
       
-      // Open PDF in new window
+      // Fetch PDF with auth token and open in new window
       if (result.published_pdf_url) {
-        window.open(result.published_pdf_url, "_blank");
+        // Extract path from full URL if needed
+        const pdfPath = result.published_pdf_url.startsWith("http") 
+          ? new URL(result.published_pdf_url).pathname 
+          : result.published_pdf_url;
+        const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
+        const pdfUrl = pdfPath.startsWith("/api") ? pdfPath : `${API_BASE}${pdfPath.startsWith("/") ? "" : "/"}${pdfPath}`;
+        
+        fetch(pdfUrl, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error("Failed to fetch prescription PDF");
+            return res.blob();
+          })
+          .then((blob) => {
+            const url = window.URL.createObjectURL(blob);
+            const win = window.open(url, "_blank");
+            if (win) {
+              // Clean up blob URL after a delay
+              setTimeout(() => window.URL.revokeObjectURL(url), 100);
+            }
+          })
+          .catch((err) => {
+            console.error("Failed to load prescription:", err);
+            setError("Failed to load prescription PDF. Please try again.");
+          });
       }
       
       setSelectedVisit(null);

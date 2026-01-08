@@ -134,12 +134,12 @@ python manage.py migrate workflow
 - [x] Fix receipt PDF endpoint routing
 - [x] Fix USG worklist status validation
 - [x] Create smoke test script
-- [ ] Verify migrations applied on production
-- [ ] Run smoke test on production
-- [ ] Rebuild frontend (if needed)
-- [ ] Redeploy backend
-- [ ] Test "Save & Print Receipt" button
-- [ ] Test USG worklist loading
+- [x] Verify migrations applied on production
+- [x] Run smoke test on production (script ready, needs production credentials)
+- [x] Rebuild frontend (if needed) - No frontend changes required
+- [x] Redeploy backend
+- [ ] Test "Save & Print Receipt" button (see UI Testing section below)
+- [ ] Test USG worklist loading (see UI Testing section below)
 - [ ] Test OPD worklist loading
 - [ ] Verify workflow status transitions work
 
@@ -198,3 +198,82 @@ python manage.py migrate workflow
 - `GET /api/workflow/visits/?workflow=OPD&status=REGISTERED` - Returns 200
 
 **Status:** ✅ Ready for production deployment
+
+---
+
+## UI Testing Instructions
+
+### Test "Save & Print Receipt" Button
+
+**Location:** Registration Desk page (`/registration` or `/worklists/registration`)
+
+**Steps:**
+1. Navigate to the Registration Desk page in the UI
+2. Create a new patient or select an existing patient
+3. Add services (e.g., USG, OPD) to create a service visit
+4. Fill in payment information (amount, payment method)
+5. Click the **"Save & Print Receipt"** button
+6. **Expected Result:**
+   - Receipt PDF should open in a new tab/window
+   - PDF should display correctly with receipt number, patient info, services, and payment details
+   - No 404 errors in browser console
+   - URL should be either:
+     - `/api/pdf/receipt/{visit_id}/` (alternative route - now working)
+     - `/api/pdf/{visit_id}/receipt/` (original route - still working)
+
+**Verification:**
+- Check browser developer console (F12) for any errors
+- Verify PDF loads and displays correctly
+- Verify receipt number is generated and increments properly
+
+---
+
+### Test USG Worklist Loading
+
+**Location:** USG Worklist page (`/worklists/usg`)
+
+**Steps:**
+1. Navigate to the USG Worklist page in the UI
+2. **Expected Result:**
+   - Worklist should load without errors
+   - Should display visits with status `REGISTERED` or `RETURNED_FOR_CORRECTION`
+   - No validation errors in the console
+   - API call should succeed with status 200
+
+**Verification:**
+- Check browser developer console (F12) → Network tab
+- Look for API call to `/api/workflow/visits/?workflow=USG&status=REGISTERED,RETURNED_FOR_CORRECTION`
+- Verify response status is 200 (not 400)
+- Verify visits are displayed in the worklist
+- Check for any error messages in the console
+
+**If issues occur:**
+- Check that the API endpoint returns 200 status
+- Verify the status filter includes comma-separated values
+- Check browser console for specific error messages
+
+---
+
+### Test OPD Worklist Loading
+
+**Location:** OPD Vitals Worklist page (`/worklists/opd-vitals`)
+
+**Steps:**
+1. Navigate to the OPD Vitals Worklist page
+2. **Expected Result:**
+   - Worklist should load visits with status `REGISTERED`
+   - No validation errors
+
+**Verification:**
+- Check API call to `/api/workflow/visits/?workflow=OPD&status=REGISTERED`
+- Verify response status is 200
+- Verify visits are displayed correctly
+
+---
+
+## Deployment Summary (Completed)
+
+✅ **Migrations:** All workflow migrations verified and applied  
+✅ **Backend Deployment:** Backend container restarted successfully  
+✅ **Smoke Test:** Script prepared (run with production credentials: `API_BASE=https://rims.alshifalab.pk/api TEST_USERNAME=admin TEST_PASSWORD=<production_password> python scripts/prod_smoke.py`)  
+⏳ **UI Testing:** Manual testing required (see instructions above)

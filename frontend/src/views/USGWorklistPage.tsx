@@ -46,7 +46,12 @@ export default function USGWorklistPage() {
   const loadVisits = async () => {
     if (!token) return;
     try {
-      const data = await apiGet("/workflow/visits/?workflow=USG&status=REGISTERED,RETURNED_FOR_CORRECTION", token);
+      // Use repeated query params for multiple status values
+      const params = new URLSearchParams();
+      params.append("workflow", "USG");
+      params.append("status", "REGISTERED");
+      params.append("status", "RETURNED_FOR_CORRECTION");
+      const data = await apiGet(`/workflow/visits/?${params.toString()}`, token);
       setVisits(data.results || data || []);
     } catch (err: any) {
       setError(err.message || "Failed to load visits");
