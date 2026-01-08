@@ -189,6 +189,18 @@ class ReceiptSettingsViewSet(viewsets.ViewSet):
         serializer = self.serializer_class(settings_obj, context={"request": request})
         return Response(serializer.data)
     
+    @action(detail=False, methods=["get"], url_path="public", permission_classes=[permissions.AllowAny])
+    def public_settings(self, request):
+        """Get public receipt settings (logo only, no auth required)"""
+        settings_obj = ReceiptSettings.get_settings()
+        data = {
+            "logo_image_url": None,
+            "header_text": settings_obj.header_text if settings_obj else "Consultant Place Clinics",
+        }
+        if settings_obj and settings_obj.logo_image:
+            data["logo_image_url"] = request.build_absolute_uri(settings_obj.logo_image.url)
+        return Response(data)
+    
     def retrieve(self, request, pk=None):
         """Get current receipt settings (same as list for singleton)"""
         settings_obj = ReceiptSettings.get_settings()

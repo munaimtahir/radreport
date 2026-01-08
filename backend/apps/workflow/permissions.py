@@ -16,6 +16,9 @@ class IsRegistrationDesk(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
+        # Superusers have all permissions
+        if request.user.is_superuser:
+            return True
         # Check if user has registration role (via groups or user profile)
         return request.user.groups.filter(name="Registration").exists() or \
                (hasattr(request.user, 'profile') and getattr(request.user.profile, 'desk_role', None) == DESK_ROLES["REGISTRATION"])
@@ -26,6 +29,9 @@ class IsPerformanceDesk(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
+        # Superusers have all permissions
+        if request.user.is_superuser:
+            return True
         return request.user.groups.filter(name="Performance").exists() or \
                (hasattr(request.user, 'profile') and getattr(request.user.profile, 'desk_role', None) == DESK_ROLES["PERFORMANCE"])
 
@@ -35,6 +41,9 @@ class IsVerificationDesk(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
+        # Superusers have all permissions
+        if request.user.is_superuser:
+            return True
         return request.user.groups.filter(name="Verification").exists() or \
                (hasattr(request.user, 'profile') and getattr(request.user.profile, 'desk_role', None) == DESK_ROLES["VERIFICATION"])
 
@@ -44,6 +53,9 @@ class IsRegistrationOrPerformanceDesk(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
+        # Superusers have all permissions
+        if request.user.is_superuser:
+            return True
         return IsRegistrationDesk().has_permission(request, view) or \
                IsPerformanceDesk().has_permission(request, view)
 
@@ -53,6 +65,9 @@ class IsPerformanceOrVerificationDesk(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
+        # Superusers have all permissions
+        if request.user.is_superuser:
+            return True
         return IsPerformanceDesk().has_permission(request, view) or \
                IsVerificationDesk().has_permission(request, view)
 

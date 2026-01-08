@@ -24,15 +24,9 @@ python manage.py collectstatic --noinput
 echo "==> Running database migrations..."
 python manage.py migrate --noinput
 
-# Create superuser if needed (optional, only for first deployment)
-# Uncomment the following lines if you want to auto-create a superuser
-# python manage.py shell << EOF
-# from django.contrib.auth import get_user_model
-# User = get_user_model()
-# if not User.objects.filter(username='admin').exists():
-#     User.objects.create_superuser('admin', 'admin@example.com', 'changeme')
-#     print('Superuser created: admin/changeme')
-# EOF
+# Create superuser and seed initial data (idempotent - safe to run multiple times)
+echo "==> Creating superuser and seeding initial data..."
+python seed_data.py
 
 echo "==> Starting Gunicorn..."
 # Bind to all interfaces inside container (Docker network isolation provides security)

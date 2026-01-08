@@ -13,18 +13,23 @@ export default function Login() {
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    // Try to fetch logo (without auth token for login page)
-    // This will likely fail, but we handle it gracefully
-    // Logo will be available after login
-    apiGet("/receipt-settings/", null)
+    // Fetch logo from public endpoint (no auth required)
+    const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
+    fetch(`${API_BASE}/receipt-settings/public/`)
+      .then((res) => {
+        if (res.ok) {
+          return res.json();
+        }
+        return null;
+      })
       .then((data: any) => {
         if (data?.logo_image_url) {
           setLogoUrl(data.logo_image_url);
         }
       })
       .catch(() => {
-        // Logo not available without auth, continue without it
-        // It will be fetched after successful login
+        // Logo not available, continue without it
+        // Logo will be visible after login in the main app
       });
   }, []);
 
@@ -65,16 +70,33 @@ export default function Login() {
         }}
       >
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          {logoUrl && (
-            <img
-              src={logoUrl}
-              alt="Logo"
-              style={{ width: 64, height: 64, objectFit: "contain", marginBottom: 16 }}
-            />
+          {logoUrl ? (
+            <>
+              <img
+                src={logoUrl}
+                alt="Consultant Place Clinics Logo"
+                style={{
+                  width: 120,
+                  height: 120,
+                  objectFit: "contain",
+                  marginBottom: 20,
+                  display: "block",
+                  margin: "0 auto 20px auto",
+                }}
+                onError={(e) => {
+                  // Hide image if it fails to load
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: "#333" }}>
+                Consultant Place Clinics
+              </h1>
+            </>
+          ) : (
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: "#333" }}>
+              Consultant Place Clinics
+            </h1>
           )}
-          <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: "#333" }}>
-            Consultant Place Clinics
-          </h1>
         </div>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>

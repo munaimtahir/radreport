@@ -63,13 +63,22 @@ function Shell() {
         >
           <div style={{ marginBottom: 24 }}>
             {logoUrl ? (
-              <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
                 <img
                   src={logoUrl}
-                  alt="Logo"
-                  style={{ width: 48, height: 48, objectFit: "contain" }}
+                  alt="Consultant Place Clinics Logo"
+                  style={{
+                    width: 60,
+                    height: 60,
+                    objectFit: "contain",
+                    display: "block",
+                  }}
+                  onError={(e) => {
+                    // Hide image if it fails to load
+                    (e.target as HTMLImageElement).style.display = "none";
+                  }}
                 />
-                <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "#333" }}>
+                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#333", lineHeight: 1.3 }}>
                   Consultant Place Clinics
                 </h2>
               </div>
