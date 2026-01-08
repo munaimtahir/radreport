@@ -115,7 +115,7 @@ class PaymentSerializer(serializers.ModelSerializer):
 
 
 class USGReportSerializer(serializers.ModelSerializer):
-    """PHASE C: USG Report serializer with template bridge support"""
+    """PHASE D: USG Report serializer with canonical template fields"""
     service_visit_id = serializers.SerializerMethodField()
     visit_id = serializers.SerializerMethodField()
     item_id = serializers.UUIDField(source="service_visit_item.id", read_only=True)
@@ -123,14 +123,22 @@ class USGReportSerializer(serializers.ModelSerializer):
     created_by_name = serializers.CharField(source="created_by.username", read_only=True)
     updated_by_name = serializers.CharField(source="updated_by.username", read_only=True)
     verifier_name = serializers.CharField(source="verifier.username", read_only=True)
+    performed_by_name = serializers.CharField(source="performed_by.username", read_only=True)
+    interpreted_by_name = serializers.CharField(source="interpreted_by.username", read_only=True)
     published_pdf_url = serializers.SerializerMethodField()
     template_version_id = serializers.UUIDField(source="template_version.id", read_only=True)
     template_version_number = serializers.IntegerField(source="template_version.version", read_only=True)
+    can_finalize = serializers.SerializerMethodField()
+    finalize_errors = serializers.SerializerMethodField()
     
     class Meta:
         model = USGReport
         fields = "__all__"
-        read_only_fields = ["saved_at", "published_pdf_path", "verified_at"]
+        read_only_fields = [
+            "saved_at", "published_pdf_path", "verified_at",
+            "version", "parent_report_id", "amendment_history_json",
+            "signoff_json", "report_datetime"
+        ]
     
     def get_service_visit_id(self, obj):
         sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
@@ -148,6 +156,16 @@ class USGReportSerializer(serializers.ModelSerializer):
                 if sv:
                     return request.build_absolute_uri(f"/api/pdf/report/{sv.id}/")
         return None
+    
+    def get_can_finalize(self, obj):
+        """Check if report can be finalized"""
+        can, _ = obj.can_finalize()
+        return can
+    
+    def get_finalize_errors(self, obj):
+        """Get list of errors preventing finalization"""
+        _, errors = obj.can_finalize()
+        return errors
 
 
 class OPDVitalsSerializer(serializers.ModelSerializer):

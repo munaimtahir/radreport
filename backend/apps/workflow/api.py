@@ -28,6 +28,7 @@ from .permissions import (
 )
 from .transitions import transition_item_status, get_allowed_transitions
 from django.core.exceptions import ValidationError
+from rest_framework.exceptions import PermissionDenied
 from apps.patients.models import Patient
 try:
     from apps.studies.models import ReceiptSequence
@@ -337,10 +338,37 @@ class USGReportViewSet(viewsets.ModelViewSet):
     
     @action(detail=True, methods=["post"], permission_classes=[IsUSGOperator])
     def save_draft(self, request, pk=None):
-        """PHASE C: Save USG report draft and transition item to IN_PROGRESS if needed"""
+        """PHASE D: Save USG report draft and transition item to IN_PROGRESS if needed"""
         report = self.get_object()
-        report.report_json = request.data.get("report_json", {})
+        
+        # PHASE D: Update canonical fields from request
+        canonical_fields = [
+            'report_status', 'study_title', 'referring_clinician', 'clinical_history',
+            'clinical_questions', 'exam_datetime', 'study_type', 'technique_approach',
+            'doppler_used', 'contrast_used', 'technique_notes', 'comparison',
+            'scan_quality', 'limitations_text', 'findings_json', 'measurements_json',
+            'impression_text', 'suggestions_text', 'critical_flag', 'critical_communication_json'
+        ]
+        
+        for field in canonical_fields:
+            if field in request.data:
+                setattr(report, field, request.data[field])
+        
+        # Legacy support
+        if 'report_json' in request.data:
+            report.report_json = request.data.get("report_json", {})
+        
+        # Auto-set exam_datetime if not set
+        if not report.exam_datetime:
+            report.exam_datetime = timezone.now()
+        
+        # Auto-generate study_title if not set
+        if not report.study_title and report.service_visit_item:
+            service_name = report.service_visit_item.service_name_snapshot or "Ultrasound"
+            report.study_title = f"{service_name} - {report.study_type or 'Study'}"
+        
         report.updated_by = request.user
+        report.report_status = "DRAFT"  # Ensure status is DRAFT on save
         report.save()
         
         # PHASE C: Get the item and transition if needed
@@ -395,11 +423,11 @@ class USGReportViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     @action(detail=True, methods=["post"], permission_classes=[IsVerifier])
-    def publish(self, request, pk=None):
-        """PHASE C: Publish USG report - uses transition service"""
+    def finalize(self, request, pk=None):
+        """PHASE D: Finalize USG report - validates required fields and sets status to FINAL"""
         report = self.get_object()
         
-        # PHASE C: Get the item
+        # PHASE D: Get the item
         item = report.service_visit_item
         if not item:
             item = report.service_visit.items.filter(department_snapshot="USG").first()
@@ -416,28 +444,120 @@ class USGReportViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # PHASE D: Hard validation gates - check required fields
+        can_finalize, errors = report.can_finalize()
+        if not can_finalize:
+            return Response(
+                {"detail": "Cannot finalize report", "errors": errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update report status to FINAL
+        now = timezone.now()
+        report.report_status = "FINAL"
+        report.report_datetime = now
+        
+        # Increment version (only on FINAL/AMENDED, not DRAFT)
+        if report.version == 1 or report.report_status != "DRAFT":
+            # Check if this is first FINAL (not an amendment)
+            if report.report_status == "FINAL" and not report.parent_report_id:
+                report.version = 1
+            else:
+                report.version += 1
+        
+        # Set signoff
+        report.signoff_json = {
+            "clinician_name": request.user.get_full_name() or request.user.username,
+            "credentials": getattr(request.user, 'credentials', ''),
+            "verified_at": now.isoformat()
+        }
+        report.verifier = request.user
+        report.verified_at = now
+        
+        # Save finalized report
+        report.save()
+        
+        # Audit log: FINALIZED
+        StatusAuditLog.objects.create(
+            service_visit_item=item,
+            service_visit=item.service_visit,
+            from_status="PENDING_VERIFICATION",
+            to_status="PUBLISHED",  # Item status becomes PUBLISHED
+            reason="Report finalized",
+            changed_by=request.user,
+        )
+        
+        serializer = self.get_serializer(report, context={"request": request})
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=["post"], permission_classes=[IsVerifier])
+    def publish(self, request, pk=None):
+        """PHASE D: Publish USG report - finalizes and generates PDF"""
+        report = self.get_object()
+        
+        # PHASE D: Get the item
+        item = report.service_visit_item
+        if not item:
+            item = report.service_visit.items.filter(department_snapshot="USG").first()
+        
+        if not item:
+            return Response(
+                {"detail": "No USG item found for this report"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        if item.status != "PENDING_VERIFICATION":
+            return Response(
+                {"detail": f"Item must be in PENDING_VERIFICATION status, current: {item.status}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # PHASE D: Hard validation gates - check required fields
+        can_finalize, errors = report.can_finalize()
+        if not can_finalize:
+            return Response(
+                {"detail": "Cannot publish report", "errors": errors},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Update report status to FINAL
+        now = timezone.now()
+        report.report_status = "FINAL"
+        report.report_datetime = now
+        
+        # Increment version (only on FINAL/AMENDED, not DRAFT)
+        if report.report_status == "FINAL" and not report.parent_report_id:
+            report.version = 1
+        else:
+            report.version += 1
+        
+        # Set signoff
+        report.signoff_json = {
+            "clinician_name": request.user.get_full_name() or request.user.username,
+            "credentials": getattr(request.user, 'credentials', ''),
+            "verified_at": now.isoformat()
+        }
+        report.verifier = request.user
+        report.verified_at = now
+        
         # Generate PDF
         from .pdf import build_usg_report_pdf
         pdf_file = build_usg_report_pdf(report)
         
         # Save PDF
-        now = timezone.now()
         year = now.strftime("%Y")
         month = now.strftime("%m")
         pdf_dir = Path(settings.MEDIA_ROOT) / "pdfs" / "reports" / "usg" / year / month
         pdf_dir.mkdir(parents=True, exist_ok=True)
         
         service_visit = item.service_visit
-        pdf_filename = f"{service_visit.visit_id}.pdf"
+        pdf_filename = f"{service_visit.visit_id}_v{report.version}.pdf"
         pdf_path = pdf_dir / pdf_filename
         
         with open(pdf_path, "wb") as f:
             f.write(pdf_file.read())
         
-        # Update report
         report.published_pdf_path = f"pdfs/reports/usg/{year}/{month}/{pdf_filename}"
-        report.verifier = request.user
-        report.verified_at = timezone.now()
         report.save()
         
         # PHASE C: Transition using transition service
@@ -451,6 +571,98 @@ class USGReportViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data)
+    
+    @action(detail=True, methods=["post"], permission_classes=[IsVerifier])
+    def create_amendment(self, request, pk=None):
+        """PHASE D: Create amended report from FINAL report"""
+        parent_report = self.get_object()
+        
+        if parent_report.report_status != "FINAL":
+            return Response(
+                {"detail": f"Can only create amendment from FINAL report, current status: {parent_report.report_status}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Get the item
+        item = parent_report.service_visit_item
+        if not item:
+            item = parent_report.service_visit.items.filter(department_snapshot="USG").first()
+        
+        if not item:
+            return Response(
+                {"detail": "No USG item found for this report"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        amendment_reason = request.data.get("amendment_reason", "")
+        if not amendment_reason:
+            return Response(
+                {"detail": "amendment_reason is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Create amendment history entry
+        amendment_history = parent_report.amendment_history_json or []
+        amendment_history.append({
+            "version": parent_report.version,
+            "report_status": parent_report.report_status,
+            "finalized_at": parent_report.verified_at.isoformat() if parent_report.verified_at else None,
+            "finalized_by": parent_report.verifier.username if parent_report.verifier else None,
+            "signoff": parent_report.signoff_json,
+            "findings": parent_report.findings_json,
+            "impression": parent_report.impression_text,
+            "limitations": parent_report.limitations_text,
+        })
+        
+        # Update parent report with history
+        parent_report.amendment_history_json = amendment_history
+        parent_report.save()
+        
+        # Create new report record (same item, new version)
+        # We'll update the existing report to AMENDED status and increment version
+        parent_report.report_status = "AMENDED"
+        parent_report.version += 1
+        parent_report.amendment_reason = amendment_reason
+        parent_report.parent_report_id = parent_report.id  # Self-reference for tracking
+        parent_report.report_datetime = timezone.now()
+        
+        # Reset verification fields (will be set on finalize)
+        parent_report.verifier = None
+        parent_report.verified_at = None
+        parent_report.signoff_json = {}
+        parent_report.published_pdf_path = ""
+        
+        # Update fields from request if provided
+        canonical_fields = [
+            'clinical_history', 'clinical_questions', 'findings_json',
+            'impression_text', 'limitations_text', 'scan_quality',
+            'critical_flag', 'critical_communication_json'
+        ]
+        for field in canonical_fields:
+            if field in request.data:
+                setattr(parent_report, field, request.data[field])
+        
+        parent_report.save()
+        
+        # Transition item back to IN_PROGRESS for editing
+        try:
+            transition_item_status(item, "IN_PROGRESS", request.user, reason=f"Amendment created: {amendment_reason}")
+        except (ValidationError, PermissionDenied) as e:
+            # Log but continue
+            pass
+        
+        # Audit log: AMENDMENT CREATED
+        StatusAuditLog.objects.create(
+            service_visit_item=item,
+            service_visit=item.service_visit,
+            from_status="PUBLISHED",
+            to_status="IN_PROGRESS",
+            reason=f"Amendment created: {amendment_reason}",
+            changed_by=request.user,
+        )
+        
+        serializer = self.get_serializer(parent_report, context={"request": request})
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
     
     @action(detail=True, methods=["post"], permission_classes=[IsVerifier])
     def return_for_correction(self, request, pk=None):
