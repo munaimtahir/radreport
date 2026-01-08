@@ -183,6 +183,12 @@ class ReceiptSettingsViewSet(viewsets.ViewSet):
     serializer_class = ReceiptSettingsSerializer
     permission_classes = [permissions.IsAuthenticated]
     
+    def get_permissions(self):
+        """Override to allow public access to public_settings action"""
+        if self.action == 'public_settings':
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+    
     def list(self, request):
         """Get current receipt settings"""
         settings_obj = ReceiptSettings.get_settings()
