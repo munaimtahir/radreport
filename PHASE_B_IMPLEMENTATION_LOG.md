@@ -327,3 +327,99 @@ class ServiceVisitItem(models.Model):
 2. Run smoke tests: `python3 scripts/phase_b_smoke.py`
 3. Verify all tests pass
 4. Phase B is CLOSED ✅
+
+---
+
+## 11. PHASE B CLOSURE EXECUTION RESULTS
+
+### Migration Execution
+
+**Command:** `python3 manage.py migrate workflow`
+
+**Output:**
+```
+Operations to perform:
+  Apply all migrations: workflow
+Running migrations:
+  No migrations to apply.
+```
+
+**Status:** ✅ All migrations already applied successfully
+
+**Note:** Migration `0002_phase_b_consolidation.py` was applied earlier. The index conflict (`workflow_se_status_idx`) was resolved by removing the duplicate index creation (status field already has `db_index=True`).
+
+### Smoke Test Execution
+
+**Command:** `python3 scripts/phase_b_smoke.py`
+
+**Output:**
+```
+============================================================
+PHASE B SMOKE TESTS
+============================================================
+✓ PASS: Authentication successful
+
+Testing: Create Patient
+✓ PASS: Patient created with MRN: MR202601080010
+
+Testing: Get Services from Unified Catalog
+✓ PASS: Found 2 services (1 USG, 1 OPD)
+
+Testing: Create ServiceVisit with Multiple Services
+✓ PASS: ServiceVisit created: SV202601080008 with 2 items
+✓ PASS:   - Item: Ultrasound Abdomen (Price: 500.00)
+✓ PASS:   - Item: OPD Consultation (Price: 200.00)
+
+Testing: Verify Invoice and Payment
+✓ PASS: Invoice balance correct: 0.00 (expected: 0.00)
+✓ PASS:   Subtotal: 700.00, Discount: 0.00, Net: 700.00, Paid: 700.00
+
+Testing: Generate Receipt PDF
+✓ PASS: Receipt number format OK: 2601-008
+✓ PASS: PDF endpoint returned 200
+
+Testing: USG Worklist Shows USG Items
+✓ PASS: USG worklist returned 8 visits
+✓ PASS:   Visit SV202601080008 has USG items: ['Ultrasound Abdomen']
+✓ PASS:   Visit SV202601080007 has USG items: ['Ultrasound Abdomen']
+✓ PASS:   Visit SV202601080006 has USG items: ['Ultrasound Abdomen']
+
+Testing: OPD Worklist Shows OPD Items
+✓ PASS: OPD worklist returned 6 visits
+✓ PASS:   Visit SV202601080008 has OPD items: ['OPD Consultation']
+✓ PASS:   Visit SV202601080007 has OPD items: ['OPD Consultation']
+✓ PASS:   Visit SV202601080006 has OPD items: ['OPD Consultation']
+
+Testing: Verify Legacy Write Paths Blocked
+✓ PASS: Legacy Visit creation blocked (403 Forbidden)
+
+============================================================
+SUMMARY
+============================================================
+✓ PASS Create Patient
+✓ PASS Get Services
+✓ PASS Create ServiceVisit with Multiple Services
+✓ PASS Verify Invoice/Payment
+✓ PASS Generate Receipt
+✓ PASS USG Worklist
+✓ PASS OPD Worklist
+✓ PASS Legacy Write Paths Blocked
+
+8/8 tests passed
+All tests passed!
+```
+
+**Status:** ✅ **ALL TESTS PASSED**
+
+### Final Status
+
+- ✅ **Migrations:** Applied successfully
+- ✅ **Billing Logic:** Receipt number generated on invoice creation
+- ✅ **Receipt PDF:** Canonical endpoint working, uses invoice.receipt_number
+- ✅ **Worklists:** USG/OPD filtering by department_snapshot working correctly
+- ✅ **Legacy Write Paths:** Blocked for non-admin users (403 Forbidden)
+- ✅ **Single Service Source:** Frontend uses `/api/services/` (catalog.Service)
+- ✅ **ServiceVisitItem:** Multiple services per visit working
+- ✅ **Invoice/Payment:** Balance calculation correct
+
+**Phase B is CLOSED and VERIFIED** ✅
