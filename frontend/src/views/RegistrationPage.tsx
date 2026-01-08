@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet, apiPost } from "../ui/api";
+import PageHeader from "../ui/components/PageHeader";
+import ErrorAlert from "../ui/components/ErrorAlert";
+import SuccessAlert from "../ui/components/SuccessAlert";
+import Button from "../ui/components/Button";
 
 interface Patient {
   id: string;
@@ -181,10 +185,10 @@ export default function RegistrationPage() {
   
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-      <h1>Registration Desk</h1>
+      <PageHeader title="Registration Desk" />
       
-      {error && <div style={{ color: "red", marginBottom: 16 }}>{error}</div>}
-      {success && <div style={{ color: "green", marginBottom: 16 }}>{success}</div>}
+      {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
+      {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
       
       {/* Patient Search and Form Section */}
       <div style={{ border: "1px solid #ddd", padding: 20, marginBottom: 20, borderRadius: 8 }}>
@@ -201,12 +205,12 @@ export default function RegistrationPage() {
                 onKeyPress={(e) => e.key === "Enter" && searchPatients()}
                 style={{ width: "100%", padding: 8, fontSize: 14 }}
               />
-              <button onClick={searchPatients} style={{ marginTop: 8, padding: "8px 16px" }}>
-                Search
-              </button>
-              <button onClick={() => setShowPatientForm(true)} style={{ marginTop: 8, marginLeft: 8, padding: "8px 16px" }}>
-                New Patient
-              </button>
+              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                <Button onClick={searchPatients}>Search</Button>
+                <Button variant="secondary" onClick={() => setShowPatientForm(true)}>
+                  New Patient
+                </Button>
+              </div>
             </div>
             
             {patientResults.length > 0 && (
@@ -281,13 +285,13 @@ export default function RegistrationPage() {
                     rows={2}
                   />
                 </div>
-                <div style={{ marginTop: 16 }}>
-                  <button onClick={createPatient} disabled={loading || !patientForm.name}>
+                <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
+                  <Button onClick={createPatient} disabled={loading || !patientForm.name}>
                     Create Patient
-                  </button>
-                  <button onClick={() => setShowPatientForm(false)} style={{ marginLeft: 8 }}>
+                  </Button>
+                  <Button variant="secondary" onClick={() => setShowPatientForm(false)}>
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
@@ -354,20 +358,20 @@ export default function RegistrationPage() {
                     rows={2}
                   />
                 </div>
-                <div style={{ marginTop: 16 }}>
-                  <button onClick={updatePatient} disabled={loading}>
+                <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
+                  <Button onClick={updatePatient} disabled={loading}>
                     Update Patient
-                  </button>
-                  <button onClick={() => setShowPatientForm(false)} style={{ marginLeft: 8 }}>
+                  </Button>
+                  <Button variant="secondary" onClick={() => setShowPatientForm(false)}>
                     Cancel
-                  </button>
+                  </Button>
                 </div>
               </div>
             )}
             {!showPatientForm && (
-              <button onClick={() => setShowPatientForm(true)} style={{ marginTop: 8 }}>
+              <Button variant="secondary" onClick={() => setShowPatientForm(true)} style={{ marginTop: 8 }}>
                 Edit Patient
-              </button>
+              </Button>
             )}
           </div>
         )}
@@ -486,21 +490,13 @@ export default function RegistrationPage() {
                 </div>
               </div>
               
-              <div>
-                <button
-                  onClick={() => saveVisit(false)}
-                  disabled={loading}
-                  style={{ padding: "12px 24px", fontSize: 16, marginRight: 8 }}
-                >
+              <div style={{ display: "flex", gap: 8 }}>
+                <Button onClick={() => saveVisit(false)} disabled={loading}>
                   Save
-                </button>
-                <button
-                  onClick={() => saveVisit(true)}
-                  disabled={loading}
-                  style={{ padding: "12px 24px", fontSize: 16 }}
-                >
+                </Button>
+                <Button onClick={() => saveVisit(true)} disabled={loading}>
                   Save & Print Receipt
-                </button>
+                </Button>
               </div>
             </>
           )}

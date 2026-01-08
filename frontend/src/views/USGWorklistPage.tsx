@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet, apiPost } from "../ui/api";
+import PageHeader from "../ui/components/PageHeader";
+import ErrorAlert from "../ui/components/ErrorAlert";
+import SuccessAlert from "../ui/components/SuccessAlert";
+import Button from "../ui/components/Button";
 
 interface ServiceVisit {
   id: string;
@@ -131,10 +135,10 @@ export default function USGWorklistPage() {
 
   return (
     <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-      <h1>USG Worklist (Performance Desk)</h1>
+      <PageHeader title="USG Worklist" subtitle="Performance Desk" />
       
-      {error && <div style={{ color: "red", marginBottom: 16 }}>{error}</div>}
-      {success && <div style={{ color: "green", marginBottom: 16 }}>{success}</div>}
+      {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
+      {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
       
       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20 }}>
         {/* Visit List */}
@@ -212,20 +216,12 @@ export default function USGWorklistPage() {
             </div>
             
             <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={saveDraft}
-                disabled={loading}
-                style={{ padding: "10px 20px", backgroundColor: "#6c757d", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}
-              >
+              <Button variant="secondary" onClick={saveDraft} disabled={loading}>
                 Save Draft
-              </button>
-              <button
-                onClick={submitForVerification}
-                disabled={loading || !reportData.findings.trim()}
-                style={{ padding: "10px 20px", backgroundColor: "#0B5ED7", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}
-              >
+              </Button>
+              <Button onClick={submitForVerification} disabled={loading || !reportData.findings.trim()}>
                 Submit for Verification
-              </button>
+              </Button>
             </div>
           </div>
         )}

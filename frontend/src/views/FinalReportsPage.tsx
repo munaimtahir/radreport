@@ -1,6 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet } from "../ui/api";
+import PageHeader from "../ui/components/PageHeader";
+import ErrorAlert from "../ui/components/ErrorAlert";
+import Button from "../ui/components/Button";
 
 interface ServiceVisit {
   id: string;
@@ -76,9 +79,9 @@ export default function FinalReportsPage() {
 
   return (
     <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-      <h1>Final Reports</h1>
+      <PageHeader title="Final Reports" />
       
-      {error && <div style={{ color: "red", marginBottom: 16 }}>{error}</div>}
+      {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
       
       <div style={{ marginBottom: 16, display: "flex", gap: 8, alignItems: "center" }}>
         <label><strong>Filter:</strong></label>
@@ -139,19 +142,9 @@ export default function FinalReportsPage() {
                   </td>
                   <td style={{ padding: 12, textAlign: "center" }}>
                     {getPdfUrl(visit) ? (
-                      <button
-                        onClick={() => downloadPdf(visit)}
-                        style={{
-                          padding: "6px 12px",
-                          backgroundColor: "#0B5ED7",
-                          color: "white",
-                          border: "none",
-                          borderRadius: 4,
-                          cursor: "pointer",
-                        }}
-                      >
+                      <Button onClick={() => downloadPdf(visit)} style={{ padding: "6px 12px", fontSize: 13 }}>
                         View PDF
-                      </button>
+                      </Button>
                     ) : (
                       <span style={{ color: "#999" }}>PDF not available</span>
                     )}

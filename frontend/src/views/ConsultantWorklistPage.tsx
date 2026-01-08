@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet, apiPost } from "../ui/api";
+import PageHeader from "../ui/components/PageHeader";
+import ErrorAlert from "../ui/components/ErrorAlert";
+import SuccessAlert from "../ui/components/SuccessAlert";
+import Button from "../ui/components/Button";
 
 interface ServiceVisit {
   id: string;
@@ -149,10 +153,10 @@ export default function ConsultantWorklistPage() {
 
   return (
     <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-      <h1>Consultant Worklist (Performance Desk)</h1>
+      <PageHeader title="Consultant Worklist" subtitle="Performance Desk" />
       
-      {error && <div style={{ color: "red", marginBottom: 16 }}>{error}</div>}
-      {success && <div style={{ color: "green", marginBottom: 16 }}>{success}</div>}
+      {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
+      {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
       
       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20 }}>
         {/* Visit List */}
@@ -224,9 +228,9 @@ export default function ConsultantWorklistPage() {
                   <div>
                     <strong>{med.name}</strong> - {med.dosage} - {med.frequency} - {med.duration}
                   </div>
-                  <button onClick={() => removeMedicine(index)} style={{ padding: "4px 8px", backgroundColor: "#dc3545", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
+                  <Button variant="danger" onClick={() => removeMedicine(index)} style={{ padding: "4px 8px", fontSize: 12 }}>
                     Remove
-                  </button>
+                  </Button>
                 </div>
               ))}
               <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: 8, marginTop: 8 }}>
@@ -254,9 +258,9 @@ export default function ConsultantWorklistPage() {
                   onChange={(e) => setNewMedicine({ ...newMedicine, duration: e.target.value })}
                   style={{ padding: 6 }}
                 />
-                <button onClick={addMedicine} style={{ padding: "6px 12px", backgroundColor: "#28a745", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
+                <Button variant="success" onClick={addMedicine} style={{ padding: "6px 12px", fontSize: 12 }}>
                   Add
-                </button>
+                </Button>
               </div>
             </div>
             
@@ -265,9 +269,9 @@ export default function ConsultantWorklistPage() {
               {investigations.map((inv, index) => (
                 <div key={index} style={{ marginBottom: 8, padding: 8, backgroundColor: "#f9f9f9", borderRadius: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                   <div>{inv}</div>
-                  <button onClick={() => removeInvestigation(index)} style={{ padding: "4px 8px", backgroundColor: "#dc3545", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
+                  <Button variant="danger" onClick={() => removeInvestigation(index)} style={{ padding: "4px 8px", fontSize: 12 }}>
                     Remove
-                  </button>
+                  </Button>
                 </div>
               ))}
               <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
@@ -278,9 +282,9 @@ export default function ConsultantWorklistPage() {
                   onKeyPress={(e) => e.key === "Enter" && addInvestigation()}
                   style={{ flex: 1, padding: 6 }}
                 />
-                <button onClick={addInvestigation} style={{ padding: "6px 12px", backgroundColor: "#28a745", color: "white", border: "none", borderRadius: 4, cursor: "pointer" }}>
+                <Button variant="success" onClick={addInvestigation} style={{ padding: "6px 12px", fontSize: 12 }}>
                   Add
-                </button>
+                </Button>
               </div>
             </div>
             
@@ -305,13 +309,9 @@ export default function ConsultantWorklistPage() {
               />
             </div>
             
-            <button
-              onClick={saveAndPrint}
-              disabled={loading || !consultForm.diagnosis.trim()}
-              style={{ padding: "12px 24px", backgroundColor: "#0B5ED7", color: "white", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 16 }}
-            >
+            <Button onClick={saveAndPrint} disabled={loading || !consultForm.diagnosis.trim()}>
               Save & Print Prescription
-            </button>
+            </Button>
           </div>
         )}
         

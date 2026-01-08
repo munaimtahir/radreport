@@ -20,7 +20,7 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 # Production stage
 FROM python:3.11-slim
 
-# Install runtime dependencies only (including WeasyPrint dependencies and fonts)
+# Install runtime dependencies (PostgreSQL client + WeasyPrint system libraries)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     libpq5 \

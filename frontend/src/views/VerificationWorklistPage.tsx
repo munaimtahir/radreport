@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet, apiPost } from "../ui/api";
+import PageHeader from "../ui/components/PageHeader";
+import ErrorAlert from "../ui/components/ErrorAlert";
+import SuccessAlert from "../ui/components/SuccessAlert";
+import Button from "../ui/components/Button";
 
 interface ServiceVisit {
   id: string;
@@ -111,10 +115,10 @@ export default function VerificationWorklistPage() {
 
   return (
     <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-      <h1>Verification Worklist (Verification Desk)</h1>
+      <PageHeader title="Verification Worklist" subtitle="Verification Desk" />
       
-      {error && <div style={{ color: "red", marginBottom: 16 }}>{error}</div>}
-      {success && <div style={{ color: "green", marginBottom: 16 }}>{success}</div>}
+      {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
+      {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
       
       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20 }}>
         {/* Visit List */}
@@ -184,20 +188,12 @@ export default function VerificationWorklistPage() {
             </div>
             
             <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={publish}
-                disabled={loading}
-                style={{ padding: "12px 24px", backgroundColor: "#28a745", color: "white", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 16 }}
-              >
+              <Button variant="success" onClick={publish} disabled={loading}>
                 Publish Report
-              </button>
-              <button
-                onClick={returnForCorrection}
-                disabled={loading || !returnReason.trim()}
-                style={{ padding: "12px 24px", backgroundColor: "#ffc107", color: "black", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 16 }}
-              >
+              </Button>
+              <Button variant="warning" onClick={returnForCorrection} disabled={loading || !returnReason.trim()}>
                 Return for Correction
-              </button>
+              </Button>
             </div>
           </div>
         )}

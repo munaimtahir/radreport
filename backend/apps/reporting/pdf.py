@@ -9,77 +9,15 @@ import os
 from PIL import Image
 from django.template.loader import render_to_string
 from django.conf import settings
-from weasyprint import HTML, CSS
 from django.urls import reverse
 
+# Import ReportLab PDF engine
+from .pdf_engine.receipt import build_receipt_pdf_reportlab
+from .pdf_engine.clinical_report import build_basic_report_pdf
+
 def build_receipt_pdf(visit) -> ContentFile:
-    """Generate receipt PDF using HTML templates with WeasyPrint (A4 dual copy layout)"""
-    from apps.studies.models import ReceiptSettings
-    
-    # Get receipt settings
-    receipt_settings = ReceiptSettings.get_settings()
-    
-    # Prepare logo URL if exists
-    logo_url = None
-    if receipt_settings.logo_image and os.path.exists(receipt_settings.logo_image.path):
-        # WeasyPrint needs file:// protocol for local files
-        logo_path = os.path.abspath(receipt_settings.logo_image.path)
-        logo_url = f'file://{logo_path}'
-    
-    # Prepare context data
-    receipt_date = visit.receipt_generated_at or visit.created_at
-    
-    # Get items with service details
-    items = visit.items.select_related('service', 'service__modality').all()
-    
-    context = {
-        'receipt_number': visit.receipt_number or visit.visit_number,
-        'receipt_date': receipt_date,
-        'patient': {
-            'mrn': visit.patient.mrn,
-            'name': visit.patient.name,
-            'age': visit.patient.age,
-            'gender': visit.patient.gender,
-            'phone': visit.patient.phone,
-        },
-        'items': items,
-        'subtotal': visit.subtotal,
-        'discount_amount': visit.discount_amount,
-        'discount_percentage': visit.discount_percentage,
-        'net_total': visit.net_total,
-        'paid_amount': visit.paid_amount,
-        'due_amount': visit.due_amount,
-        'payment_method': visit.payment_method,
-        'consultant': None,  # Can be added if consultant field exists
-        'logo_url': logo_url,
-    }
-    
-    # Render HTML template
-    html_string = render_to_string('receipts/receipt_a4_dual.html', context)
-    
-    # Get CSS file path
-    css_path = os.path.join(settings.BASE_DIR, 'static', 'css', 'receipt_print.css')
-    if not os.path.exists(css_path):
-        # Fallback: use inline CSS
-        css = CSS(string='''
-            @page {
-                size: A4 portrait;
-                margin: 10mm;
-            }
-        ''')
-        stylesheets = [css]
-    else:
-        stylesheets = [CSS(filename=css_path)]
-    
-    # Generate PDF using WeasyPrint
-    # Use BASE_DIR as base_url for resolving static assets
-    base_url = str(settings.BASE_DIR) if hasattr(settings, 'BASE_DIR') else None
-    html = HTML(string=html_string, base_url=base_url)
-    
-    # Generate PDF
-    pdf_bytes = html.write_pdf(stylesheets=stylesheets)
-    
-    return ContentFile(pdf_bytes, name=f"receipt_{visit.receipt_number or visit.visit_number}.pdf")
+    """Generate receipt PDF using ReportLab (A4 layout)"""
+    return build_receipt_pdf_reportlab(visit)
 
 def build_receipt_pdf_legacy(visit) -> ContentFile:
     """Generate receipt PDF for a visit with branding support"""
@@ -300,52 +238,5 @@ def build_receipt_pdf_legacy(visit) -> ContentFile:
     return ContentFile(pdf_bytes, name=f"receipt_{visit.receipt_number or visit.visit_number}.pdf")
 
 def build_basic_pdf(report) -> ContentFile:
-    """Basic PDF generator stub.
-    Replace with your branded layout later (header, footer, signatory, QR, etc.)
-    """
-    buffer = BytesIO()
-    c = canvas.Canvas(buffer, pagesize=A4)
-    width, height = A4
-
-    y = height - 50
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(40, y, "Radiology Report")
-    y -= 25
-
-    c.setFont("Helvetica", 10)
-    c.drawString(40, y, f"Accession: {report.study.accession}")
-    y -= 14
-    c.drawString(40, y, f"Patient: {report.study.patient.name} | MRN: {report.study.patient.mrn}")
-    y -= 14
-    c.drawString(40, y, f"Service: {report.study.service.name} ({report.study.service.modality.code})")
-    y -= 20
-
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(40, y, "Findings")
-    y -= 14
-    c.setFont("Helvetica", 10)
-    for line in (report.narrative or "").splitlines()[:40]:
-        c.drawString(40, y, line[:110])
-        y -= 12
-        if y < 80:
-            c.showPage()
-            y = height - 50
-
-    y -= 10
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(40, y, "Impression")
-    y -= 14
-    c.setFont("Helvetica", 10)
-    for line in (report.impression or "").splitlines()[:20]:
-        c.drawString(40, y, line[:110])
-        y -= 12
-        if y < 80:
-            c.showPage()
-            y = height - 50
-
-    c.showPage()
-    c.save()
-
-    pdf_bytes = buffer.getvalue()
-    buffer.close()
-    return ContentFile(pdf_bytes, name=f"{report.study.accession}.pdf")
+    """Generate basic clinical report PDF using ReportLab"""
+    return build_basic_report_pdf(report)

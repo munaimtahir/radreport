@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet, apiPost } from "../ui/api";
+import PageHeader from "../ui/components/PageHeader";
+import ErrorAlert from "../ui/components/ErrorAlert";
+import SuccessAlert from "../ui/components/SuccessAlert";
+import Button from "../ui/components/Button";
 
 interface ServiceVisit {
   id: string;
@@ -156,10 +160,10 @@ export default function OPDVitalsWorklistPage() {
 
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto" }}>
-      <h1>OPD Vitals Worklist (Performance Desk)</h1>
+      <PageHeader title="OPD Vitals Worklist" subtitle="Performance Desk" />
       
-      {error && <div style={{ color: "red", marginBottom: 16 }}>{error}</div>}
-      {success && <div style={{ color: "green", marginBottom: 16 }}>{success}</div>}
+      {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
+      {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
       
       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20 }}>
         {/* Visit List */}
@@ -286,13 +290,9 @@ export default function OPDVitalsWorklistPage() {
               </div>
             )}
             
-            <button
-              onClick={saveVitals}
-              disabled={loading}
-              style={{ padding: "12px 24px", backgroundColor: "#0B5ED7", color: "white", border: "none", borderRadius: 4, cursor: "pointer", fontSize: 16 }}
-            >
+            <Button onClick={saveVitals} disabled={loading}>
               Save Vitals
-            </button>
+            </Button>
           </div>
         )}
         

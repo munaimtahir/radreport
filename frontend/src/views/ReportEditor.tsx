@@ -2,6 +2,9 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../ui/auth";
 import { apiGet, apiPost } from "../ui/api";
+import PageHeader from "../ui/components/PageHeader";
+import ErrorAlert from "../ui/components/ErrorAlert";
+import Button from "../ui/components/Button";
 
 interface Field {
   id: string;
@@ -198,52 +201,28 @@ export default function ReportEditor() {
 
   return (
     <div>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-        <div>
-          <h1>Report Editor</h1>
-          <div style={{ color: "#666", fontSize: 14 }}>
-            Accession: {report.study.accession} | Patient: {report.study.patient_name} | Service:{" "}
-            {report.study.service_name}
-          </div>
-          <div style={{ color: "#666", fontSize: 14 }}>Status: {report.status}</div>
-        </div>
-        <div style={{ display: "flex", gap: 10 }}>
-          <button
-            onClick={handleSaveDraft}
-            disabled={saving || report.status === "final"}
-            style={{
-              padding: "8px 16px",
-              fontSize: 14,
-              background: "#17a2b8",
-              color: "white",
-              border: "none",
-              borderRadius: 4,
-              cursor: saving || report.status === "final" ? "not-allowed" : "pointer",
-            }}
-          >
-            {saving ? "Saving..." : "Save Draft"}
-          </button>
-          {report.status === "draft" && (
-            <button
-              onClick={handleFinalize}
-              disabled={saving}
-              style={{
-                padding: "8px 16px",
-                fontSize: 14,
-                background: "#28a745",
-                color: "white",
-                border: "none",
-                borderRadius: 4,
-                cursor: saving ? "not-allowed" : "pointer",
-              }}
+      <PageHeader
+        title="Report Editor"
+        subtitle={`Accession: ${report.study.accession} | Patient: ${report.study.patient_name} | Service: ${report.study.service_name} | Status: ${report.status}`}
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              onClick={handleSaveDraft}
+              disabled={saving || report.status === "final"}
             >
-              {saving ? "Finalizing..." : "Finalize Report"}
-            </button>
-          )}
-        </div>
-      </div>
+              {saving ? "Saving..." : "Save Draft"}
+            </Button>
+            {report.status === "draft" && (
+              <Button variant="success" onClick={handleFinalize} disabled={saving}>
+                {saving ? "Finalizing..." : "Finalize Report"}
+              </Button>
+            )}
+          </>
+        }
+      />
 
-      {error && <div style={{ color: "red", marginBottom: 10 }}>{error}</div>}
+      {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
 
       {report.status === "final" && (
         <div style={{ background: "#d4edda", border: "1px solid #c3e6cb", padding: 12, borderRadius: 4, marginBottom: 20 }}>
