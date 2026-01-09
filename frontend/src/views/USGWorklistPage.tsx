@@ -46,12 +46,16 @@ export default function USGWorklistPage() {
   const loadVisits = async () => {
     if (!token) return;
     try {
-      // Use repeated query params for multiple status values
+      // Use repeated query params for multiple status values (preferred format)
+      // This creates: ?workflow=USG&status=REGISTERED&status=RETURNED_FOR_CORRECTION
+      // NOT comma-separated: ?status=REGISTERED,RETURNED_FOR_CORRECTION
       const params = new URLSearchParams();
       params.append("workflow", "USG");
       params.append("status", "REGISTERED");
       params.append("status", "RETURNED_FOR_CORRECTION");
-      const data = await apiGet(`/workflow/visits/?${params.toString()}`, token);
+      // URLSearchParams.toString() will create repeated params correctly: ?key=value1&key=value2
+      const queryString = params.toString();
+      const data = await apiGet(`/workflow/visits/?${queryString}`, token);
       setVisits(data.results || data || []);
     } catch (err: any) {
       setError(err.message || "Failed to load visits");

@@ -196,6 +196,7 @@ export default function RegistrationPage() {
       if (printReceipt) {
         // Fetch receipt PDF with auth token and open in new window
         const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
+        // Use correct endpoint pattern: /api/pdf/{id}/receipt/ (matches PDFViewSet action)
         const receiptUrl = `${API_BASE}/pdf/${visit.id}/receipt/`;
         
         fetch(receiptUrl, {
@@ -204,20 +205,45 @@ export default function RegistrationPage() {
           },
         })
           .then((res) => {
-            if (!res.ok) throw new Error("Failed to fetch receipt PDF");
+            if (!res.ok) {
+              if (res.status === 401) {
+                throw new Error("Authentication failed. Please log in again.");
+              }
+              throw new Error(`Failed to fetch receipt PDF: ${res.status} ${res.statusText}`);
+            }
+            // Verify content-type is PDF
+            const contentType = res.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/pdf")) {
+              console.warn("Expected PDF but got:", contentType);
+            }
             return res.blob();
           })
           .then((blob) => {
             const url = window.URL.createObjectURL(blob);
             const win = window.open(url, "_blank");
             if (win) {
-              // Clean up blob URL after a delay
-              setTimeout(() => window.URL.revokeObjectURL(url), 100);
+              // Wait for window to load before attempting print
+              win.onload = () => {
+                // Trigger print dialog
+                win.print();
+              };
+              // Clean up blob URL after a delay (give time for print dialog)
+              setTimeout(() => window.URL.revokeObjectURL(url), 60000); // 60 seconds to allow for print
+            } else {
+              // Popup blocked, try fallback
+              const link = document.createElement("a");
+              link.href = url;
+              link.target = "_blank";
+              link.download = `receipt_${visit.visit_id || visit.id}.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              setTimeout(() => window.URL.revokeObjectURL(url), 60000);
             }
           })
           .catch((err) => {
             console.error("Failed to load receipt:", err);
-            setError("Failed to load receipt. Please try again.");
+            setError(`Failed to load receipt: ${err.message}`);
           });
       }
     } catch (err: any) {

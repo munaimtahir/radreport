@@ -310,20 +310,45 @@ export default function FrontDeskIntake() {
             });
           })
           .then((res) => {
-            if (!res.ok) throw new Error("Failed to fetch receipt PDF");
+            if (!res.ok) {
+              if (res.status === 401) {
+                throw new Error("Authentication failed. Please log in again.");
+              }
+              throw new Error(`Failed to fetch receipt PDF: ${res.status} ${res.statusText}`);
+            }
+            // Verify content-type is PDF
+            const contentType = res.headers.get("content-type");
+            if (!contentType || !contentType.includes("application/pdf")) {
+              console.warn("Expected PDF but got:", contentType);
+            }
             return res.blob();
           })
           .then((blob) => {
             const url = window.URL.createObjectURL(blob);
             const win = window.open(url, "_blank");
             if (win) {
-              // Clean up blob URL after a delay
-              setTimeout(() => window.URL.revokeObjectURL(url), 100);
+              // Wait for window to load before attempting print
+              win.onload = () => {
+                // Trigger print dialog
+                win.print();
+              };
+              // Clean up blob URL after a delay (give time for print dialog)
+              setTimeout(() => window.URL.revokeObjectURL(url), 60000); // 60 seconds to allow for print
+            } else {
+              // Popup blocked, try fallback
+              const link = document.createElement("a");
+              link.href = url;
+              link.target = "_blank";
+              link.download = `receipt_${visit.visit_id || visit.id}.pdf`;
+              document.body.appendChild(link);
+              link.click();
+              document.body.removeChild(link);
+              setTimeout(() => window.URL.revokeObjectURL(url), 60000);
             }
           })
           .catch((err) => {
             console.error("Failed to generate/load receipt:", err);
-            setError("Failed to generate receipt. Please try again.");
+            setError(`Failed to generate receipt: ${err.message}`);
           });
       }
       
