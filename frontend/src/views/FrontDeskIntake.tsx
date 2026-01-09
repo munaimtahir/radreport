@@ -302,7 +302,7 @@ export default function FrontDeskIntake() {
           })
           .then((updatedVisit) => {
             // Then fetch the PDF
-            const receiptUrl = `${API_BASE}/visits/${visit.id}/receipt/`;
+            const receiptUrl = `${API_BASE}/pdf/${visit.id}/receipt/`;
             return fetch(receiptUrl, {
               headers: {
                 Authorization: `Bearer ${token}`,

@@ -277,3 +277,107 @@ python manage.py migrate workflow
 ✅ **Backend Deployment:** Backend container restarted successfully  
 ✅ **Smoke Test:** Script prepared (run with production credentials: `API_BASE=https://rims.alshifalab.pk/api TEST_USERNAME=admin TEST_PASSWORD=<production_password> python scripts/prod_smoke.py`)  
 ⏳ **UI Testing:** Manual testing required (see instructions above)
+
+---
+
+## Production Fix - 2025-01-09
+
+### Issue A: Receipt Print Flow - 401 Error
+**Symptom:** Direct navigation to `/api/pdf/<uuid>/receipt/` returns 401 (JWT not sent in address bar). Frontend must fetch PDF with Authorization header as blob.
+
+**Root Cause:**
+- `FrontDeskIntake.tsx` was using legacy route: `/api/visits/{id}/receipt/` which causes 404/not found
+- `RegistrationPage.tsx` already uses correct endpoint: `/api/pdf/{id}/receipt/` with blob fetch
+
+**Fix Applied:**
+1. In `FrontDeskIntake.tsx` (line 305), replaced:
+   - `${API_BASE}/visits/${visit.id}/receipt/`
+   - with: `${API_BASE}/pdf/${visit.id}/receipt/`
+2. Verified blob-fetch + print logic is already in place (no changes needed)
+3. Confirmed `RegistrationPage.tsx` already uses canonical endpoint
+
+**Files Changed:**
+- `frontend/src/views/FrontDeskIntake.tsx` - Updated receipt endpoint
+
+---
+
+### Issue B: USG Worklist Status Mismatch
+**Symptom:** USG worklist returns status validation error because frontend sends `RETURNED_FOR_CORRECTION` but backend expects `RETURNED`.
+
+**Root Cause:**
+- Backend valid status choices include `REGISTERED` and `RETURNED` (not `RETURNED_FOR_CORRECTION`)
+- `USGWorklistPage.tsx` was sending `RETURNED_FOR_CORRECTION` in query params
+
+**Fix Applied:**
+1. In `USGWorklistPage.tsx` (line 55), changed:
+   - `params.append("status", "RETURNED_FOR_CORRECTION");`
+   - to: `params.append("status", "RETURNED");`
+2. Updated status check in UI (line 179):
+   - `visit.status === "RETURNED_FOR_CORRECTION"`
+   - to: `visit.status === "RETURNED"`
+3. Confirmed URLSearchParams uses repeated params (not comma-separated) - kept as is
+
+**Files Changed:**
+- `frontend/src/views/USGWorklistPage.tsx` - Updated status value from `RETURNED_FOR_CORRECTION` to `RETURNED`
+
+---
+
+### Deployment Steps Completed
+
+1. ✅ **Rebuilt frontend production bundle:**
+   ```bash
+   cd /home/munaim/srv/apps/radreport/frontend
+   npm install
+   npm run build
+   ```
+   - Output: `dist/assets/index-DkFpW_TH.js` (257.79 kB)
+
+2. ✅ **Deployed new build to VPS:**
+   ```bash
+   docker cp /home/munaim/srv/apps/radreport/frontend/dist/. rims_frontend_prod:/usr/share/nginx/html/
+   ```
+   - Files copied to container at `/usr/share/nginx/html/`
+   - New bundle: `index-DkFpW_TH.js` (dated 2025-01-09 21:17)
+
+3. ✅ **Cache-busting:**
+   - New JS bundle has different hash (`DkFpW_TH` vs old `dZRpo7Xo`)
+   - Browser will load new bundle automatically on next request
+   - Hard refresh (Ctrl+Shift+R) recommended for immediate effect
+
+---
+
+### Verification Steps
+
+**Test Receipt Print:**
+1. Navigate to Front Desk Intake page
+2. Register patient + services
+3. Click "Save & Print Receipt"
+4. **Expected:** Receipt PDF opens in new window (no 401 popup, no navigation to PDF URL in address bar)
+5. **Verify:** PDF displays correctly with receipt number and patient info
+
+**Test USG Worklist:**
+1. Navigate to USG Worklist page
+2. **Expected:** Worklist loads without status error
+3. **Verify:** Visits with status `REGISTERED` or `RETURNED` are displayed
+4. **Check:** No validation errors in browser console
+
+---
+
+### Summary
+
+**Changed Files:**
+- `frontend/src/views/FrontDeskIntake.tsx` - Receipt endpoint updated
+- `frontend/src/views/USGWorklistPage.tsx` - Status value updated
+
+**New Receipt Endpoint Used:**
+- `/api/pdf/{id}/receipt/` (canonical endpoint with Authorization header)
+
+**New Status Values Used:**
+- `RETURNED` (replaces `RETURNED_FOR_CORRECTION`)
+
+**Deployment:**
+- Frontend bundle rebuilt and deployed to `rims_frontend_prod` container
+- New bundle hash: `DkFpW_TH`
+- Ready for browser testing
+
+**Status:** ✅ Deployed and ready for verification

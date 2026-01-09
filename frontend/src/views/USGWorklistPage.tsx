@@ -47,12 +47,12 @@ export default function USGWorklistPage() {
     if (!token) return;
     try {
       // Use repeated query params for multiple status values (preferred format)
-      // This creates: ?workflow=USG&status=REGISTERED&status=RETURNED_FOR_CORRECTION
-      // NOT comma-separated: ?status=REGISTERED,RETURNED_FOR_CORRECTION
+      // This creates: ?workflow=USG&status=REGISTERED&status=RETURNED
+      // NOT comma-separated: ?status=REGISTERED,RETURNED
       const params = new URLSearchParams();
       params.append("workflow", "USG");
       params.append("status", "REGISTERED");
-      params.append("status", "RETURNED_FOR_CORRECTION");
+      params.append("status", "RETURNED");
       // URLSearchParams.toString() will create repeated params correctly: ?key=value1&key=value2
       const queryString = params.toString();
       const data = await apiGet(`/workflow/visits/?${queryString}`, token);
@@ -176,7 +176,7 @@ export default function USGWorklistPage() {
                   <div style={{ fontSize: 12, color: "#999" }}>
                     {new Date(visit.registered_at).toLocaleString()}
                   </div>
-                  {visit.status === "RETURNED_FOR_CORRECTION" && (
+                  {visit.status === "RETURNED" && (
                     <div style={{ fontSize: 12, color: "red", marginTop: 4 }}>
                       Returned for correction
                     </div>
