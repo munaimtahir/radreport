@@ -381,3 +381,129 @@ python manage.py migrate workflow
 - Ready for browser testing
 
 **Status:** ✅ Deployed and ready for verification
+
+---
+
+## Production Fix - 2025-01-XX: USG Report Save + Submit Identifier Mismatch
+
+### Issue C: USG Report Submit for Verification Fails with "usgreport for this visit id is not found"
+**Symptom:** 
+- USG report saves successfully but submitting for verification fails with error: "usgreport for this visit id is not found"
+- Save and Submit were operating on different identifiers/linkage, causing Submit to fail after Save
+
+**Root Cause:**
+1. **Backend `get_object()` method** in `USGReportViewSet` was incorrectly assuming URL parameter `pk` was always a `visit_id`, not a report UUID
+   - When frontend called `/workflow/usg/{report_id}/submit_for_verification/`, it passed the report's UUID
+   - `get_object()` tried to find by `visit_id`, failing to find the report
+2. **Identifier inconsistency**: Save used `visit_id` which backend resolved to `service_visit_item_id`, but Submit used report UUID which wasn't handled correctly
+3. **Workflow is item-centric**: USGReport should be uniquely tied to `ServiceVisitItem` (USG item), but endpoints mixed `visit_id` and report UUID lookups
+
+**Fix Applied:**
+
+#### 1. Fixed Backend `get_object()` Method (`backend/apps/workflow/api.py`)
+   - Updated to handle three lookup strategies in priority order:
+     1. **Report UUID** (primary key) - for detail actions like `submit_for_verification/{id}/`
+     2. **service_visit_item_id** - canonical item-centric lookup
+     3. **visit_id** - legacy fallback (resolves to USG item, then report)
+   - Now correctly handles report UUIDs passed in URL for detail actions
+
+#### 2. Updated Backend `create()` Method (`backend/apps/workflow/api.py`)
+   - Accepts `service_visit_item_id` as **canonical identifier** (primary)
+   - Maintains backward compatibility with `visit_id` (fallback)
+   - Ensures USGReport is always linked to the correct `ServiceVisitItem`
+
+#### 3. Updated Backend `get_queryset()` Method (`backend/apps/workflow/api.py`)
+   - Added support for filtering by `service_visit_item_id` query parameter (canonical)
+   - Maintains backward compatibility with `visit_id` filtering
+
+#### 4. Updated Frontend USGWorklistPage (`frontend/src/views/USGWorklistPage.tsx`)
+   - Added `ServiceVisitItem` interface and `items` array to `ServiceVisit` interface
+   - Added `item_id` to `USGReport` interface
+   - Updated `handleSelectVisit()` to find USG item (`department_snapshot="USG"`) and store `service_visit_item_id`
+   - Updated `loadReport()` to accept and use `service_visit_item_id` (canonical)
+   - Updated `saveDraft()` to use `service_visit_item_id` when available (canonical), fallback to `visit_id` (compatibility)
+   - Updated `submitForVerification()` to use same identifier as Save (ensures same record)
+   - Both Save and Submit now operate on the same USGReport record via `service_visit_item_id`
+
+**Files Changed:**
+- `backend/apps/workflow/api.py` - Fixed `get_object()`, `create()`, and `get_queryset()` methods in `USGReportViewSet`
+- `frontend/src/views/USGWorklistPage.tsx` - Updated to use `service_visit_item_id` consistently
+
+**Key Changes:**
+
+1. **Backend `get_object()` - Multi-strategy lookup:**
+   ```python
+   # 1. Try direct UUID lookup (for detail actions with report ID)
+   # 2. Try service_visit_item_id (canonical item-centric lookup)
+   # 3. Try visit_id (legacy compatibility)
+   ```
+
+2. **Backend `create()` - Item-centric linkage:**
+   ```python
+   # Accepts service_visit_item_id (canonical) or visit_id (compatibility)
+   # Always links USGReport to correct ServiceVisitItem
+   ```
+
+3. **Frontend - Consistent identifier usage:**
+   ```typescript
+   // Find USG item from visit.items
+   // Use service_visit_item_id for Save
+   // Use same service_visit_item_id (from report.item_id) for Submit
+   ```
+
+**Verification Steps:**
+
+1. **Manual Test:**
+   - Open USG worklist
+   - Select a visit with USG item
+   - Type report content
+   - Click "Save Draft" → Should succeed
+   - Click "Submit for Verification" → Should succeed (no "not found" error)
+
+2. **API Test:**
+   ```bash
+   # 1. Create/update report with service_visit_item_id
+   curl -X POST https://rims.alshifalab.pk/api/workflow/usg/ \
+     -H "Authorization: Bearer TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{"service_visit_item_id": "ITEM_UUID", "report_json": {...}}'
+   
+   # 2. Submit for verification using report ID (should work now)
+   curl -X POST https://rims.alshifalab.pk/api/workflow/usg/REPORT_UUID/submit_for_verification/ \
+     -H "Authorization: Bearer TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{}'
+   ```
+
+3. **Test Script:**
+   - Existing `test_e2e_workflow.py::test_usg_workflow()` should now pass
+   - Verify both Save and Submit use same USGReport record
+
+**Backward Compatibility:**
+- ✅ Frontend calls with `visit_id` still work (backend resolves to `service_visit_item_id`)
+- ✅ Reports created with `visit_id` are automatically linked to correct `ServiceVisitItem`
+- ✅ Legacy lookups by `visit_id` continue to work
+
+**Expected Behavior After Fix:**
+1. Save creates/updates USGReport for the correct `ServiceVisitItem`
+2. Submit finds the same USGReport using report UUID (handled correctly by fixed `get_object()`)
+3. Both operations operate on the same record
+4. No "not found" errors
+5. Item status transitions correctly (REGISTERED → IN_PROGRESS → PENDING_VERIFICATION)
+
+**Status:** ✅ Ready for production deployment
+
+---
+
+### Summary of All Fixes
+
+**Issues Fixed:**
+1. Receipt PDF endpoint routing (Issue 1)
+2. USG worklist status validation (Issue 2)
+3. USG report submit identifier mismatch (Issue C)
+
+**Current Status:**
+- ✅ All backend fixes applied
+- ✅ Frontend fixes applied
+- ✅ Backward compatibility maintained
+- ⏳ Manual testing required

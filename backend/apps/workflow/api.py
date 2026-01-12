@@ -260,62 +260,104 @@ class USGReportViewSet(viewsets.ModelViewSet):
     permission_classes = [IsPerformanceOrVerificationDesk]
     
     def get_queryset(self):
+        """Filter queryset by service_visit_item_id (canonical) or visit_id (compatibility)"""
+        service_visit_item_id = self.request.query_params.get("service_visit_item_id")
         visit_id = self.request.query_params.get("visit_id") or self.kwargs.get("pk")
+        
+        # Canonical: filter by service_visit_item_id
+        if service_visit_item_id:
+            return self.queryset.filter(service_visit_item_id=service_visit_item_id)
+        
+        # Compatibility: filter by visit_id
         if visit_id:
             return self.queryset.filter(
                 models.Q(service_visit_id=visit_id) | models.Q(service_visit_item__service_visit_id=visit_id)
             )
+        
         return self.queryset.all()
     
     def get_object(self):
-        visit_id = self.kwargs.get("pk")
+        """
+        Get USGReport by:
+        1. Report UUID (primary key) - for detail actions like submit_for_verification/{id}/
+        2. service_visit_item_id - canonical item-centric lookup
+        3. visit_id - legacy fallback (resolves to USG item, then report)
+        """
+        pk = self.kwargs.get("pk")
+        if not pk:
+            from rest_framework.exceptions import NotFound
+            raise NotFound("USG report identifier not provided")
+        
+        # First, try direct UUID lookup (for detail actions with report ID)
         try:
-            # Try to find via ServiceVisitItem first
+            return self.queryset.get(id=pk)
+        except (USGReport.DoesNotExist, ValueError):
+            pass
+        
+        # Second, try service_visit_item_id (canonical item-centric lookup)
+        try:
+            item = ServiceVisitItem.objects.get(id=pk, department_snapshot="USG")
+            if hasattr(item, 'usg_report'):
+                return item.usg_report
+        except (ServiceVisitItem.DoesNotExist, ValueError):
+            pass
+        
+        # Third, try visit_id (legacy compatibility - resolves to USG item, then report)
+        try:
             item = ServiceVisitItem.objects.filter(
-                service_visit_id=visit_id,
-                service__category="Radiology",
-                service__modality__code="USG"
+                service_visit_id=pk,
+                department_snapshot="USG"
             ).first()
             if item and hasattr(item, 'usg_report'):
                 return item.usg_report
-            # Fallback to legacy
-            return self.queryset.get(service_visit_id=visit_id)
+            # Fallback to legacy service_visit-based lookup
+            return self.queryset.get(service_visit_id=pk)
         except USGReport.DoesNotExist:
             from rest_framework.exceptions import NotFound
             raise NotFound("USG report not found for this visit")
     
     def create(self, request):
-        """Create or update USG report"""
+        """Create or update USG report - accepts service_visit_item_id (canonical) or visit_id (compatibility)"""
+        service_visit_item_id = request.data.get("service_visit_item_id")
         visit_id = request.data.get("visit_id") or request.query_params.get("visit_id")
-        if not visit_id:
-            return Response({"detail": "visit_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         
-        try:
-            service_visit = ServiceVisit.objects.get(id=visit_id)
-        except ServiceVisit.DoesNotExist:
-            return Response({"detail": "Service visit not found"}, status=status.HTTP_404_NOT_FOUND)
+        # Canonical: use service_visit_item_id if provided
+        if service_visit_item_id:
+            try:
+                usg_item = ServiceVisitItem.objects.get(id=service_visit_item_id, department_snapshot="USG")
+            except ServiceVisitItem.DoesNotExist:
+                return Response({"detail": "USG service visit item not found"}, status=status.HTTP_404_NOT_FOUND)
+        # Compatibility: fallback to visit_id (resolve to USG item)
+        elif visit_id:
+            try:
+                service_visit = ServiceVisit.objects.get(id=visit_id)
+            except ServiceVisit.DoesNotExist:
+                return Response({"detail": "Service visit not found"}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Find USG ServiceVisitItem for this visit
+            usg_item = service_visit.items.filter(department_snapshot="USG").first()
+            if not usg_item:
+                return Response({"detail": "No USG service found in this visit"}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({"detail": "service_visit_item_id or visit_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         
-        # Find or create USG ServiceVisitItem
-        usg_item = service_visit.items.filter(
-            service__category="Radiology",
-            service__modality__code="USG"
-        ).first()
-        
-        if not usg_item:
-            return Response({"detail": "No USG service found in this visit"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        # Check if report exists (prefer item-based, fallback to legacy)
+        # Get or create USGReport for this item (item-centric canonical linkage)
         report = None
+        created = False
+        
         if hasattr(usg_item, 'usg_report'):
             report = usg_item.usg_report
             created = False
         else:
-            # Try legacy
-            report = USGReport.objects.filter(service_visit=service_visit).first()
-            if report:
-                # Migrate to item-based
-                report.service_visit_item = usg_item
-                report.save()
+            # Try legacy service_visit-based lookup (for migration)
+            legacy_report = USGReport.objects.filter(service_visit=usg_item.service_visit).first()
+            if legacy_report:
+                # Migrate to item-based linkage
+                legacy_report.service_visit_item = usg_item
+                if not legacy_report.service_visit:
+                    legacy_report.service_visit = usg_item.service_visit
+                legacy_report.save()
+                report = legacy_report
                 created = False
             else:
                 # PHASE C: Assign template_version if service has default_template
@@ -325,25 +367,20 @@ class USGReportViewSet(viewsets.ModelViewSet):
                     template = usg_item.service.default_template
                     template_version = template.versions.filter(is_published=True).order_by("-version").first()
                 
-                # Create new
+                # Create new report with item-centric linkage
                 report = USGReport.objects.create(
                     service_visit_item=usg_item,
-                    service_visit=service_visit,  # Keep for backward compatibility
+                    service_visit=usg_item.service_visit,  # Keep for backward compatibility
                     template_version=template_version,  # PHASE C: Template bridge
                     created_by=request.user,
                     updated_by=request.user,
                 )
                 created = True
         
-        if not created:
-            report.updated_by = request.user
-            report.report_json = request.data.get("report_json", report.report_json)
-            report.save()
-        
-        if not created:
-            report.updated_by = request.user
-            report.report_json = request.data.get("report_json", report.report_json)
-            report.save()
+        # Update report data
+        report.updated_by = request.user
+        report.report_json = request.data.get("report_json", report.report_json)
+        report.save()
         
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)

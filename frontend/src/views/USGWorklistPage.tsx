@@ -6,6 +6,13 @@ import ErrorAlert from "../ui/components/ErrorAlert";
 import SuccessAlert from "../ui/components/SuccessAlert";
 import Button from "../ui/components/Button";
 
+interface ServiceVisitItem {
+  id: string;
+  service_visit_id: string;
+  department_snapshot: string;
+  status: string;
+}
+
 interface ServiceVisit {
   id: string;
   visit_id: string;
@@ -15,11 +22,13 @@ interface ServiceVisit {
   service_code: string;
   status: string;
   registered_at: string;
+  items?: ServiceVisitItem[];
 }
 
 interface USGReport {
   id: string;
   service_visit_id: string;
+  item_id?: string;  // service_visit_item_id (canonical identifier)
   report_json: any;
   return_reason?: string;
 }
@@ -31,6 +40,7 @@ export default function USGWorklistPage() {
   const [success, setSuccess] = useState<string>("");
   const [visits, setVisits] = useState<ServiceVisit[]>([]);
   const [selectedVisit, setSelectedVisit] = useState<ServiceVisit | null>(null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(null);  // service_visit_item_id (canonical)
   const [report, setReport] = useState<USGReport | null>(null);
   const [reportData, setReportData] = useState({
     findings: "",
@@ -62,13 +72,19 @@ export default function USGWorklistPage() {
     }
   };
 
-  const loadReport = async (visitId: string) => {
+  const loadReport = async (visitId: string, itemId?: string) => {
     if (!token) return;
     try {
-      const data = await apiGet(`/workflow/usg/?visit_id=${visitId}`, token);
+      // Try item-centric lookup first (canonical), fallback to visit_id
+      const queryParam = itemId ? `service_visit_item_id=${itemId}` : `visit_id=${visitId}`;
+      const data = await apiGet(`/workflow/usg/?${queryParam}`, token);
       if (data && data.length > 0) {
         const r = data[0];
         setReport(r);
+        // Use item_id from report if available, otherwise use the one we found
+        if (r.item_id && !selectedItemId) {
+          setSelectedItemId(r.item_id);
+        }
         setReportData({
           findings: r.report_json?.findings || "",
           impression: r.report_json?.impression || "",
@@ -86,7 +102,18 @@ export default function USGWorklistPage() {
 
   const handleSelectVisit = async (visit: ServiceVisit) => {
     setSelectedVisit(visit);
-    await loadReport(visit.id);
+    
+    // Find USG item (canonical identifier) - prefer department_snapshot="USG"
+    const usgItem = visit.items?.find(item => item.department_snapshot === "USG");
+    if (usgItem) {
+      setSelectedItemId(usgItem.id);
+      // Load report by service_visit_item_id (canonical)
+      await loadReport(visit.id, usgItem.id);
+    } else {
+      // Fallback: use visit_id (legacy compatibility)
+      setSelectedItemId(null);
+      await loadReport(visit.id);
+    }
   };
 
   const saveDraft = async () => {
@@ -94,17 +121,34 @@ export default function USGWorklistPage() {
     setLoading(true);
     setError("");
     try {
-      const reportPayload = {
-        visit_id: selectedVisit.id,
+      // Use service_visit_item_id (canonical) if available, fallback to visit_id (compatibility)
+      const reportPayload: any = {
         report_json: {
           findings: reportData.findings,
           impression: reportData.impression,
         },
       };
       
-      await apiPost("/workflow/usg/", token, reportPayload);
+      if (selectedItemId) {
+        reportPayload.service_visit_item_id = selectedItemId;
+      } else {
+        reportPayload.visit_id = selectedVisit.id;  // Legacy fallback
+      }
+      
+      const savedReport = await apiPost("/workflow/usg/", token, reportPayload);
       setSuccess("Draft saved successfully");
-      await loadReport(selectedVisit.id);
+      
+      // Update selectedItemId from saved report if available
+      if (savedReport.item_id) {
+        setSelectedItemId(savedReport.item_id);
+      }
+      
+      // Reload report using canonical identifier
+      if (selectedItemId || savedReport.item_id) {
+        await loadReport(selectedVisit.id, selectedItemId || savedReport.item_id);
+      } else {
+        await loadReport(selectedVisit.id);
+      }
     } catch (err: any) {
       setError(err.message || "Failed to save draft");
     } finally {
@@ -117,22 +161,38 @@ export default function USGWorklistPage() {
     setLoading(true);
     setError("");
     try {
-      const reportPayload = {
-        visit_id: selectedVisit.id,
+      // Use service_visit_item_id (canonical) if available, fallback to visit_id (compatibility)
+      const reportPayload: any = {
         report_json: {
           findings: reportData.findings,
           impression: reportData.impression,
         },
       };
       
-      // First create/update report
-      const reportData_resp = await apiPost("/workflow/usg/", token, reportPayload);
+      if (selectedItemId) {
+        reportPayload.service_visit_item_id = selectedItemId;
+      } else {
+        reportPayload.visit_id = selectedVisit.id;  // Legacy fallback
+      }
       
-      // Then submit for verification
-      await apiPost(`/workflow/usg/${reportData_resp.id}/submit_for_verification/`, token, {});
+      // First create/update report (ensures same record is used)
+      const savedReport = await apiPost("/workflow/usg/", token, reportPayload);
+      
+      // Update selectedItemId from saved report if available
+      const canonicalItemId = savedReport.item_id || selectedItemId;
+      if (savedReport.item_id) {
+        setSelectedItemId(savedReport.item_id);
+      }
+      
+      // Submit for verification using report ID (now handled correctly by fixed get_object())
+      // OR use service_visit_item_id directly if supported (defensive approach)
+      await apiPost(`/workflow/usg/${savedReport.id}/submit_for_verification/`, token, {
+        report_json: reportPayload.report_json,  // Include latest data
+      });
       
       setSuccess("Report submitted for verification");
       setSelectedVisit(null);
+      setSelectedItemId(null);
       setReport(null);
       await loadVisits();
     } catch (err: any) {
