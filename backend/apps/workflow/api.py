@@ -382,6 +382,16 @@ class USGReportViewSet(viewsets.ModelViewSet):
         report.report_json = request.data.get("report_json", report.report_json)
         report.save()
         
+        # If this is a new report and item is REGISTERED, transition to IN_PROGRESS
+        # This ensures proper workflow when creating a report
+        if created and usg_item.status == "REGISTERED":
+            try:
+                transition_item_status(usg_item, "IN_PROGRESS", request.user)
+            except (ValidationError, PermissionDenied):
+                # Log but don't fail - report creation should succeed even if transition fails
+                # The transition will happen when user saves draft or submits for verification
+                pass
+        
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
     
@@ -455,6 +465,23 @@ class USGReportViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Ensure proper workflow: REGISTERED -> IN_PROGRESS -> PENDING_VERIFICATION
+        # If item is REGISTERED, transition to IN_PROGRESS first
+        if item.status == "REGISTERED":
+            try:
+                transition_item_status(item, "IN_PROGRESS", request.user)
+            except ValidationError as e:
+                return Response(
+                    {"detail": f"Failed to transition to IN_PROGRESS: {str(e)}"},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            except PermissionDenied as e:
+                return Response(
+                    {"detail": f"Permission denied for IN_PROGRESS transition: {str(e)}"},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        # Now transition to PENDING_VERIFICATION (item should be IN_PROGRESS at this point)
         try:
             transition_item_status(item, "PENDING_VERIFICATION", request.user)
         except ValidationError as e:

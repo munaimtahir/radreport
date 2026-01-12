@@ -121,7 +121,7 @@ export default function USGWorklistPage() {
     setLoading(true);
     setError("");
     try {
-      // Use service_visit_item_id (canonical) if available, fallback to visit_id (compatibility)
+      // First ensure report exists by creating/updating it
       const reportPayload: any = {
         report_json: {
           findings: reportData.findings,
@@ -135,13 +135,18 @@ export default function USGWorklistPage() {
         reportPayload.visit_id = selectedVisit.id;  // Legacy fallback
       }
       
+      // Create/update report first
       const savedReport = await apiPost("/workflow/usg/", token, reportPayload);
-      setSuccess("Draft saved successfully");
       
       // Update selectedItemId from saved report if available
       if (savedReport.item_id) {
         setSelectedItemId(savedReport.item_id);
       }
+      
+      // Use save_draft endpoint to properly transition status if needed
+      await apiPost(`/workflow/usg/${savedReport.id}/save_draft/`, token, reportPayload);
+      
+      setSuccess("Draft saved successfully");
       
       // Reload report using canonical identifier
       if (selectedItemId || savedReport.item_id) {
