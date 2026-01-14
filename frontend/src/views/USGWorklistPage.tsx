@@ -11,6 +11,13 @@ interface ServiceVisitItem {
   service_visit_id: string;
   department_snapshot: string;
   status: string;
+  template_details?: {
+    template_id: string;
+    template_name: string;
+    version_id?: string;
+    version?: number | null;
+    schema?: TemplateSchema | null;
+  } | null;
 }
 
 interface ServiceVisit {
@@ -29,8 +36,33 @@ interface USGReport {
   id: string;
   service_visit_id: string;
   item_id?: string;  // service_visit_item_id (canonical identifier)
-  report_json: any;
+  report_json: Record<string, any>;
+  template_schema?: TemplateSchema | null;
+  template_name?: string;
   return_reason?: string;
+}
+
+interface TemplateField {
+  id: string;
+  label: string;
+  key: string;
+  type: string;
+  required: boolean;
+  help_text: string;
+  placeholder: string;
+  unit: string;
+  options?: { label: string; value: string }[];
+}
+
+interface TemplateSection {
+  id: string;
+  title: string;
+  fields: TemplateField[];
+}
+
+interface TemplateSchema {
+  name?: string;
+  sections: TemplateSection[];
 }
 
 export default function USGWorklistPage() {
@@ -42,10 +74,8 @@ export default function USGWorklistPage() {
   const [selectedVisit, setSelectedVisit] = useState<ServiceVisit | null>(null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);  // service_visit_item_id (canonical)
   const [report, setReport] = useState<USGReport | null>(null);
-  const [reportData, setReportData] = useState({
-    findings: "",
-    impression: "",
-  });
+  const [templateSchema, setTemplateSchema] = useState<TemplateSchema | null>(null);
+  const [reportValues, setReportValues] = useState<Record<string, any>>({});
 
   useEffect(() => {
     if (token) {
@@ -81,22 +111,22 @@ export default function USGWorklistPage() {
       if (data && data.length > 0) {
         const r = data[0];
         setReport(r);
+        if (r.template_schema) {
+          setTemplateSchema(r.template_schema);
+        }
         // Use item_id from report if available, otherwise use the one we found
         if (r.item_id && !selectedItemId) {
           setSelectedItemId(r.item_id);
         }
-        setReportData({
-          findings: r.report_json?.findings || "",
-          impression: r.report_json?.impression || "",
-        });
+        setReportValues(r.report_json || {});
       } else {
         setReport(null);
-        setReportData({ findings: "", impression: "" });
+        setReportValues({});
       }
     } catch (err: any) {
       // Report might not exist yet
       setReport(null);
-      setReportData({ findings: "", impression: "" });
+      setReportValues({});
     }
   };
 
@@ -107,13 +137,40 @@ export default function USGWorklistPage() {
     const usgItem = visit.items?.find(item => item.department_snapshot === "USG");
     if (usgItem) {
       setSelectedItemId(usgItem.id);
+      setTemplateSchema(usgItem.template_details?.schema || null);
       // Load report by service_visit_item_id (canonical)
       await loadReport(visit.id, usgItem.id);
     } else {
       // Fallback: use visit_id (legacy compatibility)
       setSelectedItemId(null);
+      setTemplateSchema(null);
       await loadReport(visit.id);
     }
+  };
+
+  const handleFieldChange = (key: string, value: any) => {
+    setReportValues({ ...reportValues, [key]: value });
+  };
+
+  const isMissingRequiredField = (field: TemplateField, value: any) => {
+    if (!field.required) return false;
+    if (field.type === "checklist") {
+      return !value || (Array.isArray(value) && value.length === 0);
+    }
+    if (field.type === "number") {
+      return value === null || value === undefined || value === "";
+    }
+    if (field.type === "boolean") {
+      return value === null || value === undefined;
+    }
+    return value === null || value === undefined || (typeof value === "string" && !value.trim());
+  };
+
+  const isReadyToSubmit = () => {
+    if (!templateSchema) return false;
+    return !templateSchema.sections.some((section) =>
+      section.fields.some((field) => isMissingRequiredField(field, reportValues[field.key]))
+    );
   };
 
   const saveDraft = async () => {
@@ -123,10 +180,7 @@ export default function USGWorklistPage() {
     try {
       // First ensure report exists by creating/updating it
       const reportPayload: any = {
-        report_json: {
-          findings: reportData.findings,
-          impression: reportData.impression,
-        },
+        values: reportValues,
       };
       
       if (selectedItemId) {
@@ -168,10 +222,7 @@ export default function USGWorklistPage() {
     try {
       // Use service_visit_item_id (canonical) if available, fallback to visit_id (compatibility)
       const reportPayload: any = {
-        report_json: {
-          findings: reportData.findings,
-          impression: reportData.impression,
-        },
+        values: reportValues,
       };
       
       if (selectedItemId) {
@@ -192,7 +243,7 @@ export default function USGWorklistPage() {
       // Submit for verification using report ID (now handled correctly by fixed get_object())
       // OR use service_visit_item_id directly if supported (defensive approach)
       await apiPost(`/workflow/usg/${savedReport.id}/submit_for_verification/`, token, {
-        report_json: reportPayload.report_json,  // Include latest data
+        values: reportPayload.values,  // Include latest data
       });
       
       setSuccess("Report submitted for verification");
@@ -267,33 +318,116 @@ export default function USGWorklistPage() {
               </div>
             )}
             
-            <div style={{ marginBottom: 16 }}>
-              <label><strong>Findings:</strong></label>
-              <textarea
-                value={reportData.findings}
-                onChange={(e) => setReportData({ ...reportData, findings: e.target.value })}
-                rows={10}
-                style={{ width: "100%", padding: 8, fontSize: 14, fontFamily: "monospace" }}
-                placeholder="Enter findings..."
-              />
-            </div>
-            
-            <div style={{ marginBottom: 16 }}>
-              <label><strong>Impression:</strong></label>
-              <textarea
-                value={reportData.impression}
-                onChange={(e) => setReportData({ ...reportData, impression: e.target.value })}
-                rows={6}
-                style={{ width: "100%", padding: 8, fontSize: 14, fontFamily: "monospace" }}
-                placeholder="Enter impression..."
-              />
-            </div>
+            {!templateSchema && (
+              <div style={{ marginBottom: 16, padding: 12, backgroundColor: "#fff3cd", borderRadius: 4, border: "1px solid #ffeeba" }}>
+                No published template found for this service. Please assign and publish a template before reporting.
+              </div>
+            )}
+
+            {templateSchema && (
+              <div style={{ display: "grid", gap: 20, marginBottom: 16 }}>
+                {templateSchema.sections.map((section) => (
+                  <div key={section.id} style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16, background: "white" }}>
+                    <h3 style={{ marginTop: 0, marginBottom: 12 }}>{section.title}</h3>
+                    <div style={{ display: "grid", gap: 12 }}>
+                      {section.fields.map((field) => {
+                        const value = reportValues[field.key] ?? (field.type === "boolean" ? false : field.type === "checklist" ? [] : "");
+                        const missing = isMissingRequiredField(field, value);
+                        return (
+                          <div key={field.id}>
+                            <label style={{ display: "block", marginBottom: 6, fontWeight: field.required ? "bold" : "normal" }}>
+                              {field.label}
+                              {field.required && <span style={{ color: "red" }}> *</span>}
+                              {field.unit && <span style={{ color: "#666" }}> ({field.unit})</span>}
+                            </label>
+                            {field.type === "short_text" && (
+                              <input
+                                type="text"
+                                value={value}
+                                onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                                placeholder={field.placeholder}
+                                style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
+                              />
+                            )}
+                            {field.type === "number" && (
+                              <input
+                                type="number"
+                                value={value}
+                                onChange={(e) => handleFieldChange(field.key, e.target.value === "" ? "" : Number(e.target.value))}
+                                placeholder={field.placeholder}
+                                style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
+                              />
+                            )}
+                            {field.type === "paragraph" && (
+                              <textarea
+                                value={value}
+                                onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                                placeholder={field.placeholder}
+                                rows={4}
+                                style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
+                              />
+                            )}
+                            {field.type === "boolean" && (
+                              <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(value)}
+                                  onChange={(e) => handleFieldChange(field.key, e.target.checked)}
+                                />
+                                Yes
+                              </label>
+                            )}
+                            {field.type === "dropdown" && (
+                              <select
+                                value={value}
+                                onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                                style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
+                              >
+                                <option value="">Select...</option>
+                                {field.options?.map((opt) => (
+                                  <option key={opt.value} value={opt.value}>
+                                    {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
+                            {field.type === "checklist" && (
+                              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                {field.options?.map((opt) => {
+                                  const selected = Array.isArray(value) ? value : [];
+                                  return (
+                                    <label key={opt.value} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                      <input
+                                        type="checkbox"
+                                        checked={selected.includes(opt.value)}
+                                        onChange={(e) => {
+                                          const nextValue = e.target.checked
+                                            ? [...selected, opt.value]
+                                            : selected.filter((v: string) => v !== opt.value);
+                                          handleFieldChange(field.key, nextValue);
+                                        }}
+                                      />
+                                      {opt.label}
+                                    </label>
+                                  );
+                                })}
+                              </div>
+                            )}
+                            {field.help_text && <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{field.help_text}</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             
             <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="secondary" onClick={saveDraft} disabled={loading}>
+              <Button variant="secondary" onClick={saveDraft} disabled={loading || !templateSchema}>
                 Save Draft
               </Button>
-              <Button onClick={submitForVerification} disabled={loading || !reportData.findings.trim()}>
+              <Button onClick={submitForVerification} disabled={loading || !templateSchema || !isReadyToSubmit()}>
                 Submit for Verification
               </Button>
             </div>

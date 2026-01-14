@@ -8,12 +8,9 @@ import Patients from "../views/Patients";
 import Studies from "../views/Studies";
 import Templates from "../views/Templates";
 import ReportEditor from "../views/ReportEditor";
-import FrontDeskIntake from "../views/FrontDeskIntake";
 import ReceiptSettings from "../views/ReceiptSettings";
 import RegistrationPage from "../views/RegistrationPage";
 import USGWorklistPage from "../views/USGWorklistPage";
-import OPDVitalsWorklistPage from "../views/OPDVitalsWorklistPage";
-import ConsultantWorklistPage from "../views/ConsultantWorklistPage";
 import VerificationWorklistPage from "../views/VerificationWorklistPage";
 import FinalReportsPage from "../views/FinalReportsPage";
 import Footer from "./components/Footer";
@@ -134,35 +131,7 @@ function Shell() {
                 fontWeight: isActiveRoute("/worklists/usg") ? 500 : 400,
               }}
             >
-              USG Worklist
-            </Link>
-            <Link
-              to="/worklists/opd-vitals"
-              style={{
-                padding: "10px 12px",
-                textDecoration: "none",
-                color: isActiveRoute("/worklists/opd-vitals") ? "#0B5ED7" : "#555",
-                backgroundColor: isActiveRoute("/worklists/opd-vitals") ? "#f0f7ff" : "transparent",
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: isActiveRoute("/worklists/opd-vitals") ? 500 : 400,
-              }}
-            >
-              OPD Vitals
-            </Link>
-            <Link
-              to="/worklists/consultant"
-              style={{
-                padding: "10px 12px",
-                textDecoration: "none",
-                color: isActiveRoute("/worklists/consultant") ? "#0B5ED7" : "#555",
-                backgroundColor: isActiveRoute("/worklists/consultant") ? "#f0f7ff" : "transparent",
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: isActiveRoute("/worklists/consultant") ? 500 : 400,
-              }}
-            >
-              Consultant
+              Report Entry
             </Link>
             <Link
               to="/worklists/verification"
@@ -308,12 +277,9 @@ function Shell() {
               {/* Workflow Routes */}
               <Route path="/registration" element={<RegistrationPage />} />
               <Route path="/worklists/usg" element={<USGWorklistPage />} />
-              <Route path="/worklists/opd-vitals" element={<OPDVitalsWorklistPage />} />
-              <Route path="/worklists/consultant" element={<ConsultantWorklistPage />} />
               <Route path="/worklists/verification" element={<VerificationWorklistPage />} />
               <Route path="/reports" element={<FinalReportsPage />} />
               {/* Legacy Routes */}
-              <Route path="/intake" element={<FrontDeskIntake />} />
               <Route path="/patients" element={<Patients />} />
               <Route path="/studies" element={<Studies />} />
               <Route path="/templates" element={<Templates />} />

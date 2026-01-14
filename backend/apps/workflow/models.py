@@ -391,16 +391,40 @@ class USGReport(models.Model):
     def can_finalize(self):
         """Check if report can be finalized (all required fields present)"""
         errors = []
-        if not self.scan_quality:
-            errors.append("scan_quality is required")
-        if not self.limitations_text or not self.limitations_text.strip():
-            errors.append("limitations_text is required (can be 'None' but must be explicit)")
-        if not self.impression_text or not self.impression_text.strip():
-            errors.append("impression_text is required")
-        if self.critical_flag:
-            comm = self.critical_communication_json or {}
-            if not comm.get("recipient") or not comm.get("method") or not comm.get("communicated_at"):
-                errors.append("critical_communication_json must have recipient, method, and communicated_at when critical_flag is true")
+        if self.template_version and self.template_version.schema:
+            schema = self.template_version.schema or {}
+            sections = schema.get("sections", [])
+            values = self.report_json if isinstance(self.report_json, dict) else {}
+
+            def is_missing(field_type, value):
+                if field_type == "checklist":
+                    return not value or len(value) == 0
+                if field_type == "number":
+                    return value is None or value == ""
+                if field_type == "boolean":
+                    return value is None
+                return value is None or (isinstance(value, str) and not value.strip())
+
+            for section in sections:
+                for field in section.get("fields", []):
+                    if field.get("required"):
+                        key = field.get("key")
+                        field_type = field.get("type")
+                        value = values.get(key)
+                        if is_missing(field_type, value):
+                            label = field.get("label") or key
+                            errors.append(f"{label} is required")
+        else:
+            if not self.scan_quality:
+                errors.append("scan_quality is required")
+            if not self.limitations_text or not self.limitations_text.strip():
+                errors.append("limitations_text is required (can be 'None' but must be explicit)")
+            if not self.impression_text or not self.impression_text.strip():
+                errors.append("impression_text is required")
+            if self.critical_flag:
+                comm = self.critical_communication_json or {}
+                if not comm.get("recipient") or not comm.get("method") or not comm.get("communicated_at"):
+                    errors.append("critical_communication_json must have recipient, method, and communicated_at when critical_flag is true")
         return len(errors) == 0, errors
 
 
