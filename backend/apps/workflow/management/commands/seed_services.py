@@ -35,19 +35,36 @@ class Command(BaseCommand):
                 defaults={"name": service_data["code"]},
             )
             category = "OPD" if service_data["code"] == "OPD" else "Radiology"
-            service, created = Service.objects.update_or_create(
-                code=service_data["code"],
-                defaults={
-                    "modality": modality,
-                    "name": service_data["name"],
-                    "category": category,
-                    "price": service_data["default_price"],
-                    "charges": service_data["default_price"],
-                    "default_price": service_data["default_price"],
-                    "turnaround_time": service_data["turnaround_time"],
-                    "is_active": service_data["is_active"],
-                },
-            )
+            
+            # Check for existing service by (modality, name) first to handle unique_together constraint
+            try:
+                existing_service = Service.objects.get(modality=modality, name=service_data["name"])
+                # Update the existing service
+                existing_service.code = service_data["code"]
+                existing_service.category = category
+                existing_service.price = service_data["default_price"]
+                existing_service.charges = service_data["default_price"]
+                existing_service.default_price = service_data["default_price"]
+                existing_service.turnaround_time = service_data["turnaround_time"]
+                existing_service.is_active = service_data["is_active"]
+                existing_service.save()
+                service = existing_service
+                created = False
+            except Service.DoesNotExist:
+                # No existing service with this (modality, name), use update_or_create with code
+                service, created = Service.objects.update_or_create(
+                    code=service_data["code"],
+                    defaults={
+                        "modality": modality,
+                        "name": service_data["name"],
+                        "category": category,
+                        "price": service_data["default_price"],
+                        "charges": service_data["default_price"],
+                        "default_price": service_data["default_price"],
+                        "turnaround_time": service_data["turnaround_time"],
+                        "is_active": service_data["is_active"],
+                    },
+                )
             if created:
                 created_count += 1
                 self.stdout.write(

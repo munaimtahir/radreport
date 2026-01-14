@@ -48,28 +48,28 @@ class Service(models.Model):
 
     def save(self, *args, **kwargs):
         # Sync charges to price if charges is set
-        if self.charges and not self.price:
+        # Use explicit None checks to handle Decimal('0') correctly
+        if self.charges is not None and self.price is None:
             self.price = self.charges
-        elif self.price and not self.charges:
+        elif self.price is not None and self.charges is None:
             self.charges = self.price
-        if self.default_price and not self.price:
+        if self.default_price is not None and self.price is None:
             self.price = self.default_price
-        elif self.price and not self.default_price:
+        elif self.price is not None and self.default_price is None:
             self.default_price = self.price
         
         # Calculate tat_minutes from tat_value and tat_unit (or legacy turnaround_time)
-        if (
-            self.turnaround_time
-            and self.tat_unit == "hours"
-            and self.tat_value == 1
-            and self.tat_minutes == 60
-        ):
+        # For new instances with legacy turnaround_time set, use it to initialize tat_minutes
+        if not self.pk and self.turnaround_time and self.turnaround_time != 60:
+            # New instance with explicit turnaround_time - use it
             self.tat_minutes = self.turnaround_time
         else:
+            # Calculate from tat_value and tat_unit
             if self.tat_unit == "hours":
                 self.tat_minutes = self.tat_value * 60
             elif self.tat_unit == "days":
                 self.tat_minutes = self.tat_value * 24 * 60
+        # Keep turnaround_time in sync
         self.turnaround_time = self.tat_minutes
         
         super().save(*args, **kwargs)
