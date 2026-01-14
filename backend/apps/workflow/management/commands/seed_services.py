@@ -39,8 +39,12 @@ class Command(BaseCommand):
             # Check for existing service by (modality, name) first to handle unique_together constraint
             try:
                 existing_service = Service.objects.get(modality=modality, name=service_data["name"])
-                # Update the existing service
-                existing_service.code = service_data["code"]
+                # Update the existing service, but only update code if it's different and not conflicting
+                if existing_service.code != service_data["code"]:
+                    # Check if the new code would conflict with another service
+                    conflicting_service = Service.objects.filter(code=service_data["code"]).exclude(pk=existing_service.pk).first()
+                    if not conflicting_service:
+                        existing_service.code = service_data["code"]
                 existing_service.category = category
                 existing_service.price = service_data["default_price"]
                 existing_service.charges = service_data["default_price"]

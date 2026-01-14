@@ -21,6 +21,9 @@ class Service(models.Model):
         ("hours", "Hours"),
         ("days", "Days"),
     ]
+    
+    # Default turnaround time in minutes (1 hour)
+    DEFAULT_TAT_MINUTES = 60
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     code = models.CharField(max_length=50, unique=True, null=True, blank=True)  # CSV-driven unique code
@@ -32,8 +35,8 @@ class Service(models.Model):
     default_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Legacy price alias")
     tat_value = models.PositiveIntegerField(default=1, help_text="TAT numeric value")
     tat_unit = models.CharField(max_length=10, choices=TAT_UNIT_CHOICES, default="hours")
-    tat_minutes = models.PositiveIntegerField(default=60, help_text="Calculated TAT in minutes")
-    turnaround_time = models.PositiveIntegerField(default=60, help_text="Legacy turnaround time in minutes")
+    tat_minutes = models.PositiveIntegerField(default=DEFAULT_TAT_MINUTES, help_text="Calculated TAT in minutes")
+    turnaround_time = models.PositiveIntegerField(default=DEFAULT_TAT_MINUTES, help_text="Legacy turnaround time in minutes")
     default_template = models.ForeignKey("templates.Template", on_delete=models.SET_NULL, null=True, blank=True)
     requires_radiologist_approval = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
@@ -60,7 +63,7 @@ class Service(models.Model):
         
         # Calculate tat_minutes from tat_value and tat_unit (or legacy turnaround_time)
         # For new instances with legacy turnaround_time set, use it to initialize tat_minutes
-        if not self.pk and self.turnaround_time and self.turnaround_time != 60:
+        if not self.pk and self.turnaround_time and self.turnaround_time != self.DEFAULT_TAT_MINUTES:
             # New instance with explicit turnaround_time - use it
             self.tat_minutes = self.turnaround_time
         else:
