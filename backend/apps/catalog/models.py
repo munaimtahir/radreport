@@ -29,9 +29,11 @@ class Service(models.Model):
     category = models.CharField(max_length=50, choices=CATEGORY_CHOICES, default="Radiology")
     price = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     charges = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Alias for price, CSV-driven")
+    default_price = models.DecimalField(max_digits=10, decimal_places=2, default=0, help_text="Legacy price alias")
     tat_value = models.PositiveIntegerField(default=1, help_text="TAT numeric value")
     tat_unit = models.CharField(max_length=10, choices=TAT_UNIT_CHOICES, default="hours")
     tat_minutes = models.PositiveIntegerField(default=60, help_text="Calculated TAT in minutes")
+    turnaround_time = models.PositiveIntegerField(default=60, help_text="Legacy turnaround time in minutes")
     default_template = models.ForeignKey("templates.Template", on_delete=models.SET_NULL, null=True, blank=True)
     requires_radiologist_approval = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
@@ -50,12 +52,25 @@ class Service(models.Model):
             self.price = self.charges
         elif self.price and not self.charges:
             self.charges = self.price
+        if self.default_price and not self.price:
+            self.price = self.default_price
+        elif self.price and not self.default_price:
+            self.default_price = self.price
         
-        # Calculate tat_minutes from tat_value and tat_unit
-        if self.tat_unit == "hours":
-            self.tat_minutes = self.tat_value * 60
-        elif self.tat_unit == "days":
-            self.tat_minutes = self.tat_value * 24 * 60
+        # Calculate tat_minutes from tat_value and tat_unit (or legacy turnaround_time)
+        if (
+            self.turnaround_time
+            and self.tat_unit == "hours"
+            and self.tat_value == 1
+            and self.tat_minutes == 60
+        ):
+            self.tat_minutes = self.turnaround_time
+        else:
+            if self.tat_unit == "hours":
+                self.tat_minutes = self.tat_value * 60
+            elif self.tat_unit == "days":
+                self.tat_minutes = self.tat_value * 24 * 60
+        self.turnaround_time = self.tat_minutes
         
         super().save(*args, **kwargs)
 
