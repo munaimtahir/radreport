@@ -15,21 +15,38 @@ def migrate_service_catalog(apps, schema_editor):
         )
         category = "OPD" if modality_code == "OPD" else "Radiology"
 
-        Service.objects.using(db_alias).update_or_create(
-            code=legacy_service.code,
-            defaults={
-                "modality": modality,
-                "name": legacy_service.name,
-                "category": category,
-                "price": legacy_service.default_price,
-                "charges": legacy_service.default_price,
-                "default_price": legacy_service.default_price,
-                "turnaround_time": legacy_service.turnaround_time,
-                "is_active": legacy_service.is_active,
-            },
-        )
+        # Normalize the legacy service code; treat empty/whitespace as no code.
+        service_code = (legacy_service.code or "").strip() or None
 
-
+        if service_code:
+            # For services with a non-empty code, use the code as the stable identifier.
+            Service.objects.using(db_alias).update_or_create(
+                code=service_code,
+                defaults={
+                    "modality": modality,
+                    "name": legacy_service.name,
+                    "category": category,
+                    "price": legacy_service.default_price,
+                    "charges": legacy_service.default_price,
+                    "default_price": legacy_service.default_price,
+                    "turnaround_time": legacy_service.turnaround_time,
+                    "is_active": legacy_service.is_active,
+                },
+            )
+        else:
+            # For services without a code, always create a separate Service record
+            # to avoid merging multiple null/blank-code entries into one.
+            Service.objects.using(db_alias).create(
+                code=None,
+                modality=modality,
+                name=legacy_service.name,
+                category=category,
+                price=legacy_service.default_price,
+                charges=legacy_service.default_price,
+                default_price=legacy_service.default_price,
+                turnaround_time=legacy_service.turnaround_time,
+                is_active=legacy_service.is_active,
+            )
 class Migration(migrations.Migration):
 
     dependencies = [
