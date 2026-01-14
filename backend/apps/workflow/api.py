@@ -61,7 +61,7 @@ class ServiceCatalogViewSet(viewsets.ReadOnlyModelViewSet):
 class ServiceVisitViewSet(viewsets.ModelViewSet):
     """Service visit management"""
     queryset = ServiceVisit.objects.select_related("patient", "service", "created_by", "assigned_to").prefetch_related(
-        "items__service", "items__service__modality", "status_audit_logs__changed_by"
+        "items__service", "items__service__modality", "items__service__default_template", "status_audit_logs__changed_by"
     ).all()
     serializer_class = ServiceVisitSerializer
     permission_classes = [permissions.IsAuthenticated]
@@ -169,7 +169,7 @@ class ServiceVisitItemViewSet(viewsets.ReadOnlyModelViewSet):
     This is the primary interface for worklists and item operations.
     """
     queryset = ServiceVisitItem.objects.select_related(
-        "service_visit", "service_visit__patient", "service", "service__modality"
+        "service_visit", "service_visit__patient", "service", "service__modality", "service__default_template"
     ).prefetch_related(
         "status_audit_logs__changed_by"
     ).all()
@@ -320,6 +320,9 @@ class USGReportViewSet(viewsets.ModelViewSet):
         """Create or update USG report - accepts service_visit_item_id (canonical) or visit_id (compatibility)"""
         service_visit_item_id = request.data.get("service_visit_item_id")
         visit_id = request.data.get("visit_id") or request.query_params.get("visit_id")
+        report_values = request.data.get("values")
+        if report_values is None:
+            report_values = request.data.get("report_json")
         
         # Canonical: use service_visit_item_id if provided
         if service_visit_item_id:
@@ -341,6 +344,18 @@ class USGReportViewSet(viewsets.ModelViewSet):
         else:
             return Response({"detail": "service_visit_item_id or visit_id is required"}, status=status.HTTP_400_BAD_REQUEST)
         
+        # Determine template version from service (required for template-based reporting)
+        template_version = None
+        if usg_item.service and usg_item.service.default_template:
+            template = usg_item.service.default_template
+            template_version = template.versions.filter(is_published=True).order_by("-version").first()
+
+        if not template_version:
+            return Response(
+                {"detail": "Service template is required and must have a published version."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         # Get or create USGReport for this item (item-centric canonical linkage)
         report = None
         created = False
@@ -348,6 +363,9 @@ class USGReportViewSet(viewsets.ModelViewSet):
         if hasattr(usg_item, 'usg_report'):
             report = usg_item.usg_report
             created = False
+            if not report.template_version:
+                report.template_version = template_version
+                report.save(update_fields=["template_version"])
         else:
             # Try legacy service_visit-based lookup (for migration)
             legacy_report = USGReport.objects.filter(service_visit=usg_item.service_visit).first()
@@ -356,17 +374,12 @@ class USGReportViewSet(viewsets.ModelViewSet):
                 legacy_report.service_visit_item = usg_item
                 if not legacy_report.service_visit:
                     legacy_report.service_visit = usg_item.service_visit
+                if not legacy_report.template_version:
+                    legacy_report.template_version = template_version
                 legacy_report.save()
                 report = legacy_report
                 created = False
             else:
-                # PHASE C: Assign template_version if service has default_template
-                template_version = None
-                if usg_item.service and usg_item.service.default_template:
-                    # Get latest published template version
-                    template = usg_item.service.default_template
-                    template_version = template.versions.filter(is_published=True).order_by("-version").first()
-                
                 # Create new report with item-centric linkage
                 report = USGReport.objects.create(
                     service_visit_item=usg_item,
@@ -379,7 +392,8 @@ class USGReportViewSet(viewsets.ModelViewSet):
         
         # Update report data
         report.updated_by = request.user
-        report.report_json = request.data.get("report_json", report.report_json)
+        if report_values is not None:
+            report.report_json = report_values
         report.save()
         
         # If this is a new report and item is REGISTERED, transition to IN_PROGRESS
@@ -413,9 +427,11 @@ class USGReportViewSet(viewsets.ModelViewSet):
             if field in request.data:
                 setattr(report, field, request.data[field])
         
-        # Legacy support
-        if 'report_json' in request.data:
-            report.report_json = request.data.get("report_json", {})
+        report_values = request.data.get("values")
+        if report_values is None:
+            report_values = request.data.get("report_json")
+        if report_values is not None:
+            report.report_json = report_values
         
         # Auto-set exam_datetime if not set
         if not report.exam_datetime:
@@ -450,7 +466,11 @@ class USGReportViewSet(viewsets.ModelViewSet):
     def submit_for_verification(self, request, pk=None):
         """PHASE C: Submit USG report for verification - uses transition service"""
         report = self.get_object()
-        report.report_json = request.data.get("report_json", report.report_json)
+        report_values = request.data.get("values")
+        if report_values is None:
+            report_values = request.data.get("report_json")
+        if report_values is not None:
+            report.report_json = report_values
         report.updated_by = request.user
         report.save()
         

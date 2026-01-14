@@ -25,6 +25,7 @@ class ServiceVisitItemSerializer(serializers.ModelSerializer):
     
     # Audit logs
     status_audit_logs = serializers.SerializerMethodField()
+    template_details = serializers.SerializerMethodField()
     
     class Meta:
         model = ServiceVisitItem
@@ -35,6 +36,27 @@ class ServiceVisitItemSerializer(serializers.ModelSerializer):
         """Get audit logs for this item"""
         logs = obj.status_audit_logs.all()[:10]  # Last 10 logs
         return StatusAuditLogSerializer(logs, many=True, context=self.context).data
+
+    def get_template_details(self, obj):
+        """Return latest published template version details for the service."""
+        template = obj.service.default_template if obj.service else None
+        if not template:
+            return None
+        version = template.versions.filter(is_published=True).order_by("-version").first()
+        if not version:
+            return {
+                "template_id": str(template.id),
+                "template_name": template.name,
+                "version": None,
+                "schema": None,
+            }
+        return {
+            "template_id": str(template.id),
+            "template_name": template.name,
+            "version_id": str(version.id),
+            "version": version.version,
+            "schema": version.schema,
+        }
 
 
 class StatusAuditLogSerializer(serializers.ModelSerializer):
@@ -120,6 +142,8 @@ class USGReportSerializer(serializers.ModelSerializer):
     published_pdf_url = serializers.SerializerMethodField()
     template_version_id = serializers.UUIDField(source="template_version.id", read_only=True)
     template_version_number = serializers.IntegerField(source="template_version.version", read_only=True)
+    template_schema = serializers.SerializerMethodField()
+    template_name = serializers.CharField(source="template_version.template.name", read_only=True)
     can_finalize = serializers.SerializerMethodField()
     finalize_errors = serializers.SerializerMethodField()
     
@@ -147,6 +171,11 @@ class USGReportSerializer(serializers.ModelSerializer):
                 sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
                 if sv:
                     return request.build_absolute_uri(f"/api/pdf/report/{sv.id}/")
+        return None
+
+    def get_template_schema(self, obj):
+        if obj.template_version:
+            return obj.template_version.schema
         return None
     
     def get_can_finalize(self, obj):

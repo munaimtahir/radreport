@@ -19,7 +19,29 @@ interface ServiceVisit {
 interface USGReport {
   id: string;
   service_visit_id: string;
-  report_json: any;
+  report_json: Record<string, any>;
+  template_schema?: TemplateSchema | null;
+  template_name?: string;
+}
+
+interface TemplateField {
+  id: string;
+  label: string;
+  key: string;
+  type: string;
+  required: boolean;
+  unit: string;
+}
+
+interface TemplateSection {
+  id: string;
+  title: string;
+  fields: TemplateField[];
+}
+
+interface TemplateSchema {
+  name?: string;
+  sections: TemplateSection[];
 }
 
 export default function VerificationWorklistPage() {
@@ -185,19 +207,36 @@ export default function VerificationWorklistPage() {
               <div><strong>Service:</strong> {selectedVisit.service_name}</div>
             </div>
             
-            <div style={{ marginBottom: 16, border: "1px solid #ddd", padding: 16, borderRadius: 4 }}>
-              <h3>Findings</h3>
-              <div style={{ whiteSpace: "pre-wrap", fontFamily: "monospace", padding: 12, backgroundColor: "#f9f9f9", borderRadius: 4 }}>
-                {report.report_json?.findings || "No findings entered"}
+            {!report.template_schema && (
+              <div style={{ marginBottom: 16, padding: 12, backgroundColor: "#fff3cd", borderRadius: 4, border: "1px solid #ffeeba" }}>
+                No template schema available for this report.
               </div>
-            </div>
-            
-            <div style={{ marginBottom: 16, border: "1px solid #ddd", padding: 16, borderRadius: 4 }}>
-              <h3>Impression</h3>
-              <div style={{ whiteSpace: "pre-wrap", fontFamily: "monospace", padding: 12, backgroundColor: "#f9f9f9", borderRadius: 4 }}>
-                {report.report_json?.impression || "No impression entered"}
+            )}
+
+            {report.template_schema && (
+              <div style={{ display: "grid", gap: 16, marginBottom: 16 }}>
+                {report.template_schema.sections.map((section) => (
+                  <div key={section.id} style={{ border: "1px solid #ddd", padding: 16, borderRadius: 4 }}>
+                    <h3 style={{ marginTop: 0 }}>{section.title}</h3>
+                    <div style={{ display: "grid", gap: 10 }}>
+                      {section.fields.map((field) => {
+                        const value = report.report_json?.[field.key];
+                        const displayValue = Array.isArray(value) ? value.join(", ") : value ?? "—";
+                        return (
+                          <div key={field.id}>
+                            <div style={{ fontSize: 13, color: "#666" }}>
+                              {field.label}
+                              {field.unit ? ` (${field.unit})` : ""}
+                            </div>
+                            <div style={{ padding: "6px 0" }}>{String(displayValue)}</div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
               </div>
-            </div>
+            )}
             
             <div style={{ marginBottom: 16 }}>
               <label><strong>Return Reason (if returning for correction):</strong></label>
