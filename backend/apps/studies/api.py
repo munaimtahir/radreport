@@ -1,14 +1,20 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from django.http import HttpResponse
-from django.utils import timezone
-from django.conf import settings
-from django.core.files.storage import default_storage
-import os
-from pathlib import Path
-from .models import Study, Visit, OrderItem, ReceiptSequence, ReceiptSettings
-from .serializers import StudySerializer, VisitSerializer, OrderItemSerializer, UnifiedIntakeSerializer, ReceiptSettingsSerializer
+from .models import Study, Visit, ReceiptSettings
+from .serializers import StudySerializer, VisitSerializer, ReceiptSettingsSerializer
+
+LEGACY_DEPRECATION_HEADERS = {
+    "X-Deprecated": "true",
+    "X-Deprecated-Reason": "Legacy studies/visits endpoints are deprecated. Use workflow service visits instead.",
+    "X-Deprecated-Use": "/api/workflow/visits/",
+}
+
+
+def add_deprecation_headers(response):
+    for key, value in LEGACY_DEPRECATION_HEADERS.items():
+        response[key] = value
+    return response
 
 class StudyViewSet(viewsets.ModelViewSet):
     """
@@ -34,6 +40,46 @@ class StudyViewSet(viewsets.ModelViewSet):
         context["request"] = self.request
         return context
 
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return add_deprecation_headers(response)
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        return add_deprecation_headers(response)
+
+    def create(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": "Legacy Study writes are deprecated. Use /api/workflow/visits/ to create service visits."
+            },
+            status=status.HTTP_410_GONE,
+        )
+
+    def update(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": "Legacy Study updates are deprecated. Use workflow item transitions instead."
+            },
+            status=status.HTTP_410_GONE,
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": "Legacy Study updates are deprecated. Use workflow item transitions instead."
+            },
+            status=status.HTTP_410_GONE,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": "Legacy Study deletion is deprecated. Use workflow service visits instead."
+            },
+            status=status.HTTP_410_GONE,
+        )
+
 class VisitViewSet(viewsets.ModelViewSet):
     """
     LEGACY: Visit model is deprecated. Use ServiceVisit workflow instead.
@@ -52,152 +98,96 @@ class VisitViewSet(viewsets.ModelViewSet):
         if self.action in ['create', 'update', 'partial_update', 'destroy', 'unified_intake', 'finalize']:
             return [permissions.IsAdminUser()]
         return [permissions.IsAuthenticated()]
+
+    def list(self, request, *args, **kwargs):
+        response = super().list(request, *args, **kwargs)
+        return add_deprecation_headers(response)
+
+    def retrieve(self, request, *args, **kwargs):
+        response = super().retrieve(request, *args, **kwargs)
+        return add_deprecation_headers(response)
+
+    def create(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": "Legacy Visit writes are deprecated. Use /api/workflow/visits/create_visit/."
+            },
+            status=status.HTTP_410_GONE,
+        )
+
+    def update(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": "Legacy Visit updates are deprecated. Use workflow service visits instead."
+            },
+            status=status.HTTP_410_GONE,
+        )
+
+    def partial_update(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": "Legacy Visit updates are deprecated. Use workflow service visits instead."
+            },
+            status=status.HTTP_410_GONE,
+        )
+
+    def destroy(self, request, *args, **kwargs):
+        return Response(
+            {
+                "detail": "Legacy Visit deletion is deprecated. Use workflow service visits instead."
+            },
+            status=status.HTTP_410_GONE,
+        )
     
     @action(detail=False, methods=["post"], url_path="unified-intake")
     def unified_intake(self, request):
         """Unified endpoint for patient registration + exam registration + billing"""
-        serializer = UnifiedIntakeSerializer(data=request.data, context={"request": request})
-        if serializer.is_valid():
-            visit = serializer.save()
-            visit.is_finalized = True
-            visit.finalized_at = timezone.now()
-            visit.save()
-            
-            response_serializer = VisitSerializer(visit, context={"request": request})
-            return Response(response_serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(
+            {
+                "detail": "Legacy unified intake is deprecated. Use /api/workflow/visits/create_visit/."
+            },
+            status=status.HTTP_410_GONE,
+        )
     
     @action(detail=True, methods=["post"], url_path="finalize")
     def finalize(self, request, pk=None):
         """Finalize a visit (lock billing and generate visit number if not already done)"""
-        visit = self.get_object()
-        if visit.is_finalized:
-            return Response({"detail": "Visit already finalized"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        visit.is_finalized = True
-        visit.finalized_at = timezone.now()
-        visit.save()
-        
-        serializer = self.get_serializer(visit)
-        return Response(serializer.data)
+        return Response(
+            {
+                "detail": "Legacy Visit finalization is deprecated. Use workflow service visits."
+            },
+            status=status.HTTP_410_GONE,
+        )
     
     @action(detail=True, methods=["post"], url_path="generate-receipt")
     def generate_receipt(self, request, pk=None):
         """Generate receipt number and PDF if not already generated"""
-        visit = self.get_object()
-        
-        # If receipt already generated, return existing
-        if visit.receipt_number and visit.receipt_pdf_path:
-            serializer = self.get_serializer(visit)
-            return Response(serializer.data)
-        
-        # Generate receipt number
-        if not visit.receipt_number:
-            visit.receipt_number = ReceiptSequence.get_next_receipt_number()
-        
-        # Generate PDF
-        from apps.reporting.pdf import build_receipt_pdf
-        pdf_file = build_receipt_pdf(visit)
-        
-        # Save PDF to storage
-        now = timezone.now()
-        year = now.strftime("%Y")
-        month = now.strftime("%m")
-        pdf_dir = Path(settings.MEDIA_ROOT) / "pdfs" / "receipts" / year / month
-        pdf_dir.mkdir(parents=True, exist_ok=True)
-        
-        pdf_filename = f"{visit.receipt_number}.pdf"
-        pdf_path = pdf_dir / pdf_filename
-        
-        with open(pdf_path, "wb") as f:
-            f.write(pdf_file.read())
-        
-        # Store relative path
-        visit.receipt_pdf_path = f"pdfs/receipts/{year}/{month}/{pdf_filename}"
-        visit.receipt_generated_at = timezone.now()
-        visit.save()
-        
-        serializer = self.get_serializer(visit)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(
+            {
+                "detail": "Legacy receipt generation is deprecated. Use /api/pdf/{service_visit_id}/receipt/."
+            },
+            status=status.HTTP_410_GONE,
+        )
     
     @action(detail=True, methods=["get"], url_path="receipt")
     def receipt(self, request, pk=None):
         """Get receipt PDF for printing/downloading"""
-        visit = self.get_object()
-        
-        # If PDF exists, serve it
-        if visit.receipt_pdf_path:
-            pdf_path = Path(settings.MEDIA_ROOT) / visit.receipt_pdf_path
-            if pdf_path.exists():
-                with open(pdf_path, "rb") as f:
-                    response = HttpResponse(f.read(), content_type="application/pdf")
-                    filename = visit.receipt_number or visit.visit_number
-                    response["Content-Disposition"] = f'inline; filename="receipt_{filename}.pdf"'
-                    return response
-        
-        # Otherwise generate on-the-fly (for backward compatibility)
-        # Generate receipt number if not exists
-        if not visit.receipt_number:
-            visit.receipt_number = ReceiptSequence.get_next_receipt_number()
-            visit.save()
-        
-        # Generate PDF
-        from apps.reporting.pdf import build_receipt_pdf
-        pdf_file = build_receipt_pdf(visit)
-        
-        response = HttpResponse(pdf_file.read(), content_type="application/pdf")
-        filename = visit.receipt_number or visit.visit_number
-        response["Content-Disposition"] = f'inline; filename="receipt_{filename}.pdf"'
-        return response
+        return Response(
+            {
+                "detail": "Legacy receipt retrieval is deprecated. Use /api/pdf/{service_visit_id}/receipt/."
+            },
+            status=status.HTTP_410_GONE,
+        )
     
     @action(detail=True, methods=["get"], url_path="receipt-preview")
     def receipt_preview(self, request, pk=None):
         """Preview receipt HTML in browser (for testing/printing)"""
-        from django.template.loader import render_to_string
-        from apps.studies.models import ReceiptSettings
-        import os
-        
-        visit = self.get_object()
-        receipt_settings = ReceiptSettings.get_settings()
-        
-        # Prepare logo URL if exists
-        logo_url = None
-        if receipt_settings.logo_image and os.path.exists(receipt_settings.logo_image.path):
-            # For HTML preview, use relative URL
-            logo_url = receipt_settings.logo_image.url
-        
-        # Prepare context data
-        receipt_date = visit.receipt_generated_at or visit.created_at
-        
-        # Get items with service details
-        items = visit.items.select_related('service', 'service__modality').all()
-        
-        context = {
-            'receipt_number': visit.receipt_number or visit.visit_number,
-            'receipt_date': receipt_date,
-            'patient': {
-                'mrn': visit.patient.mrn,
-                'name': visit.patient.name,
-                'age': visit.patient.age,
-                'gender': visit.patient.gender,
-                'phone': visit.patient.phone,
+        return Response(
+            {
+                "detail": "Legacy receipt preview is deprecated. Use /api/pdf/{service_visit_id}/receipt/."
             },
-            'items': items,
-            'subtotal': visit.subtotal,
-            'discount_amount': visit.discount_amount,
-            'discount_percentage': visit.discount_percentage,
-            'net_total': visit.net_total,
-            'paid_amount': visit.paid_amount,
-            'due_amount': visit.due_amount,
-            'payment_method': visit.payment_method,
-            'consultant': None,
-            'logo_url': logo_url,
-        }
-        
-        # Render HTML template
-        html_string = render_to_string('receipts/receipt_a4_dual.html', context, request=request)
-        
-        return HttpResponse(html_string, content_type="text/html")
+            status=status.HTTP_410_GONE,
+        )
 
 
 class ReceiptSettingsViewSet(viewsets.ViewSet):

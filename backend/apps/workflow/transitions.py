@@ -15,6 +15,25 @@ from django.core.exceptions import ValidationError
 from rest_framework.exceptions import PermissionDenied
 from .models import ServiceVisitItem, StatusAuditLog, ServiceVisit
 
+# Legacy Study status mapping to ServiceVisitItem status
+STUDY_STATUS_TO_ITEM_STATUS = {
+    "registered": "REGISTERED",
+    "in_progress": "IN_PROGRESS",
+    "draft": "PENDING_VERIFICATION",
+    "final": "FINALIZED",
+    "delivered": "PUBLISHED",
+}
+
+
+def map_study_status_to_item_status(study_status):
+    """
+    Map legacy Study.status values to ServiceVisitItem.status.
+    Defaults to REGISTERED when no mapping is found.
+    """
+    if not study_status:
+        return "REGISTERED"
+    return STUDY_STATUS_TO_ITEM_STATUS.get(study_status, "REGISTERED")
+
 # PHASE C: Define allowed transitions per department/item type
 USG_TRANSITIONS = {
     "REGISTERED": ["IN_PROGRESS"],
