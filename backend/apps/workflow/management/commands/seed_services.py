@@ -1,12 +1,12 @@
 """
-Management command to seed ServiceCatalog with USG and OPD services
+Management command to seed catalog.Service with USG and OPD services.
 """
 from django.core.management.base import BaseCommand
-from apps.workflow.models import ServiceCatalog
+from apps.catalog.models import Modality, Service
 
 
 class Command(BaseCommand):
-    help = 'Seed ServiceCatalog with USG and OPD services'
+    help = "Seed catalog.Service with USG and OPD services"
 
     def handle(self, *args, **options):
         services = [
@@ -30,9 +30,23 @@ class Command(BaseCommand):
         updated_count = 0
         
         for service_data in services:
-            service, created = ServiceCatalog.objects.update_or_create(
-                code=service_data['code'],
-                defaults=service_data
+            modality, _ = Modality.objects.get_or_create(
+                code=service_data["code"],
+                defaults={"name": service_data["code"]},
+            )
+            category = "OPD" if service_data["code"] == "OPD" else "Radiology"
+            service, created = Service.objects.update_or_create(
+                code=service_data["code"],
+                defaults={
+                    "modality": modality,
+                    "name": service_data["name"],
+                    "category": category,
+                    "price": service_data["default_price"],
+                    "charges": service_data["default_price"],
+                    "default_price": service_data["default_price"],
+                    "turnaround_time": service_data["turnaround_time"],
+                    "is_active": service_data["is_active"],
+                },
             )
             if created:
                 created_count += 1

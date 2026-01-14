@@ -11,11 +11,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 
 from .models import (
-    ServiceCatalog, ServiceVisit, ServiceVisitItem, Invoice, Payment,
+    ServiceVisit, ServiceVisitItem, Invoice, Payment,
     USGReport, OPDVitals, OPDConsult, StatusAuditLog
 )
 from .serializers import (
-    ServiceCatalogSerializer, ServiceVisitSerializer, ServiceVisitItemSerializer, InvoiceSerializer,
+    ServiceVisitSerializer, ServiceVisitItemSerializer, InvoiceSerializer,
     PaymentSerializer, USGReportSerializer, OPDVitalsSerializer,
     OPDConsultSerializer, ServiceVisitCreateSerializer, StatusTransitionSerializer
 )

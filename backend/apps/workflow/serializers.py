@@ -2,20 +2,12 @@ from rest_framework import serializers
 from django.utils import timezone
 from decimal import Decimal
 from .models import (
-    ServiceCatalog, ServiceVisit, ServiceVisitItem, Invoice, Payment,
+    ServiceVisit, ServiceVisitItem, Invoice, Payment,
     USGReport, OPDVitals, OPDConsult, StatusAuditLog
 )
 from apps.patients.models import Patient
 from apps.patients.serializers import PatientSerializer
 from apps.catalog.models import Service as CatalogService
-
-
-# DEPRECATED: Use catalog.Service API instead
-class ServiceCatalogSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ServiceCatalog
-        fields = "__all__"
-        read_only_fields = ["created_at", "updated_at"]
 
 
 class ServiceVisitItemSerializer(serializers.ModelSerializer):
