@@ -247,14 +247,15 @@ export default function FrontDeskIntake() {
     
     try {
       const payload: any = {
-        items: cart.map(item => ({
-          service_id: item.service_id,
-          indication: item.indication,
-        })),
-        discount_amount: discountType === "amount" ? discountAmount : 0,
-        discount_percentage: discountType === "percentage" ? parseFloat(discountValue) : null,
-        paid_amount: paid,
-        payment_method: paymentMethod,
+        service_ids: cart.map((item) => item.service_id),
+        subtotal,
+        discount: discountType === "amount" ? discountAmount : 0,
+        discount_percentage:
+          discountType === "percentage" && discountValue ? parseFloat(discountValue) : null,
+        total_amount: netTotal,
+        net_amount: netTotal,
+        amount_paid: paid,
+        payment_method: paymentMethod || "cash",
       };
       
       if (selectedPatient) {
@@ -269,9 +270,9 @@ export default function FrontDeskIntake() {
         payload.address = patientForm.address;
       }
       
-      const visit = await apiPost("/visits/unified-intake/", token, payload);
+      const visit = await apiPost("/workflow/visits/create_visit/", token, payload);
       
-      setSuccess(`Visit ${visit.visit_number} created successfully!`);
+      setSuccess(`Visit ${visit.visit_id} created successfully!`);
       
       // Reset form
       setSelectedPatient(null);
@@ -287,28 +288,13 @@ export default function FrontDeskIntake() {
       if (printReceipt && visit.id && token) {
         // Use centralized API helper
         const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
+        const receiptUrl = `${API_BASE}/pdf/${visit.id}/receipt/`;
         
-        // First generate receipt (creates receipt number and PDF if not exists)
-        fetch(`${API_BASE}/visits/${visit.id}/generate-receipt/`, {
-          method: "POST",
+        fetch(receiptUrl, {
           headers: {
             Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
           },
         })
-          .then((res) => {
-            if (!res.ok) throw new Error("Failed to generate receipt");
-            return res.json();
-          })
-          .then((updatedVisit) => {
-            // Then fetch the PDF
-            const receiptUrl = `${API_BASE}/pdf/${visit.id}/receipt/`;
-            return fetch(receiptUrl, {
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            });
-          })
           .then((res) => {
             if (!res.ok) {
               if (res.status === 401) {
@@ -347,8 +333,8 @@ export default function FrontDeskIntake() {
             }
           })
           .catch((err) => {
-            console.error("Failed to generate/load receipt:", err);
-            setError(`Failed to generate receipt: ${err.message}`);
+            console.error("Failed to load receipt:", err);
+            setError(`Failed to load receipt: ${err.message}`);
           });
       }
       
