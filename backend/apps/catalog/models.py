@@ -63,7 +63,7 @@ class Service(models.Model):
         
         # Calculate tat_minutes from tat_value and tat_unit (or legacy turnaround_time)
         # For new instances with legacy turnaround_time set, use it to initialize tat_minutes
-        if not self.pk and self.turnaround_time and self.turnaround_time != self.DEFAULT_TAT_MINUTES:
+        if not self.pk and self.turnaround_time is not None and self.turnaround_time != self.DEFAULT_TAT_MINUTES:
             # New instance with explicit turnaround_time - use it
             self.tat_minutes = self.turnaround_time
         else:

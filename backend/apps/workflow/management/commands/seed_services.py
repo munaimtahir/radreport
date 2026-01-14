@@ -36,6 +36,16 @@ class Command(BaseCommand):
             )
             category = "OPD" if service_data["code"] == "OPD" else "Radiology"
             
+            # Prepare service field values
+            service_fields = {
+                "category": category,
+                "price": service_data["default_price"],
+                "charges": service_data["default_price"],
+                "default_price": service_data["default_price"],
+                "turnaround_time": service_data["turnaround_time"],
+                "is_active": service_data["is_active"],
+            }
+            
             # Check for existing service by (modality, name) first to handle unique_together constraint
             try:
                 existing_service = Service.objects.get(modality=modality, name=service_data["name"])
@@ -45,12 +55,9 @@ class Command(BaseCommand):
                     conflicting_service = Service.objects.filter(code=service_data["code"]).exclude(pk=existing_service.pk).first()
                     if not conflicting_service:
                         existing_service.code = service_data["code"]
-                existing_service.category = category
-                existing_service.price = service_data["default_price"]
-                existing_service.charges = service_data["default_price"]
-                existing_service.default_price = service_data["default_price"]
-                existing_service.turnaround_time = service_data["turnaround_time"]
-                existing_service.is_active = service_data["is_active"]
+                # Apply all service field updates
+                for field, value in service_fields.items():
+                    setattr(existing_service, field, value)
                 existing_service.save()
                 service = existing_service
                 created = False
@@ -61,12 +68,7 @@ class Command(BaseCommand):
                     defaults={
                         "modality": modality,
                         "name": service_data["name"],
-                        "category": category,
-                        "price": service_data["default_price"],
-                        "charges": service_data["default_price"],
-                        "default_price": service_data["default_price"],
-                        "turnaround_time": service_data["turnaround_time"],
-                        "is_active": service_data["is_active"],
+                        **service_fields,
                     },
                 )
             if created:
