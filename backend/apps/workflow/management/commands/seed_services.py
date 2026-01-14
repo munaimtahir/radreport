@@ -35,19 +35,42 @@ class Command(BaseCommand):
                 defaults={"name": service_data["code"]},
             )
             category = "OPD" if service_data["code"] == "OPD" else "Radiology"
-            service, created = Service.objects.update_or_create(
-                code=service_data["code"],
-                defaults={
-                    "modality": modality,
-                    "name": service_data["name"],
-                    "category": category,
-                    "price": service_data["default_price"],
-                    "charges": service_data["default_price"],
-                    "default_price": service_data["default_price"],
-                    "turnaround_time": service_data["turnaround_time"],
-                    "is_active": service_data["is_active"],
-                },
-            )
+            
+            # Prepare service field values
+            service_fields = {
+                "category": category,
+                "price": service_data["default_price"],
+                "charges": service_data["default_price"],
+                "default_price": service_data["default_price"],
+                "turnaround_time": service_data["turnaround_time"],
+                "is_active": service_data["is_active"],
+            }
+            
+            # Check for existing service by (modality, name) first to handle unique_together constraint
+            try:
+                existing_service = Service.objects.get(modality=modality, name=service_data["name"])
+                # Update the existing service, but only update code if it's different and not conflicting
+                if existing_service.code != service_data["code"]:
+                    # Check if the new code would conflict with another service
+                    conflicting_service = Service.objects.filter(code=service_data["code"]).exclude(pk=existing_service.pk).first()
+                    if not conflicting_service:
+                        existing_service.code = service_data["code"]
+                # Apply all service field updates
+                for field, value in service_fields.items():
+                    setattr(existing_service, field, value)
+                existing_service.save()
+                service = existing_service
+                created = False
+            except Service.DoesNotExist:
+                # No existing service with this (modality, name), use update_or_create with code
+                service, created = Service.objects.update_or_create(
+                    code=service_data["code"],
+                    defaults={
+                        "modality": modality,
+                        "name": service_data["name"],
+                        **service_fields,
+                    },
+                )
             if created:
                 created_count += 1
                 self.stdout.write(
