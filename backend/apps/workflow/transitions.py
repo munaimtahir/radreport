@@ -9,11 +9,15 @@ All transitions must go through this service to ensure:
 - Timestamp updates
 """
 
+import logging
+
 from django.db import transaction
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 from rest_framework.exceptions import PermissionDenied
 from .models import ServiceVisitItem, StatusAuditLog, ServiceVisit
+
+logger = logging.getLogger(__name__)
 
 # Legacy Study status mapping to ServiceVisitItem status
 STUDY_STATUS_TO_ITEM_STATUS = {
@@ -225,8 +229,22 @@ def transition_item_status(item, to_status, user, reason=None):
             reason=reason or "",
             changed_by=user,
         )
-        
+
         # Update derived visit status
         item.service_visit.update_derived_status()
+
+    logger.info(
+        "workflow_transition",
+        extra={
+            "event": "workflow_transition",
+            "user": user.username,
+            "service_visit_id": str(item.service_visit_id),
+            "service_visit_item_id": str(item.id),
+            "department": department,
+            "from_status": from_status,
+            "to_status": to_status,
+            "reason": reason or "",
+        },
+    )
     
     return True, None

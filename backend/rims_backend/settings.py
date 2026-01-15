@@ -5,7 +5,8 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key")
 DEBUG = os.getenv("DJANGO_DEBUG", "0") == "1"
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "api.rims.alshifalab.pk,rims.alshifalab.pk,localhost,127.0.0.1").split(",") if h.strip()]
+# Configure via DJANGO_ALLOWED_HOSTS in production (comma-separated). No wildcards by default.
+ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -106,7 +107,7 @@ STORAGES = {
     },
 }
 
-MEDIA_URL = "media/"
+MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
@@ -139,6 +140,21 @@ SPECTACULAR_SETTINGS = {
 }
 
 OPD_ENABLED = os.getenv("OPD_ENABLED", "false").lower() in ("1", "true", "yes")
+
+# Security settings (configure via env for production; keep dev friendly defaults)
+SECURE_PROXY_SSL_HEADER = None
+secure_proxy_header = os.getenv("SECURE_PROXY_SSL_HEADER", "")
+if secure_proxy_header:
+    header_parts = [part.strip() for part in secure_proxy_header.split(",") if part.strip()]
+    if len(header_parts) == 2:
+        SECURE_PROXY_SSL_HEADER = (header_parts[0], header_parts[1])
+
+SESSION_COOKIE_SECURE = os.getenv("SESSION_COOKIE_SECURE", "0").lower() in ("1", "true", "yes")
+CSRF_COOKIE_SECURE = os.getenv("CSRF_COOKIE_SECURE", "0").lower() in ("1", "true", "yes")
+
+SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0") or "0")
+SECURE_HSTS_INCLUDE_SUBDOMAINS = os.getenv("SECURE_HSTS_INCLUDE_SUBDOMAINS", "0").lower() in ("1", "true", "yes")
+SECURE_HSTS_PRELOAD = os.getenv("SECURE_HSTS_PRELOAD", "0").lower() in ("1", "true", "yes")
 
 from datetime import timedelta
 SIMPLE_JWT = {
