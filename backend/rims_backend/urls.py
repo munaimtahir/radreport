@@ -140,11 +140,6 @@ urlpatterns = [
     path("api/", include(router.urls)),
 ]
 
-# Serve media files - SECURITY WARNING for production
-# This approach serves media files through Django which may have performance
-# and security implications. For production deployments, consider:
-# 1. Using a CDN or object storage (AWS S3, Google Cloud Storage, etc.)
-# 2. Serving directly through your web server (Caddy/Nginx) with proper access controls
-# 3. Implementing proper authentication/authorization for sensitive files
-# For now, serving directly for simplicity, but review for your security requirements
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+# Serve media files only in DEBUG to avoid Django handling /media in production.
+if settings.DEBUG:
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
