@@ -12,6 +12,7 @@ import USGWorklistPage from "../views/USGWorklistPage";
 import VerificationWorklistPage from "../views/VerificationWorklistPage";
 import FinalReportsPage from "../views/FinalReportsPage";
 import AccessDenied from "../views/AccessDenied";
+import ModuleDisabled from "../views/ModuleDisabled";
 import Footer from "./components/Footer";
 
 function Shell() {
@@ -303,6 +304,14 @@ function Shell() {
               <Route
                 path="/worklists/verification"
                 element={canVerify ? <VerificationWorklistPage /> : <AccessDenied />}
+              />
+              <Route
+                path="/worklists/opd/*"
+                element={<ModuleDisabled title="OPD module disabled" message="OPD module is disabled in this build." />}
+              />
+              <Route
+                path="/opd/*"
+                element={<ModuleDisabled title="OPD module disabled" message="OPD module is disabled in this build." />}
               />
               <Route path="/reports" element={<FinalReportsPage />} />
               {/* Legacy Routes */}

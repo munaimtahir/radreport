@@ -17,9 +17,6 @@ interface ServiceVisit {
   usg_report?: {
     published_pdf_url?: string;
   };
-  opd_consult?: {
-    published_pdf_url?: string;
-  };
 }
 
 export default function FinalReportsPage() {
@@ -27,7 +24,7 @@ export default function FinalReportsPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [visits, setVisits] = useState<ServiceVisit[]>([]);
-  const [filter, setFilter] = useState<"all" | "USG" | "OPD">("all");
+  const [filter, setFilter] = useState<"all" | "USG">("all");
 
   useEffect(() => {
     if (token) {
@@ -44,7 +41,8 @@ export default function FinalReportsPage() {
         url += `&workflow=${filter}`;
       }
       const data = await apiGet(url, token);
-      setVisits(data.results || data || []);
+      const results = data.results || data || [];
+      setVisits(results.filter((visit: ServiceVisit) => visit.service_code !== "OPD"));
       setError("");
     } catch (err: any) {
       setError(err.message || "Failed to load reports");
@@ -56,9 +54,6 @@ export default function FinalReportsPage() {
   const getPdfUrl = (visit: ServiceVisit) => {
     if (visit.service_code === "USG" && visit.usg_report?.published_pdf_url) {
       return visit.usg_report.published_pdf_url;
-    }
-    if (visit.service_code === "OPD" && visit.opd_consult?.published_pdf_url) {
-      return visit.opd_consult.published_pdf_url;
     }
     return null;
   };
@@ -85,12 +80,11 @@ export default function FinalReportsPage() {
         <label><strong>Filter:</strong></label>
         <select
           value={filter}
-          onChange={(e) => setFilter(e.target.value as "all" | "USG" | "OPD")}
+          onChange={(e) => setFilter(e.target.value as "all" | "USG")}
           style={{ padding: "6px 12px", fontSize: 14 }}
         >
           <option value="all">All Reports</option>
           <option value="USG">USG Reports</option>
-          <option value="OPD">OPD Prescriptions</option>
         </select>
         <div style={{ marginLeft: "auto", color: "#666" }}>
           Total: {visits.length} reports
