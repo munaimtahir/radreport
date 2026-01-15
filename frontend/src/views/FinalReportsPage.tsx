@@ -60,13 +60,6 @@ export default function FinalReportsPage() {
     if (visit.service_code === "OPD" && visit.opd_consult?.published_pdf_url) {
       return visit.opd_consult.published_pdf_url;
     }
-    // Fallback to API endpoint
-    if (visit.service_code === "USG") {
-      return `/api/pdf/${visit.id}/report/`;
-    }
-    if (visit.service_code === "OPD") {
-      return `/api/pdf/${visit.id}/prescription/`;
-    }
     return null;
   };
 
@@ -79,53 +72,7 @@ export default function FinalReportsPage() {
     const url = getPdfUrl(visit);
     if (!url) return;
     
-    // If it's an API endpoint, use blob approach with auth header
-    // If it's a media file URL, try to open directly (may still need auth depending on server config)
-    if (url.startsWith("/api/")) {
-      const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
-      // URL is already /api/pdf/... so use it directly or prepend API_BASE if needed
-      const fullUrl = url.startsWith("http") ? url : (url.startsWith(API_BASE) ? url : `${API_BASE}${url.replace(/^\/api/, "")}`);
-      
-      fetch(fullUrl, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      })
-        .then((res) => {
-          if (!res.ok) {
-            if (res.status === 401) {
-              throw new Error("Authentication failed. Please log in again.");
-            }
-            throw new Error(`Failed to fetch PDF: ${res.status} ${res.statusText}`);
-          }
-          return res.blob();
-        })
-        .then((blob) => {
-          const blobUrl = window.URL.createObjectURL(blob);
-          const win = window.open(blobUrl, "_blank");
-          if (win) {
-            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
-          } else {
-            // Popup blocked, try fallback download
-            const link = document.createElement("a");
-            link.href = blobUrl;
-            link.target = "_blank";
-            link.download = `report_${visit.visit_id || visit.id}.pdf`;
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
-          }
-        })
-        .catch((err) => {
-          console.error("Failed to load PDF:", err);
-          setError(`Failed to load PDF: ${err.message}`);
-        });
-    } else {
-      // Media file URL - try direct open (may still require auth on server side)
-      // For consistency, could also use blob approach, but media files might be large
-      window.open(url, "_blank");
-    }
+    window.open(url, "_blank");
   };
 
   return (

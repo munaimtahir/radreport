@@ -13,16 +13,12 @@ export default function Dashboard() {
     if (!token) return;
     Promise.all([
       apiGet("/patients/", token).catch(() => ({ count: 0 })),
-      apiGet("/studies/?status=registered", token).catch(() => ({ count: 0 })),
-      apiGet("/studies/?status=draft", token).catch(() => ({ count: 0 })),
-      apiGet("/studies/?status=final", token).catch(() => ({ count: 0 })),
+      apiGet("/workflow/visits/?status=PUBLISHED", token).catch(() => ({ count: 0 })),
       apiGet("/templates/", token).catch(() => ({ count: 0 })),
-    ]).then(([patients, registered, draft, final, templates]) => {
+    ]).then(([patients, published, templates]) => {
       setStats({
         patients: Array.isArray(patients) ? patients.length : patients.count || 0,
-        registered: Array.isArray(registered) ? registered.length : registered.count || 0,
-        draft: Array.isArray(draft) ? draft.length : draft.count || 0,
-        final: Array.isArray(final) ? final.length : final.count || 0,
+        published: Array.isArray(published) ? published.length : published.count || 0,
         templates: Array.isArray(templates) ? templates.length : templates.count || 0,
       });
       setLoading(false);
@@ -50,22 +46,8 @@ export default function Dashboard() {
           </Link>
         </div>
         <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: 20, background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-          <h3 style={{ margin: "0 0 10px 0", color: "#666", fontSize: 14, fontWeight: 500 }}>Registered Studies</h3>
-          <div style={{ fontSize: 32, fontWeight: "bold", color: "#6c757d", marginBottom: 8 }}>{stats?.registered || 0}</div>
-          <Link to="/studies" style={{ fontSize: 13, color: "#0B5ED7", textDecoration: "none", fontWeight: 500 }}>
-            View all →
-          </Link>
-        </div>
-        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: 20, background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
-          <h3 style={{ margin: "0 0 10px 0", color: "#666", fontSize: 14, fontWeight: 500 }}>Draft Reports</h3>
-          <div style={{ fontSize: 32, fontWeight: "bold", color: "#17a2b8", marginBottom: 8 }}>{stats?.draft || 0}</div>
-          <Link to="/studies" style={{ fontSize: 13, color: "#0B5ED7", textDecoration: "none", fontWeight: 500 }}>
-            View all →
-          </Link>
-        </div>
-        <div style={{ border: "1px solid #e0e0e0", borderRadius: 8, padding: 20, background: "white", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
           <h3 style={{ margin: "0 0 10px 0", color: "#666", fontSize: 14, fontWeight: 500 }}>Final Reports</h3>
-          <div style={{ fontSize: 32, fontWeight: "bold", color: "#28a745", marginBottom: 8 }}>{stats?.final || 0}</div>
+          <div style={{ fontSize: 32, fontWeight: "bold", color: "#28a745", marginBottom: 8 }}>{stats?.published || 0}</div>
           <Link to="/reports" style={{ fontSize: 13, color: "#0B5ED7", textDecoration: "none", fontWeight: 500 }}>
             View all →
           </Link>
