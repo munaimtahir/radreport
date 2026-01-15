@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
-import { apiGet, apiPost } from "../ui/api";
+import { apiGet, apiPatch, apiPost } from "../ui/api";
 import PageHeader from "../ui/components/PageHeader";
 import ErrorAlert from "../ui/components/ErrorAlert";
 import SuccessAlert from "../ui/components/SuccessAlert";
@@ -142,7 +142,7 @@ export default function RegistrationPage() {
       if (patientForm.age) patientData.age = parseInt(patientForm.age);
       if (patientForm.date_of_birth) patientData.date_of_birth = patientForm.date_of_birth;
       
-      const updated = await apiPost(`/patients/${selectedPatient.id}/`, token, patientData);
+      const updated = await apiPatch(`/patients/${selectedPatient.id}/`, token, patientData);
       setSelectedPatient(updated);
       setSuccess("Patient updated successfully");
     } catch (err: any) {

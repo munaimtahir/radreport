@@ -62,10 +62,10 @@ export default function FinalReportsPage() {
     }
     // Fallback to API endpoint
     if (visit.service_code === "USG") {
-      return `/api/pdf/report/${visit.id}/`;
+      return `/api/pdf/${visit.id}/report/`;
     }
     if (visit.service_code === "OPD") {
-      return `/api/pdf/prescription/${visit.id}/`;
+      return `/api/pdf/${visit.id}/prescription/`;
     }
     return null;
   };
