@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -27,9 +29,19 @@ from .permissions import (
     IsUSGOperator, IsVerifier, IsOPDOperator, IsDoctor, IsReception
 )
 from .transitions import transition_item_status, get_allowed_transitions
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, SuspiciousFileOperation
 from rest_framework.exceptions import PermissionDenied, NotFound
 from apps.patients.models import Patient
+
+logger = logging.getLogger(__name__)
+
+
+def _resolve_media_path(relative_path):
+    media_root = Path(settings.MEDIA_ROOT).resolve()
+    candidate = (media_root / relative_path).resolve()
+    if not str(candidate).startswith(str(media_root)):
+        raise SuspiciousFileOperation(f"Blocked path traversal: {relative_path}")
+    return candidate
 try:
     from apps.studies.models import ReceiptSequence
 except ImportError:
@@ -561,6 +573,19 @@ class USGReportViewSet(viewsets.ModelViewSet):
                 {"detail": str(e)},
                 status=status.HTTP_403_FORBIDDEN
             )
+
+        logger.info(
+            "workflow_submit_for_verification",
+            extra={
+                "event": "workflow_submit_for_verification",
+                "user": request.user.username,
+                "service_visit_id": str(item.service_visit_id),
+                "service_visit_item_id": str(item.id),
+                "from_status": "IN_PROGRESS",
+                "to_status": "PENDING_VERIFICATION",
+                "report_id": str(report.id),
+            },
+        )
         
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data)
@@ -631,6 +656,19 @@ class USGReportViewSet(viewsets.ModelViewSet):
             to_status="PUBLISHED",  # Item status becomes PUBLISHED
             reason="Report finalized",
             changed_by=request.user,
+        )
+
+        logger.info(
+            "workflow_finalize_report",
+            extra={
+                "event": "workflow_finalize_report",
+                "user": request.user.username,
+                "service_visit_id": str(item.service_visit_id),
+                "service_visit_item_id": str(item.id),
+                "from_status": "PENDING_VERIFICATION",
+                "to_status": "PUBLISHED",
+                "report_id": str(report.id),
+            },
         )
         
         serializer = self.get_serializer(report, context={"request": request})
@@ -705,9 +743,21 @@ class USGReportViewSet(viewsets.ModelViewSet):
         
         with open(pdf_path, "wb") as f:
             f.write(pdf_file.read())
-        
+
         report.published_pdf_path = f"pdfs/reports/usg/{year}/{month}/{pdf_filename}"
         report.save()
+
+        logger.info(
+            "workflow_pdf_published",
+            extra={
+                "event": "workflow_pdf_published",
+                "user": request.user.username,
+                "service_visit_id": str(service_visit.id),
+                "service_visit_item_id": str(item.id),
+                "report_id": str(report.id),
+                "pdf_path": str(pdf_path),
+            },
+        )
         
         # PHASE C: Transition using transition service
         try:
@@ -717,6 +767,19 @@ class USGReportViewSet(viewsets.ModelViewSet):
                 {"detail": str(e)},
                 status=status.HTTP_400_BAD_REQUEST if isinstance(e, ValidationError) else status.HTTP_403_FORBIDDEN
             )
+
+        logger.info(
+            "workflow_publish_report",
+            extra={
+                "event": "workflow_publish_report",
+                "user": request.user.username,
+                "service_visit_id": str(service_visit.id),
+                "service_visit_item_id": str(item.id),
+                "from_status": "PENDING_VERIFICATION",
+                "to_status": "PUBLISHED",
+                "report_id": str(report.id),
+            },
+        )
         
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data)
@@ -846,6 +909,7 @@ class USGReportViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        from_status = item.status
         try:
             transition_item_status(item, "RETURNED_FOR_CORRECTION", request.user, reason=reason)
         except ValidationError as e:
@@ -858,6 +922,20 @@ class USGReportViewSet(viewsets.ModelViewSet):
                 {"detail": str(e)},
                 status=status.HTTP_403_FORBIDDEN
             )
+
+        logger.info(
+            "workflow_return_for_correction",
+            extra={
+                "event": "workflow_return_for_correction",
+                "user": request.user.username,
+                "service_visit_id": str(item.service_visit_id),
+                "service_visit_item_id": str(item.id),
+                "from_status": from_status,
+                "to_status": "RETURNED_FOR_CORRECTION",
+                "report_id": str(report.id),
+                "reason": reason,
+            },
+        )
         
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data)
@@ -1160,10 +1238,39 @@ class PDFViewSet(viewsets.ViewSet):
         
         if not report.published_pdf_path:
             return Response({"detail": "Report not published"}, status=status.HTTP_404_NOT_FOUND)
-        
-        pdf_path = Path(settings.MEDIA_ROOT) / report.published_pdf_path
+
+        expected_path = report.published_pdf_path
+        try:
+            pdf_path = _resolve_media_path(expected_path)
+        except SuspiciousFileOperation:
+            logger.warning(
+                "workflow_pdf_invalid_path",
+                extra={
+                    "event": "workflow_pdf_invalid_path",
+                    "service_visit_id": str(service_visit.id),
+                    "report_id": str(report.id),
+                    "expected_path": expected_path,
+                },
+            )
+            return Response(
+                {"detail": f"PDF path invalid for report {report.id} at {expected_path}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         if not pdf_path.exists():
-            return Response({"detail": "PDF file not found"}, status=status.HTTP_404_NOT_FOUND)
+            logger.warning(
+                "workflow_pdf_missing",
+                extra={
+                    "event": "workflow_pdf_missing",
+                    "service_visit_id": str(service_visit.id),
+                    "report_id": str(report.id),
+                    "expected_path": expected_path,
+                },
+            )
+            return Response(
+                {"detail": f"PDF file not found for report {report.id} at {expected_path}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         
         with open(pdf_path, "rb") as f:
             response = HttpResponse(f.read(), content_type="application/pdf")
@@ -1197,10 +1304,39 @@ class PDFViewSet(viewsets.ViewSet):
         
         if not consult.published_pdf_path:
             return Response({"detail": "Prescription not published"}, status=status.HTTP_404_NOT_FOUND)
-        
-        pdf_path = Path(settings.MEDIA_ROOT) / consult.published_pdf_path
+
+        expected_path = consult.published_pdf_path
+        try:
+            pdf_path = _resolve_media_path(expected_path)
+        except SuspiciousFileOperation:
+            logger.warning(
+                "workflow_pdf_invalid_path",
+                extra={
+                    "event": "workflow_pdf_invalid_path",
+                    "service_visit_id": str(service_visit.id),
+                    "consult_id": str(consult.id),
+                    "expected_path": expected_path,
+                },
+            )
+            return Response(
+                {"detail": f"PDF path invalid for consult {consult.id} at {expected_path}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
         if not pdf_path.exists():
-            return Response({"detail": "PDF file not found"}, status=status.HTTP_404_NOT_FOUND)
+            logger.warning(
+                "workflow_pdf_missing",
+                extra={
+                    "event": "workflow_pdf_missing",
+                    "service_visit_id": str(service_visit.id),
+                    "consult_id": str(consult.id),
+                    "expected_path": expected_path,
+                },
+            )
+            return Response(
+                {"detail": f"PDF file not found for consult {consult.id} at {expected_path}"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
         
         with open(pdf_path, "rb") as f:
             response = HttpResponse(f.read(), content_type="application/pdf")

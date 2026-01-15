@@ -1,9 +1,12 @@
+import os
+
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from django.utils import timezone
 from apps.patients.api import PatientViewSet
 from apps.catalog.api import ModalityViewSet, ServiceViewSet
 from apps.templates.api import TemplateViewSet, TemplateVersionViewSet
@@ -44,50 +47,39 @@ router.register(r"pdf", PDFViewSet, basename="pdf")
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def health(request):
-    """Enhanced health check endpoint that verifies app, DB, and storage."""
+    """Health check endpoint for load balancers and uptime monitors."""
     from django.db import connection
-    from pathlib import Path
-    import os
-    
-    status = {
-        "status": "ok",
-        "app": "rims_backend",
-        "checks": {}
-    }
-    
-    # Check database connectivity
+
+    db_status = "ok"
+    http_status = 200
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
-            status["checks"]["database"] = "ok"
-    except Exception as e:
-        status["checks"]["database"] = f"error: {str(e)}"
-        status["status"] = "degraded"
-    
-    # Check static files directory
-    static_root = Path(settings.STATIC_ROOT)
-    if static_root.exists() and static_root.is_dir():
-        status["checks"]["static_files"] = "ok"
-    else:
-        status["checks"]["static_files"] = "missing"
-        status["status"] = "degraded"
-    
-    # Check media directory
-    media_root = Path(settings.MEDIA_ROOT)
-    try:
-        if not media_root.exists():
-            media_root.mkdir(parents=True, exist_ok=True)
-        # Check if writable
-        test_file = media_root / ".health_check"
-        test_file.touch()
-        test_file.unlink()
-        status["checks"]["media_storage"] = "ok"
-    except Exception as e:
-        status["checks"]["media_storage"] = f"error: {str(e)}"
-        status["status"] = "degraded"
-    
-    http_status = 200 if status["status"] == "ok" else 503
-    return JsonResponse(status, status=http_status)
+    except Exception as exc:
+        db_status = f"error: {exc}"
+        http_status = 503
+
+    version = os.getenv("GIT_SHA") or os.getenv("COMMIT_SHA")
+
+    return JsonResponse({
+        "status": "ok" if db_status == "ok" else "degraded",
+        "db": db_status,
+        "time": timezone.now().isoformat(),
+        "version": version,
+    }, status=http_status)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def health_auth(request):
+    """Authenticated health check for validating auth wiring."""
+    user = request.user
+    groups = list(user.groups.values_list("name", flat=True))
+    return JsonResponse({
+        "status": "ok",
+        "user": user.username,
+        "groups": groups,
+    })
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -138,6 +130,7 @@ def receipt_pdf_alt(request, visit_id):
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", health),
+    path("api/health/auth/", health_auth),
     path("api/auth/me/", auth_me),
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
