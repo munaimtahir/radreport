@@ -44,9 +44,8 @@ class Phase3RBACWorkflowTests(TestCase):
                 "order": 1,
             },
         )
-        template_version = template.versions.filter(is_published=True).order_by("-version").first()
-        if not template_version:
-            template_version = TemplateVersion.objects.create(
+        if not template.versions.filter(is_published=True).exists():
+            TemplateVersion.objects.create(
                 template=template,
                 version=1,
                 schema=build_schema(template),

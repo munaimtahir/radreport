@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useContext, useEffect, useMemo, useState, useCallback } from "react";
 import { apiGet } from "./api";
 
 type AuthCtx = {
@@ -16,9 +16,20 @@ type AuthCtx = {
 const Ctx = createContext<AuthCtx | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [token, setToken] = useState<string | null>(localStorage.getItem("token"));
+  const [token, setTokenState] = useState<string | null>(localStorage.getItem("token"));
   const [user, setUser] = useState<AuthCtx["user"]>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  const setToken = useCallback((t: string | null) => {
+    setTokenState(t);
+    if (t) localStorage.setItem("token", t);
+    else localStorage.removeItem("token");
+  }, []);
+
+  const logout = useCallback(() => {
+    setTokenState(null);
+    localStorage.removeItem("token");
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -33,28 +44,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       })
       .catch(() => {
         setUser(null);
-        setToken(null);
-        localStorage.removeItem("token");
+        logout();
       })
       .finally(() => {
         setIsLoading(false);
       });
-  }, [token]);
+  }, [token, logout]);
 
   const value = useMemo(() => ({
     token,
-    setToken: (t: string | null) => {
-      setToken(t);
-      if (t) localStorage.setItem("token", t);
-      else localStorage.removeItem("token");
-    },
-    logout: () => {
-      setToken(null);
-      localStorage.removeItem("token");
-    },
+    setToken,
+    logout,
     user,
     isLoading,
-  }), [token, user, isLoading]);
+  }), [token, user, isLoading, setToken, logout]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

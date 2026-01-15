@@ -7,11 +7,11 @@ class Command(BaseCommand):
     help = "Seed Phase 3 desk roles and demo users (registration/performance/verification)."
 
     def handle(self, *args, **options):
-        groups = {
-            "registration": "REGISTRATION_DESK",
-            "performance": "PERFORMANCE_DESK",
-            "verification": "VERIFICATION_DESK",
-        }
+        groups = [
+            "registration",
+            "performance",
+            "verification",
+        ]
 
         created_groups = []
         for group_name in groups:
