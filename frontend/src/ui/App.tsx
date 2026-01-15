@@ -11,12 +11,18 @@ import RegistrationPage from "../views/RegistrationPage";
 import USGWorklistPage from "../views/USGWorklistPage";
 import VerificationWorklistPage from "../views/VerificationWorklistPage";
 import FinalReportsPage from "../views/FinalReportsPage";
+import AccessDenied from "../views/AccessDenied";
 import Footer from "./components/Footer";
 
 function Shell() {
-  const { token, logout } = useAuth();
+  const { token, logout, user, isLoading } = useAuth();
   const location = useLocation();
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const groups = user?.groups || [];
+  const isSuperuser = user?.is_superuser || false;
+  const canRegister = isSuperuser || groups.includes("registration");
+  const canPerform = isSuperuser || groups.includes("performance");
+  const canVerify = isSuperuser || groups.includes("verification");
 
   // Helper function to check if a route is active (handles sub-routes)
   const isActiveRoute = (path: string) => {
@@ -42,6 +48,13 @@ function Shell() {
   }, [token]);
 
   if (!token) return <Navigate to="/login" replace />;
+  if (isLoading) {
+    return (
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "system-ui" }}>
+        Loading user...
+      </div>
+    );
+  }
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", fontFamily: "system-ui", flexDirection: "column" }}>
@@ -103,48 +116,54 @@ function Shell() {
                 WORKFLOW
               </div>
             </div>
-            <Link
-              to="/registration"
-              style={{
-                padding: "10px 12px",
-                textDecoration: "none",
-                color: isActiveRoute("/registration") ? "#0B5ED7" : "#555",
-                backgroundColor: isActiveRoute("/registration") ? "#f0f7ff" : "transparent",
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: isActiveRoute("/registration") ? 500 : 400,
-              }}
-            >
-              Registration
-            </Link>
-            <Link
-              to="/worklists/usg"
-              style={{
-                padding: "10px 12px",
-                textDecoration: "none",
-                color: isActiveRoute("/worklists/usg") ? "#0B5ED7" : "#555",
-                backgroundColor: isActiveRoute("/worklists/usg") ? "#f0f7ff" : "transparent",
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: isActiveRoute("/worklists/usg") ? 500 : 400,
-              }}
-            >
-              Report Entry
-            </Link>
-            <Link
-              to="/worklists/verification"
-              style={{
-                padding: "10px 12px",
-                textDecoration: "none",
-                color: isActiveRoute("/worklists/verification") ? "#0B5ED7" : "#555",
-                backgroundColor: isActiveRoute("/worklists/verification") ? "#f0f7ff" : "transparent",
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: isActiveRoute("/worklists/verification") ? 500 : 400,
-              }}
-            >
-              Verification
-            </Link>
+            {canRegister && (
+              <Link
+                to="/registration"
+                style={{
+                  padding: "10px 12px",
+                  textDecoration: "none",
+                  color: isActiveRoute("/registration") ? "#0B5ED7" : "#555",
+                  backgroundColor: isActiveRoute("/registration") ? "#f0f7ff" : "transparent",
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: isActiveRoute("/registration") ? 500 : 400,
+                }}
+              >
+                Registration
+              </Link>
+            )}
+            {canPerform && (
+              <Link
+                to="/worklists/usg"
+                style={{
+                  padding: "10px 12px",
+                  textDecoration: "none",
+                  color: isActiveRoute("/worklists/usg") ? "#0B5ED7" : "#555",
+                  backgroundColor: isActiveRoute("/worklists/usg") ? "#f0f7ff" : "transparent",
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: isActiveRoute("/worklists/usg") ? 500 : 400,
+                }}
+              >
+                Report Entry
+              </Link>
+            )}
+            {canVerify && (
+              <Link
+                to="/worklists/verification"
+                style={{
+                  padding: "10px 12px",
+                  textDecoration: "none",
+                  color: isActiveRoute("/worklists/verification") ? "#0B5ED7" : "#555",
+                  backgroundColor: isActiveRoute("/worklists/verification") ? "#f0f7ff" : "transparent",
+                  borderRadius: 6,
+                  fontSize: 14,
+                  fontWeight: isActiveRoute("/worklists/verification") ? 500 : 400,
+                }}
+              >
+                Verification
+              </Link>
+            )}
             <Link
               to="/reports"
               style={{
@@ -273,9 +292,18 @@ function Shell() {
             <Routes>
               <Route path="/" element={<Dashboard />} />
               {/* Workflow Routes */}
-              <Route path="/registration" element={<RegistrationPage />} />
-              <Route path="/worklists/usg" element={<USGWorklistPage />} />
-              <Route path="/worklists/verification" element={<VerificationWorklistPage />} />
+              <Route
+                path="/registration"
+                element={canRegister ? <RegistrationPage /> : <AccessDenied />}
+              />
+              <Route
+                path="/worklists/usg"
+                element={canPerform ? <USGWorklistPage /> : <AccessDenied />}
+              />
+              <Route
+                path="/worklists/verification"
+                element={canVerify ? <VerificationWorklistPage /> : <AccessDenied />}
+              />
               <Route path="/reports" element={<FinalReportsPage />} />
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />

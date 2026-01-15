@@ -64,7 +64,7 @@ class ServiceVisitViewSet(viewsets.ModelViewSet):
         "items__service", "items__service__modality", "items__service__default_template", "status_audit_logs__changed_by"
     ).all()
     serializer_class = ServiceVisitSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAnyDesk]
     filter_backends = [SearchFilter, OrderingFilter]  # Removed DjangoFilterBackend - status filtering handled in get_queryset
     search_fields = ["visit_id", "patient__name", "patient__patient_reg_no", "patient__mrn", "items__service__name", "items__service_name_snapshot"]
     # Removed filterset_fields - status filtering with comma-separated values handled in get_queryset
@@ -174,7 +174,7 @@ class ServiceVisitItemViewSet(viewsets.ReadOnlyModelViewSet):
         "status_audit_logs__changed_by"
     ).all()
     serializer_class = ServiceVisitItemSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAnyDesk]
     filter_backends = [DjangoFilterBackend, SearchFilter, OrderingFilter]
     search_fields = ["service_name_snapshot", "service_visit__visit_id", "service_visit__patient__name", "service_visit__patient__mrn"]
     filterset_fields = ["status", "department_snapshot"]
@@ -258,6 +258,26 @@ class USGReportViewSet(viewsets.ModelViewSet):
     ).all()
     serializer_class = USGReportSerializer
     permission_classes = [IsPerformanceOrVerificationDesk]
+
+    def _require_performance(self, request):
+        if request.user.is_superuser:
+            return None
+        if not IsPerformanceDesk().has_permission(request, self):
+            return Response(
+                {"detail": "Access denied: performance desk required to edit report content."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return None
+
+    def _require_verification(self, request):
+        if request.user.is_superuser:
+            return None
+        if not IsVerificationDesk().has_permission(request, self):
+            return Response(
+                {"detail": "Access denied: verification desk required to verify or publish reports."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+        return None
     
     def get_queryset(self):
         """Filter queryset by service_visit_item_id (canonical) or visit_id (compatibility)"""
@@ -318,6 +338,9 @@ class USGReportViewSet(viewsets.ModelViewSet):
     
     def create(self, request):
         """Create or update USG report - accepts service_visit_item_id (canonical) or visit_id (compatibility)"""
+        permission_error = self._require_performance(request)
+        if permission_error:
+            return permission_error
         service_visit_item_id = request.data.get("service_visit_item_id")
         visit_id = request.data.get("visit_id") or request.query_params.get("visit_id")
         report_values = request.data.get("values")
@@ -408,11 +431,26 @@ class USGReportViewSet(viewsets.ModelViewSet):
         
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data, status=status.HTTP_201_CREATED if created else status.HTTP_200_OK)
+
+    def update(self, request, *args, **kwargs):
+        permission_error = self._require_performance(request)
+        if permission_error:
+            return permission_error
+        return super().update(request, *args, **kwargs)
+
+    def partial_update(self, request, *args, **kwargs):
+        permission_error = self._require_performance(request)
+        if permission_error:
+            return permission_error
+        return super().partial_update(request, *args, **kwargs)
     
     @action(detail=True, methods=["post"], permission_classes=[IsUSGOperator])
     def save_draft(self, request, pk=None):
         """PHASE D: Save USG report draft and transition item to IN_PROGRESS if needed"""
         report = self.get_object()
+        permission_error = self._require_performance(request)
+        if permission_error:
+            return permission_error
         
         # PHASE D: Update canonical fields from request
         canonical_fields = [
@@ -466,6 +504,9 @@ class USGReportViewSet(viewsets.ModelViewSet):
     def submit_for_verification(self, request, pk=None):
         """PHASE C: Submit USG report for verification - uses transition service"""
         report = self.get_object()
+        permission_error = self._require_performance(request)
+        if permission_error:
+            return permission_error
         report_values = request.data.get("values")
         if report_values is None:
             report_values = request.data.get("report_json")
@@ -522,6 +563,9 @@ class USGReportViewSet(viewsets.ModelViewSet):
     def finalize(self, request, pk=None):
         """PHASE D: Finalize USG report - validates required fields and sets status to FINAL"""
         report = self.get_object()
+        permission_error = self._require_verification(request)
+        if permission_error:
+            return permission_error
         
         # PHASE D: Get the item
         item = report.service_visit_item
@@ -590,6 +634,9 @@ class USGReportViewSet(viewsets.ModelViewSet):
     def publish(self, request, pk=None):
         """PHASE D: Publish USG report - finalizes and generates PDF"""
         report = self.get_object()
+        permission_error = self._require_verification(request)
+        if permission_error:
+            return permission_error
         
         # PHASE D: Get the item
         item = report.service_visit_item
@@ -668,10 +715,13 @@ class USGReportViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(report, context={"request": request})
         return Response(serializer.data)
     
-    @action(detail=True, methods=["post"], permission_classes=[IsVerifier])
+    @action(detail=True, methods=["post"], permission_classes=[IsPerformanceDesk])
     def create_amendment(self, request, pk=None):
         """PHASE D: Create amended report from FINAL report"""
         parent_report = self.get_object()
+        permission_error = self._require_performance(request)
+        if permission_error:
+            return permission_error
         
         if parent_report.report_status != "FINAL":
             return Response(
@@ -764,6 +814,9 @@ class USGReportViewSet(viewsets.ModelViewSet):
     def return_for_correction(self, request, pk=None):
         """PHASE C: Return USG report for correction - uses transition service"""
         report = self.get_object()
+        permission_error = self._require_verification(request)
+        if permission_error:
+            return permission_error
         reason = request.data.get("reason", "")
         
         if not reason:

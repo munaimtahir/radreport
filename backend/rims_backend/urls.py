@@ -3,7 +3,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from apps.patients.api import PatientViewSet
 from apps.catalog.api import ModalityViewSet, ServiceViewSet
 from apps.templates.api import TemplateViewSet, TemplateVersionViewSet
@@ -18,7 +18,6 @@ from apps.workflow.models import ServiceVisit, Invoice
 from apps.workflow.pdf import build_service_visit_receipt_pdf
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import IsAuthenticated
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -92,6 +91,18 @@ def health(request):
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
+def auth_me(request):
+    """Return current user identity and group membership for RBAC."""
+    user = request.user
+    groups = list(user.groups.values_list("name", flat=True))
+    return JsonResponse({
+        "username": user.username,
+        "is_superuser": user.is_superuser,
+        "groups": groups,
+    })
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
 def receipt_pdf_alt(request, visit_id):
     """Alternative receipt PDF route: /api/pdf/receipt/{visit_id}/ - for compatibility with frontend"""
     try:
@@ -127,6 +138,7 @@ def receipt_pdf_alt(request, visit_id):
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", health),
+    path("api/auth/me/", auth_me),
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),

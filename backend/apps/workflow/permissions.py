@@ -11,7 +11,7 @@ Roles:
 """
 from rest_framework import permissions
 
-# Desk roles
+# Desk roles (canonical Django group names)
 DESK_ROLES = {
     "REGISTRATION": "registration",
     "PERFORMANCE": "performance",
@@ -27,9 +27,7 @@ class IsRegistrationDesk(permissions.BasePermission):
         # Superusers have all permissions
         if request.user.is_superuser:
             return True
-        # Check if user has registration role (via groups or user profile)
-        return request.user.groups.filter(name="Registration").exists() or \
-               (hasattr(request.user, 'profile') and getattr(request.user.profile, 'desk_role', None) == DESK_ROLES["REGISTRATION"])
+        return request.user.groups.filter(name=DESK_ROLES["REGISTRATION"]).exists()
 
 
 class IsPerformanceDesk(permissions.BasePermission):
@@ -40,8 +38,7 @@ class IsPerformanceDesk(permissions.BasePermission):
         # Superusers have all permissions
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name="Performance").exists() or \
-               (hasattr(request.user, 'profile') and getattr(request.user.profile, 'desk_role', None) == DESK_ROLES["PERFORMANCE"])
+        return request.user.groups.filter(name=DESK_ROLES["PERFORMANCE"]).exists()
 
 
 class IsVerificationDesk(permissions.BasePermission):
@@ -52,8 +49,7 @@ class IsVerificationDesk(permissions.BasePermission):
         # Superusers have all permissions
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name="Verification").exists() or \
-               (hasattr(request.user, 'profile') and getattr(request.user.profile, 'desk_role', None) == DESK_ROLES["VERIFICATION"])
+        return request.user.groups.filter(name=DESK_ROLES["VERIFICATION"]).exists()
 
 
 class IsRegistrationOrPerformanceDesk(permissions.BasePermission):
@@ -85,9 +81,9 @@ class IsAnyDesk(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        # For MVP, allow any authenticated user
-        # In production, check for specific desk roles
-        return True
+        if request.user.is_superuser:
+            return True
+        return request.user.groups.filter(name__in=DESK_ROLES.values()).exists()
 
 
 # PHASE C: Granular role permissions
@@ -98,8 +94,7 @@ class IsUSGOperator(permissions.BasePermission):
             return False
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name__in=["Performance", "USG Operator"]).exists() or \
-               (hasattr(request.user, 'profile') and getattr(request.user.profile, 'desk_role', None) in ["performance", "usg_operator"])
+        return request.user.groups.filter(name=DESK_ROLES["PERFORMANCE"]).exists()
 
 
 class IsVerifier(permissions.BasePermission):
@@ -109,8 +104,7 @@ class IsVerifier(permissions.BasePermission):
             return False
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name__in=["Verification", "Radiologist"]).exists() or \
-               (hasattr(request.user, 'profile') and getattr(request.user.profile, 'desk_role', None) in ["verification", "verifier"])
+        return request.user.groups.filter(name=DESK_ROLES["VERIFICATION"]).exists()
 
 
 class IsOPDOperator(permissions.BasePermission):
@@ -120,8 +114,7 @@ class IsOPDOperator(permissions.BasePermission):
             return False
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name__in=["Performance", "OPD Operator"]).exists() or \
-               (hasattr(request.user, 'profile') and getattr(request.user.profile, 'desk_role', None) in ["performance", "opd_operator"])
+        return request.user.groups.filter(name=DESK_ROLES["PERFORMANCE"]).exists()
 
 
 class IsDoctor(permissions.BasePermission):
@@ -131,8 +124,7 @@ class IsDoctor(permissions.BasePermission):
             return False
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name__in=["Doctor", "Consultant"]).exists() or \
-               (hasattr(request.user, 'profile') and getattr(request.user.profile, 'desk_role', None) in ["doctor", "consultant"])
+        return request.user.groups.filter(name="doctor").exists()
 
 
 class IsReception(permissions.BasePermission):
