@@ -155,10 +155,10 @@ class Command(BaseCommand):
                 raise CommandError(f"USG report creation failed: {report_response.data}")
             report = USGReport.objects.get(id=report_response.data["id"])
 
-        report_values = report.report_json if isinstance(report.report_json, dict) else {}
-        report_values.setdefault("summary", "Normal abdominal ultrasound.")
-        report_values["seed_marker"] = "phase1"
-        report.report_json = report_values
+        if not isinstance(report.report_json, dict):
+            report.report_json = {}
+        report.report_json.setdefault("summary", "Normal abdominal ultrasound.")
+        report.report_json["seed_marker"] = "phase1"
         if not report.template_version_id:
             report.template_version = published_version
         report.save()
