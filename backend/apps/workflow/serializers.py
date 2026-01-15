@@ -170,7 +170,7 @@ class USGReportSerializer(serializers.ModelSerializer):
             if request:
                 sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
                 if sv:
-                    return request.build_absolute_uri(f"/api/pdf/report/{sv.id}/")
+                    return request.build_absolute_uri(f"/api/pdf/{sv.id}/report/")
         return None
 
     def get_template_schema(self, obj):
@@ -233,7 +233,7 @@ class OPDConsultSerializer(serializers.ModelSerializer):
             if request:
                 sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
                 if sv:
-                    return request.build_absolute_uri(f"/api/pdf/prescription/{sv.id}/")
+                    return request.build_absolute_uri(f"/api/pdf/{sv.id}/prescription/")
         return None
 
 
