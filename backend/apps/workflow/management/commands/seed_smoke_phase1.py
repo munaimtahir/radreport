@@ -98,6 +98,9 @@ class Command(BaseCommand):
                 address="Phase1 Seed Address",
             )
 
+        # NOTE: This JSON key lookup (`report_json__seed_marker`) relies on PostgreSQL's
+        # JSON/JSONB field support for nested key lookups and is intended to run against
+        # a PostgreSQL database. Behavior may differ on other database backends.
         report = USGReport.objects.filter(report_json__seed_marker="phase1").first()
         service_visit = None
         item = None
