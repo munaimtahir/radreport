@@ -44,9 +44,8 @@ class Phase3RBACWorkflowTests(TestCase):
                 "order": 1,
             },
         )
-        template_version = template.versions.filter(is_published=True).order_by("-version").first()
-        if not template_version:
-            template_version = TemplateVersion.objects.create(
+        if not template.versions.filter(is_published=True).exists():
+            TemplateVersion.objects.create(
                 template=template,
                 version=1,
                 schema=build_schema(template),
@@ -175,3 +174,168 @@ class Phase3RBACWorkflowTests(TestCase):
         force_authenticate(finalize_request, user=self.ver_user)
         finalize_response = USGReportViewSet.as_view({"post": "finalize"})(finalize_request, pk=str(report.id))
         self.assertEqual(finalize_response.status_code, 200, finalize_response.data)
+
+    def test_registration_cannot_create_report(self):
+        """Registration users cannot create USG reports"""
+        visit = self._create_visit(self.reg_user)
+        item = visit.items.first()
+
+        factory = APIRequestFactory()
+        create_request = factory.post(
+            "/api/workflow/usg/",
+            {"service_visit_item_id": str(item.id), "values": {"summary": "Attempt by registration."}},
+            format="json",
+        )
+        force_authenticate(create_request, user=self.reg_user)
+        create_response = USGReportViewSet.as_view({"post": "create"})(create_request)
+        self.assertEqual(create_response.status_code, 403)
+
+    def test_verification_cannot_create_or_update_report(self):
+        """Verification users cannot create or update USG reports"""
+        visit = self._create_visit(self.reg_user)
+        item = visit.items.first()
+
+        factory = APIRequestFactory()
+        # Test create
+        create_request = factory.post(
+            "/api/workflow/usg/",
+            {"service_visit_item_id": str(item.id), "values": {"summary": "Attempt by verification."}},
+            format="json",
+        )
+        force_authenticate(create_request, user=self.ver_user)
+        create_response = USGReportViewSet.as_view({"post": "create"})(create_request)
+        self.assertEqual(create_response.status_code, 403)
+
+        # Create a report with performance user first
+        report = self._create_report(self.perf_user, item.id)
+
+        # Test update
+        update_request = factory.put(
+            f"/api/workflow/usg/{report.id}/",
+            {"report_json": {"summary": "Update attempt by verification."}},
+            format="json",
+        )
+        force_authenticate(update_request, user=self.ver_user)
+        update_response = USGReportViewSet.as_view({"put": "update"})(update_request, pk=str(report.id))
+        self.assertEqual(update_response.status_code, 403)
+
+        # Test partial_update
+        patch_request = factory.patch(
+            f"/api/workflow/usg/{report.id}/",
+            {"report_json": {"summary": "Patch attempt by verification."}},
+            format="json",
+        )
+        force_authenticate(patch_request, user=self.ver_user)
+        patch_response = USGReportViewSet.as_view({"patch": "partial_update"})(patch_request, pk=str(report.id))
+        self.assertEqual(patch_response.status_code, 403)
+
+
+class AuthMeEndpointTests(TestCase):
+    """Tests for the /api/auth/me/ endpoint that returns user identity and groups"""
+
+    @classmethod
+    def setUpTestData(cls):
+        user_model = get_user_model()
+        
+        # Create groups
+        cls.reg_group = Group.objects.create(name="registration")
+        cls.perf_group = Group.objects.create(name="performance")
+        cls.ver_group = Group.objects.create(name="verification")
+        
+        # Create users with different group memberships
+        cls.user_with_one_group = user_model.objects.create_user(
+            username="user_one_group", password="test"
+        )
+        cls.user_with_one_group.groups.add(cls.reg_group)
+        
+        cls.user_with_multiple_groups = user_model.objects.create_user(
+            username="user_multi_groups", password="test"
+        )
+        cls.user_with_multiple_groups.groups.add(cls.perf_group, cls.ver_group)
+        
+        cls.user_no_groups = user_model.objects.create_user(
+            username="user_no_groups", password="test"
+        )
+        
+        cls.superuser = user_model.objects.create_superuser(
+            username="admin", password="test"
+        )
+
+    def test_auth_me_returns_user_info_with_one_group(self):
+        """Test that auth_me returns correct user info for user with one group"""
+        from rims_backend.urls import auth_me
+        import json
+        
+        factory = APIRequestFactory()
+        request = factory.get("/api/auth/me/")
+        force_authenticate(request, user=self.user_with_one_group)
+        
+        response = auth_me(request)
+        self.assertEqual(response.status_code, 200)
+        
+        data = json.loads(response.content)
+        self.assertEqual(data["username"], "user_one_group")
+        self.assertEqual(data["is_superuser"], False)
+        self.assertEqual(data["groups"], ["registration"])
+
+    def test_auth_me_returns_user_info_with_multiple_groups(self):
+        """Test that auth_me returns correct user info for user with multiple groups"""
+        from rims_backend.urls import auth_me
+        import json
+        
+        factory = APIRequestFactory()
+        request = factory.get("/api/auth/me/")
+        force_authenticate(request, user=self.user_with_multiple_groups)
+        
+        response = auth_me(request)
+        self.assertEqual(response.status_code, 200)
+        
+        data = json.loads(response.content)
+        self.assertEqual(data["username"], "user_multi_groups")
+        self.assertEqual(data["is_superuser"], False)
+        self.assertCountEqual(data["groups"], ["performance", "verification"])
+
+    def test_auth_me_returns_user_info_with_no_groups(self):
+        """Test that auth_me returns correct user info for user with no groups"""
+        from rims_backend.urls import auth_me
+        import json
+        
+        factory = APIRequestFactory()
+        request = factory.get("/api/auth/me/")
+        force_authenticate(request, user=self.user_no_groups)
+        
+        response = auth_me(request)
+        self.assertEqual(response.status_code, 200)
+        
+        data = json.loads(response.content)
+        self.assertEqual(data["username"], "user_no_groups")
+        self.assertEqual(data["is_superuser"], False)
+        self.assertEqual(data["groups"], [])
+
+    def test_auth_me_returns_superuser_status(self):
+        """Test that auth_me correctly identifies superusers"""
+        from rims_backend.urls import auth_me
+        import json
+        
+        factory = APIRequestFactory()
+        request = factory.get("/api/auth/me/")
+        force_authenticate(request, user=self.superuser)
+        
+        response = auth_me(request)
+        self.assertEqual(response.status_code, 200)
+        
+        data = json.loads(response.content)
+        self.assertEqual(data["username"], "admin")
+        self.assertEqual(data["is_superuser"], True)
+        self.assertEqual(data["groups"], [])
+
+    def test_auth_me_requires_authentication(self):
+        """Test that auth_me requires authentication"""
+        from rims_backend.urls import auth_me
+        
+        factory = APIRequestFactory()
+        request = factory.get("/api/auth/me/")
+        # No authentication
+        
+        response = auth_me(request)
+        self.assertEqual(response.status_code, 401)

@@ -452,6 +452,7 @@ class USGReportViewSet(viewsets.ModelViewSet):
     def save_draft(self, request, pk=None):
         """PHASE D: Save USG report draft and transition item to IN_PROGRESS if needed"""
         report = self.get_object()
+        # NOTE: IsUSGOperator in decorator is not sufficient; explicit check needed for DRF action permissions
         permission_error = self._require_performance(request)
         if permission_error:
             return permission_error
@@ -508,6 +509,7 @@ class USGReportViewSet(viewsets.ModelViewSet):
     def submit_for_verification(self, request, pk=None):
         """PHASE C: Submit USG report for verification - uses transition service"""
         report = self.get_object()
+        # NOTE: IsUSGOperator in decorator is not sufficient; explicit check needed for DRF action permissions
         permission_error = self._require_performance(request)
         if permission_error:
             return permission_error
@@ -818,6 +820,7 @@ class USGReportViewSet(viewsets.ModelViewSet):
     def return_for_correction(self, request, pk=None):
         """PHASE C: Return USG report for correction - uses transition service"""
         report = self.get_object()
+        # NOTE: IsVerifier in decorator is not sufficient; explicit check needed for DRF action permissions
         permission_error = self._require_verification(request)
         if permission_error:
             return permission_error
