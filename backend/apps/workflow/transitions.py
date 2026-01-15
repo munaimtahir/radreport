@@ -88,7 +88,7 @@ def get_user_roles(user):
     roles = []
     
     # Check Django groups
-    group_names = user.groups.values_list('name', flat=True)
+    group_names = user.groups.values_list("name", flat=True)
     for group_name in group_names:
         group_upper = group_name.upper()
         if group_upper in ["REGISTRATION", "PERFORMANCE", "VERIFICATION", "ADMIN"]:
@@ -98,12 +98,6 @@ def get_user_roles(user):
             roles.extend(["USG_OPERATOR", "OPD_OPERATOR"])
         if group_upper == "VERIFICATION":
             roles.append("VERIFIER")
-    
-    # Check user profile if exists
-    if hasattr(user, 'profile'):
-        desk_role = getattr(user.profile, 'desk_role', None)
-        if desk_role:
-            roles.append(desk_role.upper())
     
     return list(set(roles))  # Remove duplicates
 
