@@ -5,9 +5,7 @@ import { apiGet } from "./api";
 import Login from "../views/Login";
 import Dashboard from "../views/Dashboard";
 import Patients from "../views/Patients";
-import Studies from "../views/Studies";
 import Templates from "../views/Templates";
-import ReportEditor from "../views/ReportEditor";
 import ReceiptSettings from "../views/ReceiptSettings";
 import RegistrationPage from "../views/RegistrationPage";
 import USGWorklistPage from "../views/USGWorklistPage";
@@ -281,10 +279,11 @@ function Shell() {
               <Route path="/reports" element={<FinalReportsPage />} />
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />
-              <Route path="/studies" element={<Studies />} />
               <Route path="/templates" element={<Templates />} />
               <Route path="/receipt-settings" element={<ReceiptSettings />} />
-              <Route path="/reports/:reportId/edit" element={<ReportEditor />} />
+              {/* Legacy endpoints disabled in Phase 2 */}
+              <Route path="/studies" element={<Navigate to="/" replace />} />
+              <Route path="/reports/:reportId/edit" element={<Navigate to="/reports" replace />} />
             </Routes>
           </div>
           <Footer />
