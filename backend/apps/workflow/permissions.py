@@ -118,7 +118,14 @@ class IsOPDOperator(permissions.BasePermission):
 
 
 class IsDoctor(permissions.BasePermission):
-    """Permission for doctors (can finalize and publish OPD)"""
+    """
+    Permission for doctors (can finalize and publish OPD consultations).
+    
+    NOTE: This permission requires a 'doctor' Django group which is NOT created by
+    the seed_roles_phase3 management command. The 'doctor' group is part of the OPD
+    workflow (out of scope for Phase 3 USG workflow) and must be created separately
+    if OPD functionality is needed.
+    """
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
