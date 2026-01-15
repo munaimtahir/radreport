@@ -28,7 +28,7 @@ from .permissions import (
 )
 from .transitions import transition_item_status, get_allowed_transitions
 from django.core.exceptions import ValidationError
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import PermissionDenied, NotFound
 from apps.patients.models import Patient
 try:
     from apps.studies.models import ReceiptSequence
@@ -87,6 +87,8 @@ class ServiceVisitViewSet(viewsets.ModelViewSet):
                     items__department_snapshot="USG"
                 ).distinct()
             elif workflow == "OPD":
+                if not settings.OPD_ENABLED:
+                    raise NotFound("OPD disabled")
                 # Filter by items with department_snapshot == "OPD"
                 queryset = queryset.filter(
                     items__department_snapshot="OPD"
@@ -187,6 +189,8 @@ class ServiceVisitItemViewSet(viewsets.ReadOnlyModelViewSet):
         # Filter by department (workflow)
         department = self.request.query_params.get("department", None)
         if department:
+            if department == "OPD" and not settings.OPD_ENABLED:
+                raise NotFound("OPD disabled")
             queryset = queryset.filter(department_snapshot=department)
         
         # Filter by status
@@ -864,6 +868,11 @@ class OPDVitalsViewSet(viewsets.ModelViewSet):
     ).all()
     serializer_class = OPDVitalsSerializer
     permission_classes = [IsPerformanceDesk]
+
+    def initial(self, request, *args, **kwargs):
+        if not settings.OPD_ENABLED:
+            raise NotFound("OPD disabled")
+        return super().initial(request, *args, **kwargs)
     
     def get_queryset(self):
         visit_id = self.request.query_params.get("visit_id") or self.kwargs.get("pk")
@@ -959,6 +968,11 @@ class OPDConsultViewSet(viewsets.ModelViewSet):
     ).all()
     serializer_class = OPDConsultSerializer
     permission_classes = [IsPerformanceDesk]
+
+    def initial(self, request, *args, **kwargs):
+        if not settings.OPD_ENABLED:
+            raise NotFound("OPD disabled")
+        return super().initial(request, *args, **kwargs)
     
     def get_queryset(self):
         visit_id = self.request.query_params.get("visit_id") or self.kwargs.get("pk")
@@ -1156,6 +1170,8 @@ class PDFViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["get"], url_path="prescription")
     def prescription(self, request, pk=None):
         """Get OPD prescription PDF"""
+        if not settings.OPD_ENABLED:
+            return Response({"detail": "OPD disabled"}, status=status.HTTP_404_NOT_FOUND)
         try:
             service_visit = ServiceVisit.objects.get(id=pk)
             # Try to find OPD consult via ServiceVisitItem first, then fallback to legacy

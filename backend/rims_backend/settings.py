@@ -138,6 +138,8 @@ SPECTACULAR_SETTINGS = {
     "VERSION": "0.1.0",
 }
 
+OPD_ENABLED = os.getenv("OPD_ENABLED", "false").lower() in ("1", "true", "yes")
+
 from datetime import timedelta
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
