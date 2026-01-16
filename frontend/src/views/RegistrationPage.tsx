@@ -484,15 +484,20 @@ export default function RegistrationPage() {
   const paidAmount = parseFloat(amountPaid) || netAmount;
   const balanceAmount = netAmount - paidAmount;
 
+  const hasAutoFilledAmountPaid = useRef(false);
+
   useEffect(() => {
     if (selectedServices.length === 0) {
       setAmountPaid("");
+      hasAutoFilledAmountPaid.current = false;
       return;
     }
-    if (!amountPaid) {
+
+    if (!hasAutoFilledAmountPaid.current) {
       setAmountPaid(netAmount.toFixed(2));
+      hasAutoFilledAmountPaid.current = true;
     }
-  }, [selectedServices.length, netAmount, amountPaid]);
+  }, [selectedServices.length, netAmount]);
 
   const saveVisit = async (printReceipt: boolean = false) => {
     if (!token || !selectedPatient || selectedServices.length === 0) {
