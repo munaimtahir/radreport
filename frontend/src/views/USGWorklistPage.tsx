@@ -503,7 +503,18 @@ export default function USGWorklistPage() {
                             <input
                               type="number"
                               value={value}
-                              onChange={(e) => handleTemplateFieldChange(field.key, e.target.value === "" ? "" : Number(e.target.value))}
+                              onChange={(e) => {
+                                const rawValue = e.target.value;
+                                if (rawValue === "") {
+                                  handleTemplateFieldChange(field.key, "");
+                                  return;
+                                }
+                                const parsed = Number(rawValue);
+                                handleTemplateFieldChange(
+                                  field.key,
+                                  Number.isNaN(parsed) ? "" : parsed
+                                );
+                              }}
                               onKeyDown={handlePreventEnter}
                               placeholder={field.placeholder}
                               style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
