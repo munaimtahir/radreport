@@ -124,7 +124,7 @@ class ReportingViewSet(viewsets.ViewSet):
                 if field.field_type == "checkbox":
                     if value is not True:
                         errors[field.key] = "Required checkbox must be checked."
-                elif value in [None, "", []]:
+                elif value is None or value == "" or value == []:
                     errors[field.key] = "This field is required."
             if value is None:
                 continue
