@@ -7,6 +7,8 @@ import Dashboard from "../views/Dashboard";
 import Patients from "../views/Patients";
 import Templates from "../views/Templates";
 import ReceiptSettings from "../views/ReceiptSettings";
+import ReportTemplates from "../views/ReportTemplates";
+import ServiceTemplates from "../views/ServiceTemplates";
 import RegistrationPage from "../views/RegistrationPage";
 import USGWorklistPage from "../views/USGWorklistPage";
 import VerificationWorklistPage from "../views/VerificationWorklistPage";
@@ -24,6 +26,7 @@ function Shell() {
   const canRegister = isSuperuser || groups.includes("registration");
   const canPerform = isSuperuser || groups.includes("performance");
   const canVerify = isSuperuser || groups.includes("verification");
+  const canAdmin = isSuperuser;
 
   // Helper function to check if a route is active (handles sub-routes)
   const isActiveRoute = (path: string) => {
@@ -179,6 +182,41 @@ function Shell() {
             >
               Final Reports
             </Link>
+            {canAdmin && (
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e0e0e0" }}>
+                <div style={{ fontSize: 11, color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+                  ADMIN
+                </div>
+                <Link
+                  to="/admin/report-templates"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/admin/report-templates") ? "#0B5ED7" : "#555",
+                    backgroundColor: isActiveRoute("/admin/report-templates") ? "#f0f7ff" : "transparent",
+                    borderRadius: 6,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/admin/report-templates") ? 500 : 400,
+                  }}
+                >
+                  Report Templates
+                </Link>
+                <Link
+                  to="/admin/service-templates"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/admin/service-templates") ? "#0B5ED7" : "#555",
+                    backgroundColor: isActiveRoute("/admin/service-templates") ? "#f0f7ff" : "transparent",
+                    borderRadius: 6,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/admin/service-templates") ? 500 : 400,
+                  }}
+                >
+                  Service Templates
+                </Link>
+              </div>
+            )}
             {/* PHASE C: Legacy routes hidden from navigation - accessible via direct URL for admin only */}
             {/* Uncomment below to show legacy routes (admin-only in production) */}
             {/*
@@ -314,6 +352,14 @@ function Shell() {
                 element={<ModuleDisabled title="OPD module disabled" message="OPD module is disabled in this build." />}
               />
               <Route path="/reports" element={<FinalReportsPage />} />
+              <Route
+                path="/admin/report-templates"
+                element={canAdmin ? <ReportTemplates /> : <AccessDenied />}
+              />
+              <Route
+                path="/admin/service-templates"
+                element={canAdmin ? <ServiceTemplates /> : <AccessDenied />}
+              />
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />
               <Route path="/templates" element={<Templates />} />

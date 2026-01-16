@@ -10,6 +10,18 @@ FIELD_TYPES = (
     ("boolean", "Yes/No"),
 )
 
+REPORT_TEMPLATE_FIELD_TYPES = (
+    ("short_text", "Short Text"),
+    ("long_text", "Long Text"),
+    ("number", "Number"),
+    ("date", "Date"),
+    ("dropdown", "Dropdown"),
+    ("checkbox", "Checkbox"),
+    ("radio", "Radio"),
+    ("heading", "Heading"),
+    ("separator", "Separator"),
+)
+
 class Template(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
@@ -81,3 +93,74 @@ class FieldOption(models.Model):
 
     def __str__(self):
         return f"{self.field.key}: {self.label}"
+
+
+class ReportTemplate(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=200)
+    code = models.CharField(max_length=80, unique=True, null=True, blank=True)
+    description = models.TextField(blank=True, default="")
+    category = models.CharField(max_length=120, blank=True, default="")
+    is_active = models.BooleanField(default=True)
+    version = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        return self.name
+
+
+class ReportTemplateField(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    template = models.ForeignKey(ReportTemplate, on_delete=models.CASCADE, related_name="fields")
+    label = models.CharField(max_length=200)
+    key = models.SlugField(max_length=80)
+    field_type = models.CharField(max_length=30, choices=REPORT_TEMPLATE_FIELD_TYPES)
+    is_required = models.BooleanField(default=False)
+    help_text = models.CharField(max_length=300, blank=True, default="")
+    default_value = models.JSONField(null=True, blank=True)
+    placeholder = models.CharField(max_length=200, blank=True, default="")
+    order = models.PositiveIntegerField(default=0)
+    validation = models.JSONField(null=True, blank=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        unique_together = ("template", "key")
+        ordering = ["order"]
+
+    def __str__(self):
+        return f"{self.template.name} :: {self.label}"
+
+
+class ReportTemplateFieldOption(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    field = models.ForeignKey(ReportTemplateField, on_delete=models.CASCADE, related_name="options")
+    value = models.CharField(max_length=120)
+    label = models.CharField(max_length=120)
+    order = models.PositiveIntegerField(default=0)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["order"]
+
+    def __str__(self):
+        return f"{self.field.key}: {self.label}"
+
+
+class ServiceReportTemplate(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    service = models.ForeignKey("catalog.Service", on_delete=models.CASCADE, related_name="report_templates")
+    template = models.ForeignKey(ReportTemplate, on_delete=models.CASCADE, related_name="service_links")
+    is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("service", "template")
+        ordering = ["-is_default", "created_at"]
+
+    def __str__(self):
+        return f"{self.service.name}: {self.template.name}"

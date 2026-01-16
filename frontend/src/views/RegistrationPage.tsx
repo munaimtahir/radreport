@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../ui/auth";
 import { apiGet, apiPatch, apiPost } from "../ui/api";
 import PageHeader from "../ui/components/PageHeader";
@@ -16,6 +16,7 @@ interface Patient {
   gender: string;
   phone: string;
   address: string;
+  notes?: string;
 }
 
 interface Service {
@@ -25,6 +26,7 @@ interface Service {
   price: number;
   charges: number;
   category: string;
+  usage_count?: number;
   modality: {
     code: string;
     name: string;
@@ -33,347 +35,504 @@ interface Service {
   usage_count?: number;
 }
 
+interface ParsedNotes {
+  fatherHusband: string;
+  cnic: string;
+  comments: string;
+  extraNotes: string;
+}
+
+const LOCAL_USAGE_KEY = "rims:service-usage";
+
+const parsePatientNotes = (notes?: string): ParsedNotes => {
+  const parsed: ParsedNotes = {
+    fatherHusband: "",
+    cnic: "",
+    comments: "",
+    extraNotes: "",
+  };
+
+  if (!notes) {
+    return parsed;
+  }
+
+  const lines = notes.split("\n").map((line) => line.trim()).filter(Boolean);
+  const remaining: string[] = [];
+
+  lines.forEach((line) => {
+    if (line.toLowerCase().startsWith("father/husband:")) {
+      parsed.fatherHusband = line.replace(/father\/husband:/i, "").trim();
+    } else if (line.toLowerCase().startsWith("cnic:")) {
+      parsed.cnic = line.replace(/cnic:/i, "").trim();
+    } else if (line.toLowerCase().startsWith("comments:")) {
+      parsed.comments = line.replace(/comments:/i, "").trim();
+    } else {
+      remaining.push(line);
+    }
+  });
+
+  if (!parsed.comments && remaining.length > 0) {
+    parsed.comments = remaining.join("\n");
+  }
+  parsed.extraNotes = remaining.join("\n");
+
+  return parsed;
+};
+
+const buildNotes = (existingNotes: string | undefined, fields: ParsedNotes): string => {
+  const cleanExisting = (existingNotes || "")
+    .split("\n")
+    .filter((line) => !line.toLowerCase().startsWith("father/husband:")
+      && !line.toLowerCase().startsWith("cnic:")
+      && !line.toLowerCase().startsWith("comments:"))
+    .join("\n")
+    .trim();
+
+  const tagged: string[] = [];
+  if (fields.fatherHusband.trim()) {
+    tagged.push(`Father/Husband: ${fields.fatherHusband.trim()}`);
+  }
+  if (fields.cnic.trim()) {
+    tagged.push(`CNIC: ${fields.cnic.trim()}`);
+  }
+  if (fields.comments.trim()) {
+    tagged.push(`Comments: ${fields.comments.trim()}`);
+  }
+
+  return [cleanExisting, tagged.join("\n")].filter(Boolean).join("\n");
+};
+
+const calculateAgeFromDob = (dateString: string) => {
+  if (!dateString) return { years: "", months: "", days: "" };
+  const dob = new Date(dateString);
+  if (Number.isNaN(dob.getTime())) return { years: "", months: "", days: "" };
+  const today = new Date();
+  let years = today.getFullYear() - dob.getFullYear();
+  let months = today.getMonth() - dob.getMonth();
+  let days = today.getDate() - dob.getDate();
+
+  if (days < 0) {
+    months -= 1;
+    const previousMonth = new Date(today.getFullYear(), today.getMonth(), 0);
+    days += previousMonth.getDate();
+  }
+  if (months < 0) {
+    years -= 1;
+    months += 12;
+  }
+
+  return {
+    years: years >= 0 ? String(years) : "",
+    months: months >= 0 ? String(months) : "",
+    days: days >= 0 ? String(days) : "",
+  };
+};
+
+const calculateDobFromAge = (years: string, months: string, days: string) => {
+  const y = parseInt(years || "0", 10) || 0;
+  const m = parseInt(months || "0", 10) || 0;
+  const d = parseInt(days || "0", 10) || 0;
+  if (y === 0 && m === 0 && d === 0) return "";
+  const today = new Date();
+  const estimated = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  estimated.setFullYear(estimated.getFullYear() - y);
+  estimated.setMonth(estimated.getMonth() - m);
+  estimated.setDate(estimated.getDate() - d);
+  return estimated.toISOString().slice(0, 10);
+};
+
+const getLocalUsageMap = () => {
+  try {
+    const stored = localStorage.getItem(LOCAL_USAGE_KEY);
+    if (!stored) return {} as Record<string, number>;
+    return JSON.parse(stored) as Record<string, number>;
+  } catch {
+    return {} as Record<string, number>;
+  }
+};
+
+const updateLocalUsage = (serviceId: string) => {
+  const usage = getLocalUsageMap();
+  usage[serviceId] = (usage[serviceId] || 0) + 1;
+  localStorage.setItem(LOCAL_USAGE_KEY, JSON.stringify(usage));
+};
+
+const getLocalMostUsed = (services: Service[]) => {
+  const usage = getLocalUsageMap();
+  return [...services]
+    .filter((service) => service.is_active)
+    .sort((a, b) => (usage[b.id] || 0) - (usage[a.id] || 0))
+    .slice(0, 5);
+};
+
 export default function RegistrationPage() {
   const { token } = useAuth();
+  const pageRef = useRef<HTMLDivElement>(null);
+  const serviceSearchRef = useRef<HTMLInputElement>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
-  
-  // Patient state
-  const [patientSearch, setPatientSearch] = useState("");
+
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [patientResults, setPatientResults] = useState<Patient[]>([]);
-  const [showPatientForm, setShowPatientForm] = useState(false);
+  const [activePatientIndex, setActivePatientIndex] = useState(-1);
+  const [patientLocked, setPatientLocked] = useState(false);
   const [patientForm, setPatientForm] = useState({
-    name: "",
-    age: "",
-    date_of_birth: "",
-    gender: "",
     phone: "",
+    name: "",
+    fatherHusband: "",
+    date_of_birth: "",
+    ageYears: "",
+    ageMonths: "",
+    ageDays: "",
+    gender: "",
+    cnic: "",
     address: "",
+    comments: "",
   });
-  
-  // Service registration state
+
   const [services, setServices] = useState<Service[]>([]);
   const [mostUsedServices, setMostUsedServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [serviceSearch, setServiceSearch] = useState("");
-  const [serviceSearchResults, setServiceSearchResults] = useState<Service[]>([]);
-  const [serviceSearchFocused, setServiceSearchFocused] = useState(false);
-  const [selectedSearchIndex, setSelectedSearchIndex] = useState(-1);
-  const [servicePrice, setServicePrice] = useState("");
-  const [discount, setDiscount] = useState("");
-  const [discountType, setDiscountType] = useState<"amount" | "percentage">("percentage");
+  const [activeServiceIndex, setActiveServiceIndex] = useState(-1);
+  const [discountPercentage, setDiscountPercentage] = useState("");
   const [amountPaid, setAmountPaid] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
-  
-  // Refs for keyboard navigation
-  const serviceSearchRef = useRef<HTMLInputElement>(null);
-  const patientNameRef = useRef<HTMLInputElement>(null);
-  const patientAgeRef = useRef<HTMLInputElement>(null);
-  const patientDobRef = useRef<HTMLInputElement>(null);
-  const patientGenderRef = useRef<HTMLSelectElement>(null);
-  const patientPhoneRef = useRef<HTMLInputElement>(null);
-  const patientAddressRef = useRef<HTMLTextAreaElement>(null);
-  const discountRef = useRef<HTMLInputElement>(null);
-  const amountPaidRef = useRef<HTMLInputElement>(null);
-  
-  // Debounce timer for service search
-  const searchDebounceTimer = useRef<NodeJS.Timeout | null>(null);
-  
   useEffect(() => {
     if (token) {
       loadServices();
       loadMostUsedServices();
     }
   }, [token]);
-  
+
+  useEffect(() => {
+    if (!token) return;
+    if (!patientForm.phone.trim()) {
+      setPatientResults([]);
+      setActivePatientIndex(-1);
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      searchPatients(patientForm.phone.trim());
+    }, 300);
+
+    return () => window.clearTimeout(timer);
+  }, [patientForm.phone, token]);
+
+  useEffect(() => {
+    if (selectedPatient) {
+      setPatientLocked(true);
+      setTimeout(() => serviceSearchRef.current?.focus(), 0);
+    }
+  }, [selectedPatient]);
+
   const loadServices = async () => {
     if (!token) return;
     try {
-      // Use unified catalog API
       const data = await apiGet("/services/", token);
-      setServices(data.results || data || []);
+      const serviceList = data.results || data || [];
+      setServices(serviceList);
+      await loadMostUsedServices(serviceList);
     } catch (err: any) {
       setError(err.message || "Failed to load services");
     }
   };
-  
-  const loadMostUsedServices = async () => {
+
+  const loadMostUsedServices = async (serviceList: Service[]) => {
     if (!token) return;
     try {
-      const data = await apiGet("/services/most-used/?limit=5", token);
-      setMostUsedServices(data || []);
-    } catch (err: any) {
-      // Fallback: use local services if endpoint fails
-      console.warn("Failed to load most-used services, using local fallback");
-      const localServices = services.filter(s => s.is_active).slice(0, 5);
-      setMostUsedServices(localServices);
-    }
-  };
-  
-  // Debounced service search
-  useEffect(() => {
-    if (searchDebounceTimer.current) {
-      clearTimeout(searchDebounceTimer.current);
-    }
-    
-    if (serviceSearch.trim().length >= 2) {
-      searchDebounceTimer.current = setTimeout(() => {
-        const filtered = services.filter(s => 
-          s.is_active && (
-            s.name.toLowerCase().includes(serviceSearch.toLowerCase()) ||
-            s.code?.toLowerCase().includes(serviceSearch.toLowerCase()) ||
-            s.modality?.code?.toLowerCase().includes(serviceSearch.toLowerCase())
-          )
-        ).slice(0, 10);
-        setServiceSearchResults(filtered);
-        setSelectedSearchIndex(-1);
-      }, 300);
-    } else {
-      setServiceSearchResults([]);
-      setSelectedSearchIndex(-1);
-    }
-    
-    return () => {
-      if (searchDebounceTimer.current) {
-        clearTimeout(searchDebounceTimer.current);
+      const data = await apiGet("/services/most-used/", token);
+      if (Array.isArray(data) && data.length > 0) {
+        setMostUsedServices(data);
+        return;
       }
-    };
-  }, [serviceSearch, services]);
-  
-  // DOB ↔ Age linkage
-  const calculateAgeFromDOB = (dob: string): string => {
-    if (!dob) return "";
-    const birthDate = new Date(dob);
-    const today = new Date();
-    let age = today.getFullYear() - birthDate.getFullYear();
-    const monthDiff = today.getMonth() - birthDate.getMonth();
-    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-      age--;
+    } catch (err) {
+      // Fall back to local usage when endpoint is unavailable
     }
-    return age.toString();
+    setMostUsedServices(getLocalMostUsed(serviceList));
   };
-  
-  const calculateDOBFromAge = (age: string): string => {
-    if (!age) return "";
-    const ageNum = parseInt(age);
-    if (isNaN(ageNum)) return "";
-    const today = new Date();
-    const birthYear = today.getFullYear() - ageNum;
-    return `${birthYear}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-  };
-  
-  // Keyboard navigation: Enter behaves like Tab
-  const handleEnterAsTab = (e: React.KeyboardEvent, nextRef?: React.RefObject<HTMLElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      if (nextRef?.current) {
-        nextRef.current.focus();
-      } else {
-        // Find next focusable element
-        const form = e.currentTarget.closest('form') || e.currentTarget.closest('div');
-        if (form) {
-          const focusableElements = form.querySelectorAll(
-            'input, select, textarea, button:not([disabled])'
-          );
-          const currentIndex = Array.from(focusableElements).indexOf(e.currentTarget as HTMLElement);
-          const nextElement = focusableElements[currentIndex + 1] as HTMLElement;
-          if (nextElement) {
-            nextElement.focus();
-          }
-        }
-      }
-    }
-  };
-  
-  const toggleServiceSelection = (service: Service) => {
-    setSelectedServices(prev => {
-      const exists = prev.find(s => s.id === service.id);
-      if (exists) {
-        return prev.filter(s => s.id !== service.id);
-      } else {
-        const updated = [...prev, service];
-        // Recalculate price from selected services
-        const totalPrice = updated.reduce((sum, s) => sum + (s.price || s.charges || 0), 0);
-        setServicePrice(totalPrice.toString());
-        return updated;
-      }
-    });
-  };
-  
-  const searchPatients = async () => {
-    if (!token || !patientSearch.trim()) return;
+
+  const searchPatients = async (query: string) => {
+    if (!token || !query.trim()) return;
     try {
-      const data = await apiGet(`/patients/?search=${encodeURIComponent(patientSearch)}`, token);
-      setPatientResults(data.results || data || []);
+      const data = await apiGet(`/patients/?search=${encodeURIComponent(query)}`, token);
+      const results = data.results || data || [];
+      setPatientResults(results);
+      setActivePatientIndex(results.length > 0 ? 0 : -1);
     } catch (err: any) {
       setError(err.message || "Failed to search patients");
     }
   };
-  
-  const createPatient = async () => {
+
+  const focusNextElement = (current: HTMLElement) => {
+    if (!pageRef.current) return;
+    const focusable = Array.from(
+      pageRef.current.querySelectorAll<HTMLElement>(
+        "input, select, textarea, button, [tabindex]:not([tabindex='-1'])"
+      )
+    ).filter((el) => !el.hasAttribute("disabled") && el.tabIndex !== -1);
+    const currentIndex = focusable.indexOf(current);
+    if (currentIndex >= 0 && currentIndex < focusable.length - 1) {
+      focusable[currentIndex + 1]?.focus();
+    }
+  };
+
+  const handleEnterAsTab = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    focusNextElement(event.currentTarget as HTMLElement);
+  };
+
+  const handleSelectPatient = (patient: Patient) => {
+    const parsedNotes = parsePatientNotes(patient.notes);
+    const derivedAge = patient.date_of_birth ? calculateAgeFromDob(patient.date_of_birth) : null;
+    setSelectedPatient(patient);
+    setPatientForm({
+      phone: patient.phone || "",
+      name: patient.name || "",
+      fatherHusband: parsedNotes.fatherHusband,
+      date_of_birth: patient.date_of_birth || "",
+      ageYears: derivedAge?.years || (patient.age ? String(patient.age) : ""),
+      ageMonths: derivedAge?.months || "",
+      ageDays: derivedAge?.days || "",
+      gender: patient.gender || "",
+      cnic: parsedNotes.cnic,
+      address: patient.address || "",
+      comments: parsedNotes.comments || "",
+    });
+    setPatientResults([]);
+  };
+
+  const buildPatientPayload = (existingNotes?: string) => {
+    const payload: any = {
+      name: patientForm.name.trim(),
+      gender: patientForm.gender,
+      phone: patientForm.phone.trim(),
+      address: patientForm.address.trim(),
+    };
+    if (patientForm.date_of_birth) {
+      payload.date_of_birth = patientForm.date_of_birth;
+    }
+    if (patientForm.ageYears) {
+      payload.age = parseInt(patientForm.ageYears, 10);
+    }
+    const notesPayload = buildNotes(existingNotes, {
+      fatherHusband: patientForm.fatherHusband,
+      cnic: patientForm.cnic,
+      comments: patientForm.comments,
+      extraNotes: "",
+    });
+    if (notesPayload) {
+      payload.notes = notesPayload;
+    }
+    return payload;
+  };
+
+  const savePatient = async () => {
     if (!token) return;
+    if (!patientForm.phone.trim() || !patientForm.name.trim() || !patientForm.gender) {
+      setError("Mobile number, patient name, and gender are required.");
+      return;
+    }
     setLoading(true);
     setError("");
     try {
-      const patientData: any = {
-        name: patientForm.name,
-        gender: patientForm.gender,
-        phone: patientForm.phone,
-        address: patientForm.address,
-      };
-      if (patientForm.age) patientData.age = parseInt(patientForm.age);
-      if (patientForm.date_of_birth) patientData.date_of_birth = patientForm.date_of_birth;
-      
-      const patient = await apiPost("/patients/", token, patientData);
+      const payload = buildPatientPayload(selectedPatient?.notes);
+      const patient = selectedPatient
+        ? await apiPatch(`/patients/${selectedPatient.id}/`, token, payload)
+        : await apiPost("/patients/", token, payload);
       setSelectedPatient(patient);
-      setShowPatientForm(false);
-      setPatientForm({ name: "", age: "", date_of_birth: "", gender: "", phone: "", address: "" });
-      setSuccess("Patient created successfully");
-      
-      // Auto-focus service search after patient save (v2 feature)
-      setTimeout(() => {
-        serviceSearchRef.current?.focus();
-      }, 100);
+      setPatientLocked(true);
+      setSuccess(selectedPatient ? "Patient updated successfully" : "Patient created successfully");
+      setTimeout(() => serviceSearchRef.current?.focus(), 0);
     } catch (err: any) {
-      setError(err.message || "Failed to create patient");
+      setError(err.message || "Failed to save patient");
     } finally {
       setLoading(false);
     }
   };
-  
-  const addService = (service: Service) => {
-    setSelectedServices(prev => {
-      const exists = prev.find(s => s.id === service.id);
-      if (exists) {
-        return prev.filter(s => s.id !== service.id);
-      } else {
-        const updated = [...prev, service];
-        const totalPrice = updated.reduce((sum, s) => sum + (s.price || s.charges || 0), 0);
-        setServicePrice(totalPrice.toString());
-        return updated;
-      }
+
+  const resetPatient = () => {
+    setSelectedPatient(null);
+    setPatientLocked(false);
+    setPatientForm({
+      phone: "",
+      name: "",
+      fatherHusband: "",
+      date_of_birth: "",
+      ageYears: "",
+      ageMonths: "",
+      ageDays: "",
+      gender: "",
+      cnic: "",
+      address: "",
+      comments: "",
     });
+  };
+
+  const estimatedDob =
+    patientForm.date_of_birth
+      ? ""
+      : calculateDobFromAge(patientForm.ageYears, patientForm.ageMonths, patientForm.ageDays);
+
+  const filteredServices = useMemo(() => {
+    const query = serviceSearch.trim().toLowerCase();
+    if (!query) return [] as Service[];
+    return services.filter((service) => {
+      const matchName = service.name.toLowerCase().includes(query);
+      const matchCode = service.code?.toLowerCase().includes(query);
+      return matchName || matchCode;
+    }).slice(0, 8);
+  }, [serviceSearch, services]);
+
+  const addServiceToCart = (service: Service) => {
+    if (!service || !service.id) return;
+    setSelectedServices((prev) => {
+      if (prev.find((item) => item.id === service.id)) return prev;
+      return [...prev, service];
+    });
+    updateLocalUsage(service.id);
     setServiceSearch("");
-    setServiceSearchResults([]);
-    serviceSearchRef.current?.focus();
+    setActiveServiceIndex(-1);
+    setTimeout(() => serviceSearchRef.current?.focus(), 0);
+    setMostUsedServices(getLocalMostUsed(services));
   };
-  
-  const removeService = (serviceId: string) => {
-    setSelectedServices(prev => {
-      const filtered = prev.filter(s => s.id !== serviceId);
-      const totalPrice = filtered.reduce((sum, s) => sum + (s.price || s.charges || 0), 0);
-      setServicePrice(totalPrice.toString());
-      return filtered;
-    });
+
+  const removeServiceFromCart = (serviceId: string) => {
+    setSelectedServices((prev) => prev.filter((item) => item.id !== serviceId));
   };
-  
-  // Handle service search keyboard navigation
-  const handleServiceSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setSelectedSearchIndex(prev => 
-        prev < serviceSearchResults.length - 1 ? prev + 1 : prev
-      );
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setSelectedSearchIndex(prev => prev > 0 ? prev - 1 : -1);
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (selectedSearchIndex >= 0 && serviceSearchResults[selectedSearchIndex]) {
-        addService(serviceSearchResults[selectedSearchIndex]);
-      } else if (serviceSearchResults.length > 0) {
-        addService(serviceSearchResults[0]);
+
+  const handleServiceSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveServiceIndex((prev) => Math.min(prev + 1, filteredServices.length - 1));
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveServiceIndex((prev) => Math.max(prev - 1, 0));
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (filteredServices.length > 0) {
+        const targetIndex = activeServiceIndex >= 0 ? activeServiceIndex : 0;
+        const targetService = filteredServices[targetIndex];
+        if (targetService) {
+          addServiceToCart(targetService);
+          return;
+        }
       }
-    } else if (e.key === "Escape") {
-      setServiceSearchResults([]);
-      setSelectedSearchIndex(-1);
-    } else {
-      handleEnterAsTab(e, discountRef);
+      focusNextElement(event.currentTarget);
     }
   };
-  
-  const updatePatient = async () => {
-    if (!token || !selectedPatient) return;
-    setLoading(true);
-    setError("");
-    try {
-      const patientData: any = {
-        name: patientForm.name || selectedPatient.name,
-        gender: patientForm.gender || selectedPatient.gender,
-        phone: patientForm.phone || selectedPatient.phone,
-        address: patientForm.address || selectedPatient.address,
-      };
-      if (patientForm.age) patientData.age = parseInt(patientForm.age);
-      if (patientForm.date_of_birth) patientData.date_of_birth = patientForm.date_of_birth;
-      
-      const updated = await apiPatch(`/patients/${selectedPatient.id}/`, token, patientData);
-      setSelectedPatient(updated);
-      setSuccess("Patient updated successfully");
-    } catch (err: any) {
-      setError(err.message || "Failed to update patient");
-    } finally {
-      setLoading(false);
+
+  const handlePatientSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActivePatientIndex((prev) => Math.min(prev + 1, patientResults.length - 1));
+      return;
+    }
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActivePatientIndex((prev) => Math.max(prev - 1, 0));
+      return;
+    }
+    if (event.key === "Enter") {
+      event.preventDefault();
+      if (patientResults.length > 0) {
+        const targetIndex = activePatientIndex >= 0 ? activePatientIndex : 0;
+        const targetPatient = patientResults[targetIndex];
+        if (targetPatient) {
+          handleSelectPatient(targetPatient);
+          return;
+        }
+      }
+      focusNextElement(event.currentTarget);
     }
   };
-  
-  const calculateTotals = () => {
-    // Calculate subtotal from selected services
-    const subtotal = selectedServices.reduce((sum, s) => sum + (s.price || s.charges || 0), 0);
-    const total = parseFloat(servicePrice) || subtotal;
-    
-    // Calculate discount (amount or percentage)
-    let disc = 0;
-    if (discountType === "percentage") {
-      const discPercent = Math.min(Math.max(parseFloat(discount) || 0, 0), 100); // Clamp 0-100
-      disc = total * (discPercent / 100);
-    } else {
-      disc = parseFloat(discount) || 0;
-    }
-    
-    const net = total - disc;
-    const paid = parseFloat(amountPaid) || net;
-    const balance = net - paid;
-    return { subtotal, total, discount: disc, net, paid, balance };
+
+  const handleDobChange = (value: string) => {
+    const age = calculateAgeFromDob(value);
+    setPatientForm((prev) => ({
+      ...prev,
+      date_of_birth: value,
+      ageYears: age.years,
+      ageMonths: age.months,
+      ageDays: age.days,
+    }));
   };
-  
+
+  const handleAgeChange = (field: "ageYears" | "ageMonths" | "ageDays", value: string) => {
+    setPatientForm((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+  };
+
+  const clampDiscountPercentage = (value: string): number => {
+    const parsed = parseFloat(value);
+    const numeric = Number.isNaN(parsed) ? 0 : parsed;
+    return Math.min(Math.max(numeric, 0), 100);
+  };
+
+  const subtotal = selectedServices.reduce((sum, service) => sum + (service.price || service.charges || 0), 0);
+  const discountPercentValue = clampDiscountPercentage(discountPercentage);
+  const discountAmount = (subtotal * discountPercentValue) / 100;
+  const totalAmount = subtotal;
+  const netAmount = totalAmount - discountAmount;
+  const paidAmount = parseFloat(amountPaid) || netAmount;
+  const balanceAmount = netAmount - paidAmount;
+
+  const hasAutoFilledAmountPaid = useRef(false);
+
+  useEffect(() => {
+    if (selectedServices.length === 0) {
+      setAmountPaid("");
+      hasAutoFilledAmountPaid.current = false;
+      return;
+    }
+
+    if (!hasAutoFilledAmountPaid.current) {
+      setAmountPaid(netAmount.toFixed(2));
+      hasAutoFilledAmountPaid.current = true;
+    }
+  }, [selectedServices.length, netAmount]);
+
   const saveVisit = async (printReceipt: boolean = false) => {
     if (!token || !selectedPatient || selectedServices.length === 0) {
       setError("Please select a patient and at least one service");
       return;
     }
-    
+
     setLoading(true);
     setError("");
     try {
-      const totals = calculateTotals();
       const visitData = {
         patient_id: selectedPatient.id,
-        service_ids: selectedServices.map(s => s.id), // Multiple services
-        subtotal: totals.subtotal,
-        total_amount: totals.total,
-        discount: totals.discount,
-        net_amount: totals.net,
-        amount_paid: totals.paid,
+        service_ids: selectedServices.map((service) => service.id),
+        subtotal,
+        total_amount: totalAmount,
+        discount: discountAmount,
+        discount_percentage: discountPercentValue,
+        net_amount: netAmount,
+        amount_paid: paidAmount,
         payment_method: paymentMethod,
       };
-      
+
       const visit = await apiPost("/workflow/visits/create_visit/", token, visitData);
       setSuccess(`Service visit created: ${visit.visit_id}`);
-      
-      // Reset form
+
       setSelectedServices([]);
-      setServicePrice("");
-      setDiscount("");
+      setDiscountPercentage("");
       setAmountPaid("");
-      
+
       if (printReceipt) {
-        // Fetch receipt PDF with auth token and open in new window
-        const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
-        // Use correct endpoint pattern: /api/pdf/{id}/receipt/ (matches PDFViewSet action)
+        const API_BASE = (import.meta as any).env.VITE_API_BASE
+          || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
         const receiptUrl = `${API_BASE}/pdf/${visit.id}/receipt/`;
-        
+
         fetch(receiptUrl, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -386,7 +545,6 @@ export default function RegistrationPage() {
               }
               throw new Error(`Failed to fetch receipt PDF: ${res.status} ${res.statusText}`);
             }
-            // Verify content-type is PDF
             const contentType = res.headers.get("content-type");
             if (!contentType || !contentType.includes("application/pdf")) {
               console.warn("Expected PDF but got:", contentType);
@@ -397,15 +555,11 @@ export default function RegistrationPage() {
             const url = window.URL.createObjectURL(blob);
             const win = window.open(url, "_blank");
             if (win) {
-              // Wait for window to load before attempting print
               win.onload = () => {
-                // Trigger print dialog
                 win.print();
               };
-              // Clean up blob URL after a delay (give time for print dialog)
-              setTimeout(() => window.URL.revokeObjectURL(url), 60000); // 60 seconds to allow for print
+              setTimeout(() => window.URL.revokeObjectURL(url), 60000);
             } else {
-              // Popup blocked, try fallback
               const link = document.createElement("a");
               link.href = url;
               link.target = "_blank";
@@ -427,444 +581,324 @@ export default function RegistrationPage() {
       setLoading(false);
     }
   };
-  
-  const totals = calculateTotals();
-  
+
   return (
-    <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+    <div ref={pageRef} style={{ maxWidth: 1200, margin: "0 auto" }}>
       <PageHeader title="Registration Desk" />
-      
+
       {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
       {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
-      
-      {/* Patient Search and Form Section */}
+
       <div style={{ border: "1px solid #ddd", padding: 20, marginBottom: 20, borderRadius: 8 }}>
         <h2>Patient Information</h2>
-        
-        {!selectedPatient ? (
-          <>
-            <div style={{ marginBottom: 16 }}>
-              <input
-                type="text"
-                placeholder="Search by name, mobile, or Patient Reg No"
-                value={patientSearch}
-                onChange={(e) => setPatientSearch(e.target.value)}
-                onKeyPress={(e) => e.key === "Enter" && searchPatients()}
-                style={{ width: "100%", padding: 8, fontSize: 14 }}
-              />
-              <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                <Button onClick={searchPatients}>Search</Button>
-                <Button variant="secondary" onClick={() => setShowPatientForm(true)}>
-                  New Patient
-                </Button>
-              </div>
-            </div>
-            
-            {patientResults.length > 0 && (
-              <div style={{ border: "1px solid #eee", borderRadius: 4, maxHeight: 200, overflowY: "auto" }}>
-                {patientResults.map((p) => (
+        <div style={{ display: "grid", gap: 12 }}>
+          <div style={{ position: "relative" }}>
+            <label style={{ display: "block", marginBottom: 6 }}>Mobile Number *</label>
+            <input
+              type="text"
+              placeholder="Search by mobile number"
+              value={patientForm.phone}
+              onChange={(e) => {
+                setPatientForm({ ...patientForm, phone: e.target.value });
+                setPatientLocked(false);
+              }}
+              onKeyDown={handlePatientSearchKeyDown}
+              disabled={patientLocked}
+              style={{ width: "100%", padding: 8, fontSize: 14 }}
+            />
+            {patientResults.length > 0 && !patientLocked && (
+              <div style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                background: "#fff",
+                border: "1px solid #eee",
+                borderRadius: 4,
+                maxHeight: 200,
+                overflowY: "auto",
+                zIndex: 10,
+              }}>
+                {patientResults.map((patient, index) => (
                   <div
-                    key={p.id}
-                    onClick={() => {
-                      setSelectedPatient(p);
-                      setPatientForm({
-                        name: p.name,
-                        age: p.age?.toString() || "",
-                        date_of_birth: p.date_of_birth || "",
-                        gender: p.gender || "",
-                        phone: p.phone || "",
-                        address: p.address || "",
-                      });
-                      setPatientResults([]);
+                    key={patient.id}
+                    onClick={() => handleSelectPatient(patient)}
+                    style={{
+                      padding: 10,
+                      cursor: "pointer",
+                      backgroundColor: activePatientIndex === index ? "#eef5ff" : "transparent",
                     }}
-                    style={{ padding: 12, borderBottom: "1px solid #eee", cursor: "pointer" }}
                   >
-                    <strong>{p.name}</strong> - {p.patient_reg_no || p.mrn} - {p.phone}
+                    <strong>{patient.name}</strong> - {patient.patient_reg_no || patient.mrn} - {patient.phone}
                   </div>
                 ))}
               </div>
             )}
-            
-            {showPatientForm && (
-              <div style={{ marginTop: 16, border: "1px solid #ddd", padding: 16, borderRadius: 4 }}>
-                <h3>New Patient</h3>
-                <div style={{ display: "grid", gap: 12 }}>
-                  <input
-                    ref={patientNameRef}
-                    placeholder="Name *"
-                    value={patientForm.name}
-                    onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })}
-                    onKeyDown={(e) => handleEnterAsTab(e, patientAgeRef)}
-                    required
-                  />
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <input
-                      ref={patientAgeRef}
-                      type="number"
-                      placeholder="Age"
-                      value={patientForm.age}
-                      onChange={(e) => {
-                        const age = e.target.value;
-                        setPatientForm({ ...patientForm, age });
-                        // Auto-calculate DOB from age
-                        if (age) {
-                          const dob = calculateDOBFromAge(age);
-                          setPatientForm(prev => ({ ...prev, age, date_of_birth: dob }));
-                        }
-                      }}
-                      onKeyDown={(e) => handleEnterAsTab(e, patientDobRef)}
-                    />
-                    <input
-                      ref={patientDobRef}
-                      type="date"
-                      placeholder="Date of Birth"
-                      value={patientForm.date_of_birth}
-                      onChange={(e) => {
-                        const dob = e.target.value;
-                        setPatientForm({ ...patientForm, date_of_birth: dob });
-                        // Auto-calculate age from DOB
-                        if (dob) {
-                          const age = calculateAgeFromDOB(dob);
-                          setPatientForm(prev => ({ ...prev, date_of_birth: dob, age }));
-                        }
-                      }}
-                      onKeyDown={(e) => handleEnterAsTab(e, patientGenderRef)}
-                    />
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <select
-                      value={patientForm.gender}
-                      onChange={(e) => setPatientForm({ ...patientForm, gender: e.target.value })}
-                    >
-                      <option value="">Gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                    <input
-                      placeholder="Phone"
-                      value={patientForm.phone}
-                      onChange={(e) => setPatientForm({ ...patientForm, phone: e.target.value })}
-                    />
-                  </div>
-                  <textarea
-                    placeholder="Address"
-                    value={patientForm.address}
-                    onChange={(e) => setPatientForm({ ...patientForm, address: e.target.value })}
-                    rows={2}
-                  />
-                </div>
-                <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
-                  <Button onClick={createPatient} disabled={loading || !patientForm.name}>
-                    Create Patient
-                  </Button>
-                  <Button variant="secondary" onClick={() => setShowPatientForm(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
-          </>
-        ) : (
-          <div>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div>
-                <strong>Selected Patient:</strong> {selectedPatient.name} - {selectedPatient.patient_reg_no || selectedPatient.mrn}
-                <br />
-                <small>Phone: {selectedPatient.phone} | Age: {selectedPatient.age || "N/A"} | Gender: {selectedPatient.gender || "N/A"}</small>
-              </div>
-              <button onClick={() => {
-                setSelectedPatient(null);
-                setPatientForm({ name: "", age: "", date_of_birth: "", gender: "", phone: "", address: "" });
-              }}>
-                Change Patient
-              </button>
-            </div>
-            
-            {showPatientForm && (
-              <div style={{ marginTop: 16, border: "1px solid #ddd", padding: 16, borderRadius: 4 }}>
-                <h3>Update Patient</h3>
-                <div style={{ display: "grid", gap: 12 }}>
-                  <input
-                    ref={patientNameRef}
-                    placeholder="Name"
-                    value={patientForm.name}
-                    onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })}
-                    onKeyDown={(e) => handleEnterAsTab(e, patientAgeRef)}
-                  />
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <input
-                      ref={patientAgeRef}
-                      type="number"
-                      placeholder="Age"
-                      value={patientForm.age}
-                      onChange={(e) => {
-                        const age = e.target.value;
-                        setPatientForm({ ...patientForm, age });
-                        if (age) {
-                          const dob = calculateDOBFromAge(age);
-                          setPatientForm(prev => ({ ...prev, age, date_of_birth: dob }));
-                        }
-                      }}
-                      onKeyDown={(e) => handleEnterAsTab(e, patientDobRef)}
-                    />
-                    <input
-                      ref={patientDobRef}
-                      type="date"
-                      placeholder="Date of Birth"
-                      value={patientForm.date_of_birth}
-                      onChange={(e) => {
-                        const dob = e.target.value;
-                        setPatientForm({ ...patientForm, date_of_birth: dob });
-                        if (dob) {
-                          const age = calculateAgeFromDOB(dob);
-                          setPatientForm(prev => ({ ...prev, date_of_birth: dob, age }));
-                        }
-                      }}
-                      onKeyDown={(e) => handleEnterAsTab(e, patientGenderRef)}
-                    />
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <select
-                      ref={patientGenderRef}
-                      value={patientForm.gender}
-                      onChange={(e) => setPatientForm({ ...patientForm, gender: e.target.value })}
-                      onKeyDown={(e) => handleEnterAsTab(e, patientPhoneRef)}
-                    >
-                      <option value="">Gender</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
-                    <input
-                      ref={patientPhoneRef}
-                      placeholder="Phone"
-                      value={patientForm.phone}
-                      onChange={(e) => setPatientForm({ ...patientForm, phone: e.target.value })}
-                      onKeyDown={(e) => handleEnterAsTab(e, patientAddressRef)}
-                    />
-                  </div>
-                  <textarea
-                    ref={patientAddressRef}
-                    placeholder="Address"
-                    value={patientForm.address}
-                    onChange={(e) => setPatientForm({ ...patientForm, address: e.target.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        handleEnterAsTab(e);
-                      }
-                    }}
-                    rows={2}
-                  />
-                </div>
-                <div style={{ marginTop: 16, display: "flex", gap: 8 }}>
-                  <Button onClick={updatePatient} disabled={loading}>
-                    Update Patient
-                  </Button>
-                  <Button variant="secondary" onClick={() => setShowPatientForm(false)}>
-                    Cancel
-                  </Button>
-                </div>
-              </div>
-            )}
-            {!showPatientForm && (
-              <Button variant="secondary" onClick={() => setShowPatientForm(true)} style={{ marginTop: 8 }}>
-                Edit Patient
-              </Button>
-            )}
           </div>
-        )}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={{ display: "block", marginBottom: 6 }}>Patient Name *</label>
+              <input
+                type="text"
+                value={patientForm.name}
+                onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })}
+                onKeyDown={handleEnterAsTab}
+                disabled={patientLocked}
+                style={{ width: "100%", padding: 8 }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: 6 }}>Father/Husband Name</label>
+              <input
+                type="text"
+                value={patientForm.fatherHusband}
+                onChange={(e) => setPatientForm({ ...patientForm, fatherHusband: e.target.value })}
+                onKeyDown={handleEnterAsTab}
+                disabled={patientLocked}
+                style={{ width: "100%", padding: 8 }}
+              />
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={{ display: "block", marginBottom: 6 }}>Date of Birth</label>
+              <input
+                type="date"
+                value={patientForm.date_of_birth}
+                onChange={(e) => handleDobChange(e.target.value)}
+                onKeyDown={handleEnterAsTab}
+                disabled={patientLocked}
+                style={{ width: "100%", padding: 8 }}
+              />
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: 6 }}>Age (Years / Months / Days)</label>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+                <input
+                  type="number"
+                  placeholder="Years"
+                  value={patientForm.ageYears}
+                  onChange={(e) => handleAgeChange("ageYears", e.target.value)}
+                  onKeyDown={handleEnterAsTab}
+                  disabled={patientLocked}
+                />
+                <input
+                  type="number"
+                  placeholder="Months"
+                  value={patientForm.ageMonths}
+                  onChange={(e) => handleAgeChange("ageMonths", e.target.value)}
+                  onKeyDown={handleEnterAsTab}
+                  disabled={patientLocked}
+                />
+                <input
+                  type="number"
+                  placeholder="Days"
+                  value={patientForm.ageDays}
+                  onChange={(e) => handleAgeChange("ageDays", e.target.value)}
+                  onKeyDown={handleEnterAsTab}
+                  disabled={patientLocked}
+                />
+              </div>
+              {estimatedDob && (
+                <small style={{ color: "#666" }}>Estimated DOB: {estimatedDob}</small>
+              )}
+            </div>
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div>
+              <label style={{ display: "block", marginBottom: 6 }}>Gender *</label>
+              <select
+                value={patientForm.gender}
+                onChange={(e) => setPatientForm({ ...patientForm, gender: e.target.value })}
+                onKeyDown={handleEnterAsTab}
+                disabled={patientLocked}
+                style={{ width: "100%", padding: 8 }}
+              >
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label style={{ display: "block", marginBottom: 6 }}>CNIC</label>
+              <input
+                type="text"
+                value={patientForm.cnic}
+                onChange={(e) => setPatientForm({ ...patientForm, cnic: e.target.value })}
+                onKeyDown={handleEnterAsTab}
+                disabled={patientLocked}
+                style={{ width: "100%", padding: 8 }}
+              />
+            </div>
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: 6 }}>Address</label>
+            <input
+              type="text"
+              value={patientForm.address}
+              onChange={(e) => setPatientForm({ ...patientForm, address: e.target.value })}
+              onKeyDown={handleEnterAsTab}
+              disabled={patientLocked}
+              style={{ width: "100%", padding: 8 }}
+            />
+          </div>
+          <div>
+            <label style={{ display: "block", marginBottom: 6 }}>Comments</label>
+            <textarea
+              value={patientForm.comments}
+              onChange={(e) => setPatientForm({ ...patientForm, comments: e.target.value })}
+              onKeyDown={handleEnterAsTab}
+              disabled={patientLocked}
+              rows={2}
+              style={{ width: "100%", padding: 8 }}
+            />
+          </div>
+        </div>
+        <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
+          <Button onClick={savePatient} disabled={loading || patientLocked}>
+            Save Patient &amp; Continue to Services
+          </Button>
+          {patientLocked && (
+            <Button variant="secondary" onClick={() => setPatientLocked(false)}>
+              Edit Patient
+            </Button>
+          )}
+          <Button variant="secondary" onClick={resetPatient}>
+            Change Patient
+          </Button>
+        </div>
       </div>
-      
-      {/* Service Registration Form */}
+
       {selectedPatient && (
         <div style={{ border: "1px solid #ddd", padding: 20, borderRadius: 8 }}>
           <h2>Service Registration</h2>
-          
-          <div style={{ marginBottom: 16 }}>
-            <label>Add Service</label>
-            
-            {/* Most-used services quick buttons */}
-            {mostUsedServices.length > 0 && (
-              <div style={{ marginBottom: 12 }}>
-                <small style={{ display: "block", marginBottom: 6, color: "#666" }}>Most Used:</small>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {mostUsedServices.map(service => (
-                    <button
-                      key={service.id}
-                      type="button"
-                      onClick={() => addService(service)}
-                      disabled={selectedServices.some(s => s.id === service.id)}
-                      style={{
-                        padding: "6px 12px",
-                        fontSize: 12,
-                        border: "1px solid #ddd",
-                        borderRadius: 4,
-                        backgroundColor: selectedServices.some(s => s.id === service.id) ? "#e7f3ff" : "white",
-                        cursor: selectedServices.some(s => s.id === service.id) ? "not-allowed" : "pointer",
-                      }}
-                    >
-                      {service.name} ({service.usage_count || 0})
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Service search with dropdown */}
-            <div style={{ position: "relative", marginBottom: 12 }}>
-              <input
-                ref={serviceSearchRef}
-                type="text"
-                placeholder="Search services..."
-                value={serviceSearch}
-                onChange={(e) => setServiceSearch(e.target.value)}
-                onKeyDown={handleServiceSearchKeyDown}
-                onFocus={() => setServiceSearchFocused(true)}
-                onBlur={() => setTimeout(() => setServiceSearchFocused(false), 200)}
-                style={{ width: "100%", padding: 8, fontSize: 14 }}
-                autoComplete="off"
-              />
-              
-              {/* Search results dropdown */}
-              {serviceSearchFocused && serviceSearchResults.length > 0 && (
-                <div
-                  style={{
-                    position: "absolute",
-                    top: "100%",
-                    left: 0,
-                    right: 0,
-                    border: "1px solid #ddd",
-                    borderRadius: 4,
-                    backgroundColor: "white",
-                    maxHeight: 200,
-                    overflowY: "auto",
-                    zIndex: 1000,
-                    marginTop: 4,
-                  }}
-                >
-                  {serviceSearchResults.map((service, index) => (
-                    <div
-                      key={service.id}
-                      onClick={() => addService(service)}
-                      style={{
-                        padding: 10,
-                        cursor: "pointer",
-                        backgroundColor: index === selectedSearchIndex ? "#e7f3ff" : "white",
-                        borderBottom: "1px solid #eee",
-                      }}
-                      onMouseEnter={() => setSelectedSearchIndex(index)}
-                    >
-                      <strong>{service.name}</strong> ({service.code || service.modality?.code || ""}) - Rs. {service.price || service.charges || 0}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            {/* Selected services list */}
-            {selectedServices.length > 0 && (
-              <div style={{ marginTop: 12 }}>
-                <strong>Selected Services ({selectedServices.length}):</strong>
-                <div style={{ marginTop: 8, display: "flex", flexDirection: "column", gap: 6 }}>
-                  {selectedServices.map(service => (
-                    <div
-                      key={service.id}
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        padding: 8,
-                        backgroundColor: "#f0f0f0",
-                        borderRadius: 4,
-                      }}
-                    >
-                      <span>
-                        <strong>{service.name}</strong> - Rs. {service.price || service.charges || 0}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => removeService(service.id)}
-                        style={{
-                          padding: "4px 8px",
-                          fontSize: 12,
-                          backgroundColor: "#dc3545",
-                          color: "white",
-                          border: "none",
-                          borderRadius: 4,
-                          cursor: "pointer",
-                        }}
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  ))}
-                </div>
+
+          <div style={{ marginBottom: 16, position: "relative" }}>
+            <label style={{ display: "block", marginBottom: 6 }}>Service Search</label>
+            <input
+              ref={serviceSearchRef}
+              type="text"
+              value={serviceSearch}
+              onChange={(e) => {
+                setServiceSearch(e.target.value);
+                setActiveServiceIndex(0);
+              }}
+              onKeyDown={handleServiceSearchKeyDown}
+              placeholder="Search service by name or code"
+              style={{ width: "100%", padding: 8 }}
+            />
+            {serviceSearch && filteredServices.length > 0 && (
+              <div style={{
+                position: "absolute",
+                top: "100%",
+                left: 0,
+                right: 0,
+                background: "#fff",
+                border: "1px solid #eee",
+                borderRadius: 4,
+                maxHeight: 220,
+                overflowY: "auto",
+                zIndex: 10,
+              }}>
+                {filteredServices.map((service, index) => (
+                  <div
+                    key={service.id}
+                    onClick={() => addServiceToCart(service)}
+                    style={{
+                      padding: 10,
+                      cursor: "pointer",
+                      backgroundColor: activeServiceIndex === index ? "#eef5ff" : "transparent",
+                    }}
+                  >
+                    <strong>{service.name}</strong> ({service.code || service.modality?.code || ""}) - Rs. {service.price || service.charges || 0}
+                  </div>
+                ))}
               </div>
             )}
           </div>
-          
+
+          {mostUsedServices.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <h3 style={{ marginBottom: 8 }}>Most Used Services</h3>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {mostUsedServices.map((service) => (
+                  <Button
+                    key={service.id}
+                    variant="secondary"
+                    onClick={() => addServiceToCart(service)}
+                  >
+                    {service.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div style={{ marginBottom: 16 }}>
+            <h3>Selected Services</h3>
+            {selectedServices.length === 0 ? (
+              <div style={{ color: "#666" }}>No services added yet.</div>
+            ) : (
+              <div style={{ border: "1px solid #eee", borderRadius: 4 }}>
+                {selectedServices.map((service) => (
+                  <div
+                    key={service.id}
+                    style={{ display: "flex", justifyContent: "space-between", padding: 10, borderBottom: "1px solid #eee" }}
+                  >
+                    <div>
+                      <strong>{service.name}</strong> ({service.code || service.modality?.code || ""})
+                      <div style={{ fontSize: 12, color: "#666" }}>Rs. {service.price || service.charges || 0}</div>
+                    </div>
+                    <button
+                      onClick={() => removeServiceFromCart(service.id)}
+                      style={{ background: "transparent", border: "none", color: "#d00", cursor: "pointer" }}
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           {selectedServices.length > 0 && (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-                  <div>
+                <div>
                   <label>Subtotal (from services):</label>
                   <input
                     type="number"
-                    value={servicePrice}
+                    value={subtotal.toFixed(2)}
                     readOnly
                     style={{ width: "100%", padding: 8, backgroundColor: "#f5f5f5" }}
                   />
                   <small>Auto-calculated from selected services</small>
                 </div>
                 <div>
-                  <label>Discount:</label>
-                  <div style={{ display: "flex", gap: 8 }}>
-                    <select
-                      value={discountType}
-                      onChange={(e) => setDiscountType(e.target.value as "amount" | "percentage")}
-                      style={{ padding: 8, width: 100 }}
-                    >
-                      <option value="percentage">%</option>
-                      <option value="amount">Rs.</option>
-                    </select>
-                    <input
-                      ref={discountRef}
-                      type="number"
-                      value={discount}
-                      onChange={(e) => {
-                        let value = e.target.value;
-                        // Clamp percentage to 0-100
-                        if (discountType === "percentage") {
-                          const num = parseFloat(value) || 0;
-                          value = Math.min(Math.max(num, 0), 100).toString();
-                        }
-                        setDiscount(value);
-                        const totals = calculateTotals();
-                        setAmountPaid(totals.net.toString());
-                      }}
-                      onKeyDown={(e) => handleEnterAsTab(e, amountPaidRef)}
-                      min={discountType === "percentage" ? 0 : undefined}
-                      max={discountType === "percentage" ? 100 : undefined}
-                      style={{ flex: 1, padding: 8 }}
-                      placeholder={discountType === "percentage" ? "0-100" : "Amount"}
-                    />
-                  </div>
-                  {discountType === "percentage" && discount && (
-                    <small style={{ color: "#666" }}>
-                      {parseFloat(discount) || 0}% = Rs. {calculateTotals().discount.toFixed(2)}
-                    </small>
-                  )}
+                  <label>Discount (%)</label>
+                  <input
+                    type="number"
+                    value={discountPercentage}
+                    min={0}
+                    max={100}
+                    onChange={(e) => {
+                      const value = Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 100);
+                      setDiscountPercentage(e.target.value === "" ? "" : value.toString());
+                      setAmountPaid((subtotal - (subtotal * value) / 100).toFixed(2));
+                    }}
+                    onKeyDown={handleEnterAsTab}
+                    style={{ width: "100%", padding: 8 }}
+                  />
                 </div>
               </div>
-              
+
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
                 <div>
                   <label>Net Amount:</label>
                   <input
                     type="number"
-                    value={totals.net.toFixed(2)}
+                    value={netAmount.toFixed(2)}
                     readOnly
                     style={{ width: "100%", padding: 8, backgroundColor: "#f5f5f5" }}
                   />
@@ -872,21 +906,21 @@ export default function RegistrationPage() {
                 <div>
                   <label>Amount Paid:</label>
                   <input
-                    ref={amountPaidRef}
                     type="number"
                     value={amountPaid}
                     onChange={(e) => setAmountPaid(e.target.value)}
-                    onKeyDown={(e) => handleEnterAsTab(e)}
+                    onKeyDown={handleEnterAsTab}
                     style={{ width: "100%", padding: 8 }}
                   />
                 </div>
               </div>
-              
+
               <div style={{ marginBottom: 16 }}>
                 <label>Payment Method:</label>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
+                  onKeyDown={handleEnterAsTab}
                   style={{ width: "100%", padding: 8 }}
                 >
                   <option value="cash">Cash</option>
@@ -896,23 +930,23 @@ export default function RegistrationPage() {
                   <option value="other">Other</option>
                 </select>
               </div>
-              
+
               <div style={{ border: "1px solid #ddd", padding: 16, borderRadius: 4, marginBottom: 16 }}>
                 <h3>Summary</h3>
                 <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
                   <div>Total Amount:</div>
-                  <div><strong>Rs. {totals.total.toFixed(2)}</strong></div>
-                  <div>Discount:</div>
-                  <div><strong>Rs. {totals.discount.toFixed(2)}</strong></div>
+                  <div><strong>Rs. {totalAmount.toFixed(2)}</strong></div>
+                  <div>Discount ({discountPercentValue.toFixed(2)}%):</div>
+                  <div><strong>Rs. {discountAmount.toFixed(2)}</strong></div>
                   <div>Net Amount:</div>
-                  <div><strong>Rs. {totals.net.toFixed(2)}</strong></div>
+                  <div><strong>Rs. {netAmount.toFixed(2)}</strong></div>
                   <div>Amount Paid:</div>
-                  <div><strong>Rs. {totals.paid.toFixed(2)}</strong></div>
+                  <div><strong>Rs. {paidAmount.toFixed(2)}</strong></div>
                   <div>Balance:</div>
-                  <div><strong>Rs. {totals.balance.toFixed(2)}</strong></div>
+                  <div><strong>Rs. {balanceAmount.toFixed(2)}</strong></div>
                 </div>
               </div>
-              
+
               <div style={{ display: "flex", gap: 8 }}>
                 <Button onClick={() => saveVisit(false)} disabled={loading}>
                   Save

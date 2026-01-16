@@ -184,7 +184,15 @@ class ReceiptSettingsSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = ReceiptSettings
-        fields = ["header_text", "footer_text", "logo_image", "header_image", "logo_image_url", "header_image_url", "updated_at"]
+        fields = [
+            "header_text",
+            "footer_text",
+            "logo_image",
+            "header_image",
+            "logo_image_url",
+            "header_image_url",
+            "updated_at",
+        ]
         read_only_fields = ["updated_at"]
     
     def get_logo_image_url(self, obj):

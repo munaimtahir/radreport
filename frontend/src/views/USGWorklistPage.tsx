@@ -65,6 +65,37 @@ interface TemplateSchema {
   sections: TemplateSection[];
 }
 
+interface ReportTemplateFieldOption {
+  id: string;
+  label: string;
+  value: string;
+}
+
+interface ReportTemplateField {
+  id: string;
+  label: string;
+  key: string;
+  field_type: string;
+  is_required: boolean;
+  help_text: string;
+  placeholder: string;
+  default_value?: any;
+  options?: ReportTemplateFieldOption[];
+}
+
+interface ReportTemplate {
+  id: string;
+  name: string;
+  fields: ReportTemplateField[];
+}
+
+interface TemplateReport {
+  id: string;
+  status: string;
+  values: Record<string, any>;
+  narrative_text?: string;
+}
+
 export default function USGWorklistPage() {
   const { token } = useAuth();
   const [loading, setLoading] = useState(false);
@@ -76,6 +107,10 @@ export default function USGWorklistPage() {
   const [report, setReport] = useState<USGReport | null>(null);
   const [templateSchema, setTemplateSchema] = useState<TemplateSchema | null>(null);
   const [reportValues, setReportValues] = useState<Record<string, any>>({});
+  const [reportTemplate, setReportTemplate] = useState<ReportTemplate | null>(null);
+  const [templateReport, setTemplateReport] = useState<TemplateReport | null>(null);
+  const [templateReportValues, setTemplateReportValues] = useState<Record<string, any>>({});
+  const [templateNarrative, setTemplateNarrative] = useState("");
 
   useEffect(() => {
     if (token) {
@@ -130,6 +165,31 @@ export default function USGWorklistPage() {
     }
   };
 
+  const loadTemplateReport = async (itemId: string) => {
+    if (!token) return null;
+    try {
+      const data = await apiGet(`/reporting/${itemId}/template/`, token);
+      if (data?.template) {
+        setReportTemplate(data.template);
+        setTemplateReport(data.report || null);
+        setTemplateReportValues(data.report?.values || {});
+        setTemplateNarrative(data.report?.narrative_text || "");
+        return data.template as ReportTemplate;
+      }
+      setReportTemplate(null);
+      setTemplateReport(null);
+      setTemplateReportValues({});
+      setTemplateNarrative("");
+      return null;
+    } catch (err: any) {
+      setReportTemplate(null);
+      setTemplateReport(null);
+      setTemplateReportValues({});
+      setTemplateNarrative("");
+      return null;
+    }
+  };
+
   const handleSelectVisit = async (visit: ServiceVisit) => {
     setSelectedVisit(visit);
     
@@ -137,19 +197,40 @@ export default function USGWorklistPage() {
     const usgItem = visit.items?.find(item => item.department_snapshot === "USG");
     if (usgItem) {
       setSelectedItemId(usgItem.id);
-      setTemplateSchema(usgItem.template_details?.schema || null);
+      const dynamicTemplate = await loadTemplateReport(usgItem.id);
+      if (dynamicTemplate) {
+        setTemplateSchema(null);
+      } else {
+        setTemplateSchema(usgItem.template_details?.schema || null);
+      }
       // Load report by service_visit_item_id (canonical)
       await loadReport(visit.id, usgItem.id);
     } else {
       // Fallback: use visit_id (legacy compatibility)
       setSelectedItemId(null);
       setTemplateSchema(null);
+      setReportTemplate(null);
+      setTemplateReport(null);
+      setTemplateReportValues({});
+      setTemplateNarrative("");
       await loadReport(visit.id);
     }
   };
 
   const handleFieldChange = (key: string, value: any) => {
     setReportValues({ ...reportValues, [key]: value });
+  };
+
+  const handleTemplateFieldChange = (key: string, value: any) => {
+    setTemplateReportValues({ ...templateReportValues, [key]: value });
+  };
+
+  const getTemplateValue = (field: ReportTemplateField) => {
+    const existing = templateReportValues[field.key];
+    if (existing !== undefined) return existing;
+    if (field.default_value !== undefined && field.default_value !== null) return field.default_value;
+    if (field.field_type === "checkbox") return false;
+    return "";
   };
 
   const isMissingRequiredField = (field: TemplateField, value: any) => {
@@ -166,10 +247,28 @@ export default function USGWorklistPage() {
     return value === null || value === undefined || (typeof value === "string" && !value.trim());
   };
 
+  const isMissingRequiredTemplateField = (field: ReportTemplateField, value: any) => {
+    if (!field.is_required) return false;
+    if (field.field_type === "checkbox") {
+      return value !== true;
+    }
+    if (field.field_type === "number") {
+      return value === null || value === undefined || value === "";
+    }
+    return value === null || value === undefined || (typeof value === "string" && !value.toString().trim());
+  };
+
   const isReadyToSubmit = () => {
     if (!templateSchema) return false;
     return !templateSchema.sections.some((section) =>
       section.fields.some((field) => isMissingRequiredField(field, reportValues[field.key]))
+    );
+  };
+
+  const isReadyToSubmitTemplate = () => {
+    if (!reportTemplate) return false;
+    return !reportTemplate.fields.some((field) =>
+      isMissingRequiredTemplateField(field, templateReportValues[field.key] ?? getTemplateValue(field))
     );
   };
 
@@ -178,6 +277,18 @@ export default function USGWorklistPage() {
     setLoading(true);
     setError("");
     try {
+      if (reportTemplate && selectedItemId) {
+        await apiPost(`/reporting/${selectedItemId}/save-template-report/`, token, {
+          template_id: reportTemplate.id,
+          values: templateReportValues,
+          narrative_text: templateNarrative,
+          submit: false,
+        });
+        setSuccess("Draft saved successfully");
+        await loadTemplateReport(selectedItemId);
+        return;
+      }
+
       // First ensure report exists by creating/updating it
       const reportPayload: any = {
         values: reportValues,
@@ -220,6 +331,25 @@ export default function USGWorklistPage() {
     setLoading(true);
     setError("");
     try {
+      if (reportTemplate && selectedItemId) {
+        await apiPost(`/reporting/${selectedItemId}/save-template-report/`, token, {
+          template_id: reportTemplate.id,
+          values: templateReportValues,
+          narrative_text: templateNarrative,
+          submit: true,
+        });
+        setSuccess("Report submitted for verification");
+        setSelectedVisit(null);
+        setSelectedItemId(null);
+        setReport(null);
+        setReportTemplate(null);
+        setTemplateReport(null);
+        setTemplateReportValues({});
+        setTemplateNarrative("");
+        await loadVisits();
+        return;
+      }
+
       // Use service_visit_item_id (canonical) if available, fallback to visit_id (compatibility)
       const reportPayload: any = {
         values: reportValues,
@@ -255,6 +385,12 @@ export default function USGWorklistPage() {
       setError(err.message || "Failed to submit for verification");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePreventEnter = (event: React.KeyboardEvent) => {
+    if (event.key === "Enter" && (event.target as HTMLElement).tagName !== "TEXTAREA") {
+      event.preventDefault();
     }
   };
 
@@ -318,13 +454,142 @@ export default function USGWorklistPage() {
               </div>
             )}
             
-            {!templateSchema && (
+            {!reportTemplate && !templateSchema && (
               <div style={{ marginBottom: 16, padding: 12, backgroundColor: "#fff3cd", borderRadius: 4, border: "1px solid #ffeeba" }}>
                 No published template found for this service. Please assign and publish a template before reporting.
               </div>
             )}
 
-            {templateSchema && (
+            {reportTemplate && (
+              <div style={{ display: "grid", gap: 20, marginBottom: 16 }}>
+                <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16, background: "white" }}>
+                  <h3 style={{ marginTop: 0, marginBottom: 12 }}>{reportTemplate.name}</h3>
+                  <div style={{ display: "grid", gap: 12 }}>
+                    {reportTemplate.fields.map((field) => {
+                      const value = getTemplateValue(field);
+                      const missing = isMissingRequiredTemplateField(field, value);
+                      if (field.field_type === "heading") {
+                        return <h4 key={field.id} style={{ margin: "8px 0" }}>{field.label}</h4>;
+                      }
+                      if (field.field_type === "separator") {
+                        return <hr key={field.id} style={{ border: "none", borderTop: "1px solid #eee" }} />;
+                      }
+                      return (
+                        <div key={field.id}>
+                          <label style={{ display: "block", marginBottom: 6, fontWeight: field.is_required ? "bold" : "normal" }}>
+                            {field.label}
+                            {field.is_required && <span style={{ color: "red" }}> *</span>}
+                          </label>
+                          {field.field_type === "short_text" && (
+                            <input
+                              type="text"
+                              value={value}
+                              onChange={(e) => handleTemplateFieldChange(field.key, e.target.value)}
+                              onKeyDown={handlePreventEnter}
+                              placeholder={field.placeholder}
+                              style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
+                            />
+                          )}
+                          {field.field_type === "long_text" && (
+                            <textarea
+                              value={value}
+                              onChange={(e) => handleTemplateFieldChange(field.key, e.target.value)}
+                              placeholder={field.placeholder}
+                              rows={4}
+                              style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
+                            />
+                          )}
+                          {field.field_type === "number" && (
+                            <input
+                              type="number"
+                              value={value}
+                              onChange={(e) => {
+                                const rawValue = e.target.value;
+                                if (rawValue === "") {
+                                  handleTemplateFieldChange(field.key, "");
+                                  return;
+                                }
+                                const parsed = Number(rawValue);
+                                handleTemplateFieldChange(
+                                  field.key,
+                                  Number.isNaN(parsed) ? "" : parsed
+                                );
+                              }}
+                              onKeyDown={handlePreventEnter}
+                              placeholder={field.placeholder}
+                              style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
+                            />
+                          )}
+                          {field.field_type === "date" && (
+                            <input
+                              type="date"
+                              value={value}
+                              onChange={(e) => handleTemplateFieldChange(field.key, e.target.value)}
+                              onKeyDown={handlePreventEnter}
+                              style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
+                            />
+                          )}
+                          {field.field_type === "checkbox" && (
+                            <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                              <input
+                                type="checkbox"
+                                checked={Boolean(value)}
+                                onChange={(e) => handleTemplateFieldChange(field.key, e.target.checked)}
+                              />
+                              Yes
+                            </label>
+                          )}
+                          {field.field_type === "dropdown" && (
+                            <select
+                              value={value}
+                              onChange={(e) => handleTemplateFieldChange(field.key, e.target.value)}
+                              onKeyDown={handlePreventEnter}
+                              style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
+                            >
+                              <option value="">Select...</option>
+                              {field.options?.map((opt) => (
+                                <option key={opt.value} value={opt.value}>
+                                  {opt.label}
+                                </option>
+                              ))}
+                            </select>
+                          )}
+                          {field.field_type === "radio" && (
+                            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                              {field.options?.map((opt) => (
+                                <label key={opt.value} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <input
+                                    type="radio"
+                                    name={field.key}
+                                    value={opt.value}
+                                    checked={value === opt.value}
+                                    onChange={(e) => handleTemplateFieldChange(field.key, e.target.value)}
+                                  />
+                                  {opt.label}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                          {field.help_text && <div style={{ fontSize: 12, color: "#666", marginTop: 4 }}>{field.help_text}</div>}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+                <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16, background: "white" }}>
+                  <h3 style={{ marginTop: 0, marginBottom: 12 }}>Narrative</h3>
+                  <textarea
+                    value={templateNarrative}
+                    onChange={(e) => setTemplateNarrative(e.target.value)}
+                    placeholder="Optional narrative text..."
+                    rows={4}
+                    style={{ width: "100%", padding: 8 }}
+                  />
+                </div>
+              </div>
+            )}
+
+            {!reportTemplate && templateSchema && (
               <div style={{ display: "grid", gap: 20, marginBottom: 16 }}>
                 {templateSchema.sections.map((section) => (
                   <div key={section.id} style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16, background: "white" }}>
@@ -345,6 +610,7 @@ export default function USGWorklistPage() {
                                 type="text"
                                 value={value}
                                 onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                                onKeyDown={handlePreventEnter}
                                 placeholder={field.placeholder}
                                 style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
                               />
@@ -354,6 +620,7 @@ export default function USGWorklistPage() {
                                 type="number"
                                 value={value}
                                 onChange={(e) => handleFieldChange(field.key, e.target.value === "" ? "" : Number(e.target.value))}
+                                onKeyDown={handlePreventEnter}
                                 placeholder={field.placeholder}
                                 style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
                               />
@@ -381,6 +648,7 @@ export default function USGWorklistPage() {
                               <select
                                 value={value}
                                 onChange={(e) => handleFieldChange(field.key, e.target.value)}
+                                onKeyDown={handlePreventEnter}
                                 style={{ width: "100%", padding: 8, borderColor: missing ? "#dc3545" : "#ccc" }}
                               >
                                 <option value="">Select...</option>
@@ -424,10 +692,17 @@ export default function USGWorklistPage() {
             )}
             
             <div style={{ display: "flex", gap: 8 }}>
-              <Button variant="secondary" onClick={saveDraft} disabled={loading || !templateSchema}>
+              <Button variant="secondary" onClick={saveDraft} disabled={loading || (!templateSchema && !reportTemplate)}>
                 Save Draft
               </Button>
-              <Button onClick={submitForVerification} disabled={loading || !templateSchema || !isReadyToSubmit()}>
+              <Button
+                onClick={submitForVerification}
+                disabled={
+                  loading ||
+                  (!templateSchema && !reportTemplate) ||
+                  (reportTemplate ? !isReadyToSubmitTemplate() : !isReadyToSubmit())
+                }
+              >
                 Submit for Verification
               </Button>
             </div>
