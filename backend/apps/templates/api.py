@@ -3,7 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
 from .models import (
-    Template, TemplateVersion, TemplateSection, TemplateField, FieldOption,
+    Template, TemplateVersion,
     ReportTemplate, ReportTemplateField, ReportTemplateFieldOption,
 )
 from .serializers import (
