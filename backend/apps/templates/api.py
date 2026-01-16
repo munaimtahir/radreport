@@ -79,37 +79,9 @@ class ReportTemplateViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"])
     def duplicate(self, request, pk=None):
+        """Duplicate a report template including all fields and options."""
         template = self.get_object()
-        cloned = ReportTemplate.objects.create(
-            name=f"{template.name} (Copy)",
-            code=None,
-            description=template.description,
-            category=template.category,
-            is_active=template.is_active,
-            version=template.version,
-        )
-        for field in template.fields.all():
-            new_field = ReportTemplateField.objects.create(
-                template=cloned,
-                label=field.label,
-                key=field.key,
-                field_type=field.field_type,
-                is_required=field.is_required,
-                help_text=field.help_text,
-                default_value=field.default_value,
-                placeholder=field.placeholder,
-                order=field.order,
-                validation=field.validation,
-                is_active=field.is_active,
-            )
-            for opt in field.options.all():
-                ReportTemplateFieldOption.objects.create(
-                    field=new_field,
-                    value=opt.value,
-                    label=opt.label,
-                    order=opt.order,
-                    is_active=opt.is_active,
-                )
+        cloned = template.duplicate()
         serializer = self.get_serializer(cloned)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 

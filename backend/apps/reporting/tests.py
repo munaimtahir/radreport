@@ -115,7 +115,7 @@ class ReportTemplateFlowTests(TestCase):
             format="json",
         )
         force_authenticate(attach_request, user=self.admin)
-        attach_response = ServiceViewSet.as_view({"post": "attach_template"})(
+        attach_response = ServiceViewSet.as_view({"post": "manage_templates"})(
             attach_request, pk=str(self.service.id)
         )
         self.assertEqual(attach_response.status_code, 201, attach_response.data)
@@ -129,7 +129,7 @@ class ReportTemplateFlowTests(TestCase):
             format="json",
         )
         force_authenticate(attach_request, user=self.admin)
-        ServiceViewSet.as_view({"post": "attach_template"})(attach_request, pk=str(self.service.id))
+        ServiceViewSet.as_view({"post": "manage_templates"})(attach_request, pk=str(self.service.id))
 
         fetch_request = factory.get(f"/api/reporting/{self.item.id}/template/")
         force_authenticate(fetch_request, user=self.admin)

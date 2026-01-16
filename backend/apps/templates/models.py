@@ -112,6 +112,54 @@ class ReportTemplate(models.Model):
     def __str__(self):
         return self.name
 
+    def duplicate(self, name_suffix=" (Copy)"):
+        """
+        Create a deep copy of this template including all fields and options.
+        
+        Args:
+            name_suffix: Suffix to add to the duplicated template name (default: " (Copy)")
+            
+        Returns:
+            ReportTemplate: The newly created template instance
+        """
+        # Create cloned template (code will be None to avoid unique constraint)
+        cloned = ReportTemplate.objects.create(
+            name=f"{self.name}{name_suffix}",
+            code=None,
+            description=self.description,
+            category=self.category,
+            is_active=self.is_active,
+            version=self.version,
+        )
+        
+        # Duplicate all fields
+        for field in self.fields.all():
+            new_field = ReportTemplateField.objects.create(
+                template=cloned,
+                label=field.label,
+                key=field.key,
+                field_type=field.field_type,
+                is_required=field.is_required,
+                help_text=field.help_text,
+                default_value=field.default_value,
+                placeholder=field.placeholder,
+                order=field.order,
+                validation=field.validation,
+                is_active=field.is_active,
+            )
+            
+            # Duplicate all field options
+            for opt in field.options.all():
+                ReportTemplateFieldOption.objects.create(
+                    field=new_field,
+                    value=opt.value,
+                    label=opt.label,
+                    order=opt.order,
+                    is_active=opt.is_active,
+                )
+        
+        return cloned
+
 
 class ReportTemplateField(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
