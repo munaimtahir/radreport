@@ -170,6 +170,7 @@ class ReceiptSettings(models.Model):
     header_text = models.CharField(max_length=200, default="Consultants Clinic Place")
     logo_image = models.ImageField(upload_to="branding/", blank=True, null=True)
     header_image = models.ImageField(upload_to="branding/", blank=True, null=True)
+    footer_text = models.CharField(max_length=200, default="Computer generated receipt")
     updated_at = models.DateTimeField(auto_now=True)
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
     
