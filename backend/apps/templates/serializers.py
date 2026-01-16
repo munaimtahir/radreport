@@ -141,7 +141,6 @@ class ReportTemplateFieldSerializer(serializers.ModelSerializer):
                     if opt:
                         for attr, value in opt_data.items():
                             setattr(opt, attr, value)
-                        opt.is_active = opt_data.get("is_active", True)
                         opt.save()
                         continue
                 ReportTemplateFieldOptionSerializer(context={"field": instance}).create(opt_data)
