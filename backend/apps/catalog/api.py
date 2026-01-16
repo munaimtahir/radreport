@@ -4,8 +4,11 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
+from django.shortcuts import get_object_or_404
 from .models import Modality, Service
 from .serializers import ModalitySerializer, ServiceSerializer
+from apps.templates.models import ServiceReportTemplate
+from apps.templates.serializers import ServiceReportTemplateSerializer
 
 class ModalityViewSet(viewsets.ModelViewSet):
     queryset = Modality.objects.all()
@@ -39,6 +42,47 @@ class ServiceViewSet(viewsets.ModelViewSet):
         instance = serializer.save()
         instance._current_user = self.request.user
         instance.save()
+
+    @action(detail=True, methods=["get"], url_path="templates")
+    def list_templates(self, request, pk=None):
+        links = ServiceReportTemplate.objects.filter(service_id=pk).select_related("template", "service")
+        serializer = ServiceReportTemplateSerializer(links, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=["post"], url_path="templates", permission_classes=[permissions.IsAdminUser])
+    def attach_template(self, request, pk=None):
+        serializer = ServiceReportTemplateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        template_id = serializer.validated_data["template_id"]
+        link, _ = ServiceReportTemplate.objects.update_or_create(
+            service_id=pk,
+            template_id=template_id,
+            defaults={
+                "is_default": serializer.validated_data.get("is_default", False),
+                "is_active": serializer.validated_data.get("is_active", True),
+            },
+        )
+        if link.is_default:
+            ServiceReportTemplate.objects.filter(service_id=pk).exclude(id=link.id).update(is_default=False)
+        return Response(ServiceReportTemplateSerializer(link).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=["patch"], url_path="templates/(?P<link_id>[^/.]+)", permission_classes=[permissions.IsAdminUser])
+    def update_template_link(self, request, pk=None, link_id=None):
+        link = get_object_or_404(ServiceReportTemplate, service_id=pk, id=link_id)
+        serializer = ServiceReportTemplateSerializer(link, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        if serializer.validated_data.get("is_default"):
+            ServiceReportTemplate.objects.filter(service_id=pk).exclude(id=link.id).update(is_default=False)
+        return Response(ServiceReportTemplateSerializer(link).data)
+
+    @action(detail=True, methods=["delete"], url_path="templates/(?P<link_id>[^/.]+)", permission_classes=[permissions.IsAdminUser])
+    def delete_template_link(self, request, pk=None, link_id=None):
+        link = get_object_or_404(ServiceReportTemplate, service_id=pk, id=link_id)
+        link.is_active = False
+        link.is_default = False
+        link.save(update_fields=["is_active", "is_default"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
     
     @action(detail=False, methods=["post"], url_path="import-csv")
     def import_csv(self, request):
