@@ -470,8 +470,14 @@ export default function RegistrationPage() {
     }));
   };
 
+  const clampDiscountPercentage = (value: string): number => {
+    const parsed = parseFloat(value);
+    const numeric = Number.isNaN(parsed) ? 0 : parsed;
+    return Math.min(Math.max(numeric, 0), 100);
+  };
+
   const subtotal = selectedServices.reduce((sum, service) => sum + (service.price || service.charges || 0), 0);
-  const discountPercentValue = Math.min(Math.max(parseFloat(discountPercentage) || 0, 0), 100);
+  const discountPercentValue = clampDiscountPercentage(discountPercentage);
   const discountAmount = (subtotal * discountPercentValue) / 100;
   const totalAmount = subtotal;
   const netAmount = totalAmount - discountAmount;
