@@ -370,10 +370,10 @@ export default function RegistrationPage() {
     });
   };
 
-  const estimatedDob = useMemo(() => {
-    if (patientForm.date_of_birth) return "";
-    return calculateDobFromAge(patientForm.ageYears, patientForm.ageMonths, patientForm.ageDays);
-  }, [patientForm.date_of_birth, patientForm.ageYears, patientForm.ageMonths, patientForm.ageDays]);
+  const estimatedDob =
+    patientForm.date_of_birth
+      ? ""
+      : calculateDobFromAge(patientForm.ageYears, patientForm.ageMonths, patientForm.ageDays);
 
   const filteredServices = useMemo(() => {
     const query = serviceSearch.trim().toLowerCase();
