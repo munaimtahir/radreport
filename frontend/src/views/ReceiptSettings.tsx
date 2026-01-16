@@ -8,6 +8,7 @@ import Button from "../ui/components/Button";
 
 interface ReceiptSettings {
   header_text: string;
+  footer_text?: string;
   logo_image?: string;
   header_image?: string;
   logo_image_url?: string;
@@ -22,6 +23,7 @@ export default function ReceiptSettings() {
   const [success, setSuccess] = useState<string>("");
   const [settings, setSettings] = useState<ReceiptSettings>({
     header_text: "Consultants Clinic Place",
+    footer_text: "Computer generated receipt",
   });
   const [logoPreview, setLogoPreview] = useState<string>("");
   const [headerPreview, setHeaderPreview] = useState<string>("");
@@ -62,17 +64,20 @@ export default function ReceiptSettings() {
           Authorization: `Bearer ${token}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ header_text: settings.header_text }),
+        body: JSON.stringify({
+          header_text: settings.header_text,
+          footer_text: settings.footer_text,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update header text");
+        throw new Error("Failed to update receipt text");
       }
 
-      setSuccess("Header text updated successfully!");
+      setSuccess("Receipt text updated successfully!");
       setTimeout(() => setSuccess(""), 3000);
     } catch (e: any) {
-      setError(e.message || "Failed to update header text");
+      setError(e.message || "Failed to update receipt text");
     } finally {
       setLoading(false);
     }
@@ -160,7 +165,7 @@ export default function ReceiptSettings() {
       {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
 
       <div style={{ background: "#f9f9f9", padding: 20, borderRadius: 8, marginBottom: 20 }}>
-        <h2 style={{ marginTop: 0 }}>Header Text</h2>
+        <h2 style={{ marginTop: 0 }}>Header & Footer Text</h2>
         <div style={{ marginBottom: 15 }}>
           <label style={{ display: "block", marginBottom: 8 }}>Header Text</label>
           <input
@@ -171,8 +176,18 @@ export default function ReceiptSettings() {
             placeholder="Consultants Clinic Place"
           />
         </div>
+        <div style={{ marginBottom: 15 }}>
+          <label style={{ display: "block", marginBottom: 8 }}>Footer Text</label>
+          <input
+            type="text"
+            value={settings.footer_text || ""}
+            onChange={(e) => setSettings({ ...settings, footer_text: e.target.value })}
+            style={{ width: "100%", padding: 8 }}
+            placeholder="Computer generated receipt"
+          />
+        </div>
         <Button onClick={handleUpdateHeaderText} disabled={loading}>
-          {loading ? "Saving..." : "Save Header Text"}
+          {loading ? "Saving..." : "Save Receipt Text"}
         </Button>
       </div>
 
