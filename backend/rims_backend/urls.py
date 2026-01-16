@@ -9,9 +9,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
 from apps.patients.api import PatientViewSet
 from apps.catalog.api import ModalityViewSet, ServiceViewSet
-from apps.templates.api import TemplateViewSet, TemplateVersionViewSet
+from apps.templates.api import TemplateViewSet, TemplateVersionViewSet, ReportTemplateViewSet
 from apps.studies.api import StudyViewSet, VisitViewSet, ReceiptSettingsViewSet
-from apps.reporting.api import ReportViewSet
+from apps.reporting.api import ReportViewSet, ReportingViewSet
 from apps.audit.api import AuditLogViewSet
 from apps.workflow.api import (
     ServiceCatalogViewSet, ServiceVisitViewSet, ServiceVisitItemViewSet,
@@ -30,9 +30,11 @@ router.register(r"modalities", ModalityViewSet, basename="modalities")
 router.register(r"services", ServiceViewSet, basename="services")
 router.register(r"templates", TemplateViewSet, basename="templates")
 router.register(r"template-versions", TemplateVersionViewSet, basename="template-versions")
+router.register(r"report-templates", ReportTemplateViewSet, basename="report-templates")
 router.register(r"studies", StudyViewSet, basename="studies")
 router.register(r"visits", VisitViewSet, basename="visits")
 router.register(r"reports", ReportViewSet, basename="reports")
+router.register(r"reporting", ReportingViewSet, basename="reporting")
 router.register(r"audit", AuditLogViewSet, basename="audit")
 router.register(r"receipt-settings", ReceiptSettingsViewSet, basename="receipt-settings")
 # Workflow endpoints

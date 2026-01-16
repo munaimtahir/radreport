@@ -3,12 +3,18 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.utils import timezone
 from django.http import FileResponse, Http404
-from .models import Report
-from .serializers import ReportSerializer
+from django.shortcuts import get_object_or_404
+from .models import Report, ReportTemplateReport
+from .serializers import ReportSerializer, ReportTemplateReportSerializer
 from .pdf import build_basic_pdf
-from apps.templates.models import TemplateVersion
+from apps.templates.models import TemplateVersion, ReportTemplate, ServiceReportTemplate
+from apps.templates.serializers import ReportTemplateDetailSerializer
 from apps.studies.models import Study
 from apps.audit.models import AuditLog
+from apps.workflow.models import ServiceVisitItem
+from apps.workflow.permissions import IsAnyDesk
+from apps.workflow.transitions import transition_item_status
+from django.core.exceptions import ValidationError, PermissionDenied
 
 class ReportViewSet(viewsets.ModelViewSet):
     """
@@ -96,3 +102,90 @@ class ReportViewSet(viewsets.ModelViewSet):
             return FileResponse(report.pdf_file.open(), content_type="application/pdf", filename=f"{report.study.accession}.pdf")
         except (ValueError, IOError):
             raise Http404("PDF file not found")
+
+
+class ReportingViewSet(viewsets.ViewSet):
+    permission_classes = [IsAnyDesk]
+
+    def _get_default_template(self, item):
+        link = ServiceReportTemplate.objects.filter(
+            service=item.service, is_active=True
+        ).select_related("template").order_by("-is_default", "-created_at").first()
+        return link.template if link else None
+
+    def _validate_template_values(self, template, values, enforce_required):
+        errors = {}
+        fields = template.fields.filter(is_active=True).prefetch_related("options")
+        for field in fields:
+            if field.field_type in ["heading", "separator"]:
+                continue
+            value = values.get(field.key)
+            if enforce_required and field.is_required:
+                if field.field_type == "checkbox":
+                    if value is not True:
+                        errors[field.key] = "Required checkbox must be checked."
+                elif value in [None, "", []]:
+                    errors[field.key] = "This field is required."
+            if value is None:
+                continue
+            if field.field_type in ["dropdown", "radio"]:
+                allowed = {opt.value for opt in field.options.filter(is_active=True)}
+                if value not in allowed:
+                    errors[field.key] = "Invalid option."
+        return errors
+
+    @action(detail=True, methods=["get"], url_path="template")
+    def template(self, request, pk=None):
+        item = get_object_or_404(ServiceVisitItem, pk=pk)
+        template = self._get_default_template(item)
+        report = ReportTemplateReport.objects.filter(service_visit_item=item).first()
+        return Response({
+            "template": ReportTemplateDetailSerializer(template).data if template else None,
+            "report": ReportTemplateReportSerializer(report).data if report else None,
+        })
+
+    @action(detail=True, methods=["post"], url_path="save-template-report")
+    def save_template_report(self, request, pk=None):
+        item = get_object_or_404(ServiceVisitItem, pk=pk)
+        template_id = request.data.get("template_id")
+        values = request.data.get("values") or {}
+        narrative_text = request.data.get("narrative_text", "")
+        submit = bool(request.data.get("submit"))
+
+        if not isinstance(values, dict):
+            return Response({"detail": "values must be an object"}, status=status.HTTP_400_BAD_REQUEST)
+
+        template = None
+        if template_id:
+            template = get_object_or_404(ReportTemplate, pk=template_id)
+        else:
+            template = self._get_default_template(item)
+
+        if not template or not template.is_active:
+            return Response({"detail": "No active template available for this service"}, status=status.HTTP_400_BAD_REQUEST)
+
+        errors = self._validate_template_values(template, values, submit)
+        if errors:
+            return Response({"detail": "Validation failed", "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        report, _ = ReportTemplateReport.objects.get_or_create(
+            service_visit_item=item,
+            defaults={"template": template, "values": values, "narrative_text": narrative_text},
+        )
+        report.template = template
+        report.values = values
+        report.narrative_text = narrative_text
+        report.status = "submitted" if submit else "draft"
+        report.save()
+
+        try:
+            if submit:
+                transition_item_status(item, "PENDING_VERIFICATION", request.user)
+            else:
+                if item.status in ["REGISTERED", "RETURNED_FOR_CORRECTION"]:
+                    transition_item_status(item, "IN_PROGRESS", request.user)
+        except (ValidationError, PermissionDenied):
+            pass
+
+        serializer = ReportTemplateReportSerializer(report)
+        return Response(serializer.data, status=status.HTTP_200_OK)
