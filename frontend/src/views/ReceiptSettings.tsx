@@ -8,6 +8,7 @@ import Button from "../ui/components/Button";
 
 interface ReceiptSettings {
   header_text: string;
+  footer_text?: string;
   logo_image?: string;
   header_image?: string;
   logo_image_url?: string;
@@ -22,6 +23,7 @@ export default function ReceiptSettings() {
   const [success, setSuccess] = useState<string>("");
   const [settings, setSettings] = useState<ReceiptSettings>({
     header_text: "Consultants Clinic Place",
+    footer_text: "",
   });
   const [logoPreview, setLogoPreview] = useState<string>("");
   const [headerPreview, setHeaderPreview] = useState<string>("");
@@ -73,6 +75,36 @@ export default function ReceiptSettings() {
       setTimeout(() => setSuccess(""), 3000);
     } catch (e: any) {
       setError(e.message || "Failed to update header text");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateFooterText = async () => {
+    if (!token) return;
+    setLoading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const API_BASE = (import.meta as any).env.VITE_API_BASE || "http://localhost:8000/api";
+      const response = await fetch(`${API_BASE}/receipt-settings/1/`, {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ footer_text: settings.footer_text || "" }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update footer text");
+      }
+
+      setSuccess("Footer text updated successfully!");
+      setTimeout(() => setSuccess(""), 3000);
+    } catch (e: any) {
+      setError(e.message || "Failed to update footer text");
     } finally {
       setLoading(false);
     }
@@ -173,6 +205,22 @@ export default function ReceiptSettings() {
         </div>
         <Button onClick={handleUpdateHeaderText} disabled={loading}>
           {loading ? "Saving..." : "Save Header Text"}
+        </Button>
+      </div>
+
+      <div style={{ background: "#f9f9f9", padding: 20, borderRadius: 8, marginBottom: 20 }}>
+        <h2 style={{ marginTop: 0 }}>Footer Text</h2>
+        <div style={{ marginBottom: 15 }}>
+          <label style={{ display: "block", marginBottom: 8 }}>Footer Text</label>
+          <textarea
+            value={settings.footer_text || ""}
+            onChange={(e) => setSettings({ ...settings, footer_text: e.target.value })}
+            style={{ width: "100%", padding: 8, minHeight: 100 }}
+            placeholder="Footer text displayed at bottom of receipt"
+          />
+        </div>
+        <Button onClick={handleUpdateFooterText} disabled={loading}>
+          {loading ? "Saving..." : "Save Footer Text"}
         </Button>
       </div>
 

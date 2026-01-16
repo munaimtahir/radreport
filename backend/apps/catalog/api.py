@@ -4,6 +4,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
+from django.db.models import Count
 from .models import Modality, Service
 from .serializers import ModalitySerializer, ServiceSerializer
 
@@ -133,3 +134,62 @@ class ServiceViewSet(viewsets.ModelViewSet):
             
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=False, methods=["get"], url_path="most-used")
+    def most_used(self, request):
+        """
+        Get most frequently used services.
+        Returns top services by usage count (based on ServiceVisitItem records).
+        
+        Query params:
+        - limit: Number of services to return (default: 5)
+        """
+        limit = int(request.query_params.get("limit", 5))
+        
+        # Count usage from ServiceVisitItem (workflow) and OrderItem (legacy)
+        from apps.workflow.models import ServiceVisitItem
+        from apps.studies.models import OrderItem
+        
+        # Count from ServiceVisitItem
+        workflow_counts = ServiceVisitItem.objects.values('service_id').annotate(
+            count=Count('id')
+        ).values('service_id', 'count')
+        
+        # Count from OrderItem (legacy)
+        legacy_counts = OrderItem.objects.values('service_id').annotate(
+            count=Count('id')
+        ).values('service_id', 'count')
+        
+        # Combine counts
+        usage_map = {}
+        for item in workflow_counts:
+            service_id = item['service_id']
+            usage_map[service_id] = usage_map.get(service_id, 0) + item['count']
+        
+        for item in legacy_counts:
+            service_id = item['service_id']
+            usage_map[service_id] = usage_map.get(service_id, 0) + item['count']
+        
+        # Get services with usage counts, sorted by usage
+        service_ids = sorted(usage_map.keys(), key=lambda x: usage_map[x], reverse=True)[:limit]
+        
+        # Fetch services
+        services = Service.objects.filter(
+            id__in=service_ids,
+            is_active=True
+        ).select_related('modality', 'default_template')
+        
+        # Create a map for ordering
+        service_map = {str(s.id): s for s in services}
+        ordered_services = [service_map[str(sid)] for sid in service_ids if str(sid) in service_map]
+        
+        # Serialize with usage_count
+        serializer = self.get_serializer(ordered_services, many=True)
+        data = serializer.data
+        
+        # Add usage_count to each service
+        for item in data:
+            service_id = item['id']
+            item['usage_count'] = usage_map.get(service_id, 0)
+        
+        return Response(data)

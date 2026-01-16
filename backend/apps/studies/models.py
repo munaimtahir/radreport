@@ -168,6 +168,7 @@ class ReceiptSequence(models.Model):
 class ReceiptSettings(models.Model):
     """Receipt branding settings (singleton)"""
     header_text = models.CharField(max_length=200, default="Consultants Clinic Place")
+    footer_text = models.TextField(blank=True, default="", help_text="Footer text displayed at bottom of receipt")
     logo_image = models.ImageField(upload_to="branding/", blank=True, null=True)
     header_image = models.ImageField(upload_to="branding/", blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -1,10 +1,11 @@
 """
 Receipt PDF generation using ReportLab
 Supports both Visit (legacy) and ServiceVisit (workflow) models.
+Dual-copy receipts: Patient Copy (top) + Office Copy (bottom) on one A4 page.
 """
 from io import BytesIO
 from django.core.files.base import ContentFile
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, HRFlowable
 from reportlab.lib.units import mm
 from reportlab.lib.colors import black, white, HexColor
 from .base import PDFBase, PDFStyles
@@ -143,8 +144,11 @@ def build_receipt_pdf_reportlab(visit) -> ContentFile:
     story.append(summary_table)
     story.append(Spacer(1, 10 * mm))
     
-    # Footer note
-    story.append(Paragraph("Computer generated receipt", styles['footer']))
+    # Footer note - use footer_text from settings if available
+    footer_text = "Computer generated receipt"
+    if receipt_settings and receipt_settings.footer_text:
+        footer_text = receipt_settings.footer_text
+    story.append(Paragraph(footer_text, styles['footer']))
     
     # Build PDF
     doc.build(story)
@@ -158,27 +162,32 @@ def build_receipt_pdf_reportlab(visit) -> ContentFile:
     return ContentFile(pdf_bytes, name=f"receipt_{receipt_number}.pdf")
 
 
-def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> ContentFile:
+def _build_single_receipt_content(service_visit, invoice, copy_label="", styles=None):
     """
-    Generate receipt PDF for ServiceVisit (workflow) using ReportLab.
-    Replaces WeasyPrint-based build_service_visit_receipt_pdf.
+    Helper function to build content for one receipt copy.
+    Returns list of flowables.
     """
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=PDFBase.PAGE_SIZE)
-    styles = PDFStyles.get_styles()  # Use static method
+    if styles is None:
+        styles = PDFStyles.get_styles()
     
-    # Use existing receipt number from invoice (idempotent - should already be set)
     receipt_number = invoice.receipt_number or service_visit.visit_id
-    
-    # Get payment
     payment = service_visit.payments.first()
+    base = PDFBase()
+    receipt_settings = base.get_receipt_settings()
     
-    # Build story
-    story = []
+    content = []
     
-    # Header
-    story.append(Paragraph("RECEIPT", styles['title']))
-    story.append(Spacer(1, 10 * mm))
+    # Copy label (Patient Copy / Office Copy)
+    if copy_label:
+        content.append(Paragraph(f"<b>{copy_label}</b>", styles['heading']))
+        content.append(Spacer(1, 5 * mm))
+    
+    # Header text from settings
+    if receipt_settings and receipt_settings.header_text:
+        content.append(Paragraph(receipt_settings.header_text, styles['title']))
+    else:
+        content.append(Paragraph("RECEIPT", styles['title']))
+    content.append(Spacer(1, 8 * mm))
     
     # Receipt metadata
     metadata_data = [
@@ -195,11 +204,11 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
         ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
     ]))
-    story.append(metadata_table)
-    story.append(Spacer(1, 8 * mm))
+    content.append(metadata_table)
+    content.append(Spacer(1, 8 * mm))
     
     # Patient Information
-    story.append(Paragraph("Patient Information", styles['heading']))
+    content.append(Paragraph("Patient Information", styles['heading']))
     patient_data = [
         ['Patient Reg No:', service_visit.patient.patient_reg_no or service_visit.patient.mrn],
         ['MRN:', service_visit.patient.mrn],
@@ -219,11 +228,11 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
         ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
         ('FONTSIZE', (0, 0), (-1, -1), 10),
     ]))
-    story.append(patient_table)
-    story.append(Spacer(1, 8 * mm))
+    content.append(patient_table)
+    content.append(Spacer(1, 8 * mm))
     
-    # Service Information - use items (multiple services supported)
-    story.append(Paragraph("Service Information", styles['heading']))
+    # Service Information
+    content.append(Paragraph("Service Information", styles['heading']))
     items = service_visit.items.all()
     if items:
         service_rows = []
@@ -241,9 +250,8 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
             ('BACKGROUND', (0, 0), (-1, 0), HexColor('#E0E0E0')),
             ('GRID', (0, 0), (-1, -1), 1, black),
         ]))
-        story.append(service_table)
+        content.append(service_table)
     else:
-        # Fallback for legacy data
         if service_visit.service:
             service_data = [
                 ['Service:', service_visit.service.name],
@@ -257,11 +265,11 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
             ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
             ('FONTSIZE', (0, 0), (-1, -1), 10),
         ]))
-        story.append(service_table)
-    story.append(Spacer(1, 8 * mm))
+        content.append(service_table)
+    content.append(Spacer(1, 8 * mm))
     
-    # Amounts
-    story.append(Paragraph("Payment Summary", styles['heading']))
+    # Payment Summary
+    content.append(Paragraph("Payment Summary", styles['heading']))
     amounts_data = [
         ['Total Amount:', f"Rs. {invoice.total_amount:.2f}"],
     ]
@@ -284,11 +292,53 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
         ('FONTSIZE', (0, 0), (-1, -1), 10),
         ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
     ]))
-    story.append(amounts_table)
+    content.append(amounts_table)
+    content.append(Spacer(1, 8 * mm))
+    
+    # Footer text from settings
+    footer_text = "Computer generated receipt"
+    if receipt_settings and receipt_settings.footer_text:
+        footer_text = receipt_settings.footer_text
+    content.append(Paragraph(footer_text, styles['footer']))
+    
+    return content
+
+
+def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> ContentFile:
+    """
+    Generate dual-copy receipt PDF for ServiceVisit (workflow) using ReportLab.
+    Creates Patient Copy (top) and Office Copy (bottom) on one A4 page with tear line.
+    """
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=PDFBase.PAGE_SIZE)
+    styles = PDFStyles.get_styles()
+    
+    receipt_number = invoice.receipt_number or service_visit.visit_id
+    
+    # Build story with dual copies
+    story = []
+    
+    # Patient Copy (top half)
+    patient_content = _build_single_receipt_content(service_visit, invoice, "Patient Copy", styles)
+    story.extend(patient_content)
+    
+    # Tear line (dashed line in middle of page)
+    story.append(Spacer(1, 10 * mm))
+    tear_line = HRFlowable(
+        width="100%",
+        thickness=1,
+        lineCap='round',
+        color=HexColor('#CCCCCC'),
+        spaceBefore=5 * mm,
+        spaceAfter=5 * mm,
+        dash=(3, 3)  # Dashed line
+    )
+    story.append(tear_line)
     story.append(Spacer(1, 10 * mm))
     
-    # Footer
-    story.append(Paragraph("Computer generated receipt", styles['footer']))
+    # Office Copy (bottom half)
+    office_content = _build_single_receipt_content(service_visit, invoice, "Office Copy", styles)
+    story.extend(office_content)
     
     # Build PDF
     doc.build(story)

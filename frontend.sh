@@ -24,11 +24,11 @@ docker compose -p "$COMPOSE_PROJECT_NAME" stop frontend || true
 echo "Removing frontend container..."
 docker compose -p "$COMPOSE_PROJECT_NAME" rm -f frontend || true
 
-# Remove the frontend image to force rebuild (scoped to radreport project)
+# Remove the frontend image to force rebuild
 echo "Removing existing frontend image..."
 docker compose -p "$COMPOSE_PROJECT_NAME" rmi -f frontend || true
 # Also remove by container name pattern specific to radreport
-docker rmi $(docker images -q --filter "reference=radreport*frontend*" 2>/dev/null) 2>/dev/null || true
+docker rmi $(docker images -q --filter "reference=radreport-frontend" 2>/dev/null) 2>/dev/null || true
 docker rmi $(docker images -q --filter "reference=*rims_frontend_prod*" 2>/dev/null) 2>/dev/null || true
 
 # Rebuild the frontend image without cache
@@ -40,7 +40,8 @@ echo "Starting frontend service..."
 docker compose -p "$COMPOSE_PROJECT_NAME" up -d frontend
 
 # Wait a moment for the service to start
-sleep 3
+echo "Waiting for frontend to start..."
+sleep 5
 
 # Show logs
 echo "=========================================="
@@ -54,6 +55,16 @@ echo "Frontend deployment complete!"
 echo "Checking service status..."
 docker compose -p "$COMPOSE_PROJECT_NAME" ps frontend
 
+# Health check
+echo "=========================================="
+echo "Testing frontend accessibility..."
+if curl -s -f -I http://127.0.0.1:8081/ | grep -q "HTTP"; then
+    echo "✓ Frontend is accessible"
+else
+    echo "⚠ Frontend may still be starting..."
+fi
+
 echo "=========================================="
 echo "Frontend is now running on http://127.0.0.1:8081"
+echo "Public URL: https://rims.alshifalab.pk"
 echo "=========================================="
