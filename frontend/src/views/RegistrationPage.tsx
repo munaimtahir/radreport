@@ -884,9 +884,7 @@ export default function RegistrationPage() {
                     onChange={(e) => {
                       const value = Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 100);
                       setDiscountPercentage(e.target.value === "" ? "" : value.toString());
-                      if (!amountPaid) {
-                        setAmountPaid((subtotal - (subtotal * value) / 100).toFixed(2));
-                      }
+                      setAmountPaid((subtotal - (subtotal * value) / 100).toFixed(2));
                     }}
                     onKeyDown={handleEnterAsTab}
                     style={{ width: "100%", padding: 8 }}
