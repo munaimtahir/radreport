@@ -161,6 +161,9 @@ export default function ReportTemplates() {
 
   const removeField = (index: number) => {
     const fields = [...(formData.fields || [])].filter((_, idx) => idx !== index);
+    fields.forEach((field, idx) => {
+      field.order = idx;
+    });
     setFormData({ ...formData, fields });
   };
 
