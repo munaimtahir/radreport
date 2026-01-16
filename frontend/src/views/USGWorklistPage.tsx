@@ -108,7 +108,6 @@ export default function USGWorklistPage() {
   const [templateSchema, setTemplateSchema] = useState<TemplateSchema | null>(null);
   const [reportValues, setReportValues] = useState<Record<string, any>>({});
   const [reportTemplate, setReportTemplate] = useState<ReportTemplate | null>(null);
-  const [templateReport, setTemplateReport] = useState<TemplateReport | null>(null);
   const [templateReportValues, setTemplateReportValues] = useState<Record<string, any>>({});
   const [templateNarrative, setTemplateNarrative] = useState("");
 
@@ -171,19 +170,16 @@ export default function USGWorklistPage() {
       const data = await apiGet(`/reporting/${itemId}/template/`, token);
       if (data?.template) {
         setReportTemplate(data.template);
-        setTemplateReport(data.report || null);
         setTemplateReportValues(data.report?.values || {});
         setTemplateNarrative(data.report?.narrative_text || "");
         return data.template as ReportTemplate;
       }
       setReportTemplate(null);
-      setTemplateReport(null);
       setTemplateReportValues({});
       setTemplateNarrative("");
       return null;
     } catch (err: any) {
       setReportTemplate(null);
-      setTemplateReport(null);
       setTemplateReportValues({});
       setTemplateNarrative("");
       return null;
@@ -210,7 +206,6 @@ export default function USGWorklistPage() {
       setSelectedItemId(null);
       setTemplateSchema(null);
       setReportTemplate(null);
-      setTemplateReport(null);
       setTemplateReportValues({});
       setTemplateNarrative("");
       await loadReport(visit.id);
@@ -255,7 +250,10 @@ export default function USGWorklistPage() {
     if (field.field_type === "number") {
       return value === null || value === undefined || value === "";
     }
-    return value === null || value === undefined || (typeof value === "string" && !value.toString().trim());
+    // Check for null/undefined first, then check string emptiness
+    if (value === null || value === undefined) return true;
+    if (typeof value === "string") return !value.trim();
+    return false;
   };
 
   const isReadyToSubmit = () => {
@@ -343,7 +341,6 @@ export default function USGWorklistPage() {
         setSelectedItemId(null);
         setReport(null);
         setReportTemplate(null);
-        setTemplateReport(null);
         setTemplateReportValues({});
         setTemplateNarrative("");
         await loadVisits();

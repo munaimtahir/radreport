@@ -42,6 +42,7 @@ interface ParsedNotes {
 }
 
 const LOCAL_USAGE_KEY = "rims:service-usage";
+const REVOKE_URL_TIMEOUT_MS = 60000; // 1 minute
 
 const parsePatientNotes = (notes?: string): ParsedNotes => {
   const parsed: ParsedNotes = {
@@ -481,7 +482,10 @@ export default function RegistrationPage() {
   const discountAmount = (subtotal * discountPercentValue) / 100;
   const totalAmount = subtotal;
   const netAmount = totalAmount - discountAmount;
-  const paidAmount = parseFloat(amountPaid) || netAmount;
+  const paidAmount = (() => { 
+    const parsed = parseFloat(amountPaid); 
+    return !Number.isNaN(parsed) ? parsed : netAmount; 
+  })();
   const balanceAmount = netAmount - paidAmount;
 
   const hasAutoFilledAmountPaid = useRef(false);
@@ -557,7 +561,7 @@ export default function RegistrationPage() {
               win.onload = () => {
                 win.print();
               };
-              setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+              setTimeout(() => window.URL.revokeObjectURL(url), REVOKE_URL_TIMEOUT_MS);
             } else {
               const link = document.createElement("a");
               link.href = url;
@@ -566,7 +570,7 @@ export default function RegistrationPage() {
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
-              setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+              setTimeout(() => window.URL.revokeObjectURL(url), REVOKE_URL_TIMEOUT_MS);
             }
           })
           .catch((err) => {
@@ -882,9 +886,19 @@ export default function RegistrationPage() {
                     min={0}
                     max={100}
                     onChange={(e) => {
-                      const value = Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 100);
-                      setDiscountPercentage(e.target.value === "" ? "" : value.toString());
-                      setAmountPaid((subtotal - (subtotal * value) / 100).toFixed(2));
+                      // Allow natural typing by storing the raw input value
+                      setDiscountPercentage(e.target.value);
+                    }}
+                    onBlur={(e) => {
+                      // Clamp the value on blur to allow multi-digit typing
+                      const parsed = parseFloat(e.target.value);
+                      const value = Math.min(Math.max(isNaN(parsed) ? 0 : parsed, 0), 100);
+                      const clampedValue = e.target.value === "" ? "" : value.toString();
+                      setDiscountPercentage(clampedValue);
+                      // Update amount paid if it hasn't been manually set
+                      if (!hasAutoFilledAmountPaid.current || !amountPaid) {
+                        setAmountPaid((subtotal - (subtotal * value) / 100).toFixed(2));
+                      }
                     }}
                     onKeyDown={handleEnterAsTab}
                     style={{ width: "100%", padding: 8 }}

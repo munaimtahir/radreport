@@ -10,7 +10,6 @@ from reportlab.platypus import (
     Spacer,
     Table,
     TableStyle,
-    PageBreak,
     Image,
     HRFlowable,
     KeepTogether,
@@ -55,6 +54,15 @@ def build_receipt_pdf_reportlab(visit) -> ContentFile:
             header_image.drawWidth = max_width
             header_image.drawHeight = header_image.imageHeight * scale
         story.append(header_image)
+        story.append(Spacer(1, 4 * mm))
+    elif logo_path:
+        logo = Image(logo_path)
+        max_height = 15 * mm
+        if logo.imageHeight and logo.imageWidth:
+            scale = max_height / logo.imageHeight
+            logo.drawHeight = max_height
+            logo.drawWidth = logo.imageWidth * scale
+        story.append(logo)
         story.append(Spacer(1, 4 * mm))
     if receipt_settings and receipt_settings.header_text:
         story.append(Paragraph(receipt_settings.header_text, styles['title']))

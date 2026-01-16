@@ -115,14 +115,22 @@ export default function ServiceTemplates() {
 
   const makeDefault = async (linkId: string) => {
     if (!token || !selectedService) return;
-    await apiPatch(`/services/${selectedService.id}/templates/${linkId}/`, token, { is_default: true });
-    loadLinks(selectedService.id);
+    try {
+      await apiPatch(`/services/${selectedService.id}/templates/${linkId}/`, token, { is_default: true });
+      loadLinks(selectedService.id);
+    } catch (e: any) {
+      setError(e.message || "Failed to set default template");
+    }
   };
 
   const deactivateLink = async (linkId: string) => {
     if (!token || !selectedService) return;
-    await apiDelete(`/services/${selectedService.id}/templates/${linkId}/`, token);
-    loadLinks(selectedService.id);
+    try {
+      await apiDelete(`/services/${selectedService.id}/templates/${linkId}/`, token);
+      loadLinks(selectedService.id);
+    } catch (e: any) {
+      setError(e.message || "Failed to deactivate template link");
+    }
   };
 
   return (

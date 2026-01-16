@@ -43,28 +43,34 @@ class ServiceViewSet(viewsets.ModelViewSet):
         instance._current_user = self.request.user
         instance.save()
 
-    @action(detail=True, methods=["get"], url_path="templates")
-    def list_templates(self, request, pk=None):
-        links = ServiceReportTemplate.objects.filter(service_id=pk).select_related("template", "service")
-        serializer = ServiceReportTemplateSerializer(links, many=True)
-        return Response(serializer.data)
-
-    @action(detail=True, methods=["post"], url_path="templates", permission_classes=[permissions.IsAdminUser])
-    def attach_template(self, request, pk=None):
-        serializer = ServiceReportTemplateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        template_id = serializer.validated_data["template_id"]
-        link, _ = ServiceReportTemplate.objects.update_or_create(
-            service_id=pk,
-            template_id=template_id,
-            defaults={
-                "is_default": serializer.validated_data.get("is_default", False),
-                "is_active": serializer.validated_data.get("is_active", True),
-            },
-        )
-        if link.is_default:
-            ServiceReportTemplate.objects.filter(service_id=pk).exclude(id=link.id).update(is_default=False)
-        return Response(ServiceReportTemplateSerializer(link).data, status=status.HTTP_201_CREATED)
+    @action(detail=True, methods=["get", "post"], url_path="templates", permission_classes=[permissions.IsAuthenticated])
+    def manage_templates(self, request, pk=None):
+        """List or attach templates to a service. GET lists, POST attaches."""
+        if request.method == "GET":
+            links = ServiceReportTemplate.objects.filter(service_id=pk).select_related("template", "service")
+            serializer = ServiceReportTemplateSerializer(links, many=True)
+            return Response(serializer.data)
+        else:  # POST
+            # Admin-only for POST
+            if not request.user.is_staff:
+                return Response(
+                    {"detail": "You do not have permission to perform this action."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            serializer = ServiceReportTemplateSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            template_id = serializer.validated_data["template_id"]
+            link, _ = ServiceReportTemplate.objects.update_or_create(
+                service_id=pk,
+                template_id=template_id,
+                defaults={
+                    "is_default": serializer.validated_data.get("is_default", False),
+                    "is_active": serializer.validated_data.get("is_active", True),
+                },
+            )
+            if link.is_default:
+                ServiceReportTemplate.objects.filter(service_id=pk).exclude(id=link.id).update(is_default=False)
+            return Response(ServiceReportTemplateSerializer(link).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["patch"], url_path="templates/(?P<link_id>[^/.]+)", permission_classes=[permissions.IsAdminUser])
     def update_template_link(self, request, pk=None, link_id=None):
@@ -79,9 +85,20 @@ class ServiceViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["delete"], url_path="templates/(?P<link_id>[^/.]+)", permission_classes=[permissions.IsAdminUser])
     def delete_template_link(self, request, pk=None, link_id=None):
         link = get_object_or_404(ServiceReportTemplate, service_id=pk, id=link_id)
+        was_default = link.is_default
         link.is_active = False
         link.is_default = False
         link.save(update_fields=["is_active", "is_default"])
+        
+        # If we just deleted the default template, promote the most recent active link to default
+        if was_default:
+            new_default = ServiceReportTemplate.objects.filter(
+                service_id=pk, is_active=True
+            ).order_by("-created_at").first()
+            if new_default:
+                new_default.is_default = True
+                new_default.save(update_fields=["is_default"])
+        
         return Response(status=status.HTTP_204_NO_CONTENT)
     
     @action(detail=False, methods=["post"], url_path="import-csv")

@@ -15,6 +15,9 @@ from apps.workflow.models import ServiceVisitItem
 from apps.workflow.permissions import IsAnyDesk
 from apps.workflow.transitions import transition_item_status
 from django.core.exceptions import ValidationError, PermissionDenied
+import logging
+
+logger = logging.getLogger(__name__)
 
 class ReportViewSet(viewsets.ModelViewSet):
     """
@@ -168,15 +171,15 @@ class ReportingViewSet(viewsets.ViewSet):
         if errors:
             return Response({"detail": "Validation failed", "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
 
-        report, _ = ReportTemplateReport.objects.get_or_create(
+        report, _ = ReportTemplateReport.objects.update_or_create(
             service_visit_item=item,
-            defaults={"template": template, "values": values, "narrative_text": narrative_text},
+            defaults={
+                "template": template,
+                "values": values,
+                "narrative_text": narrative_text,
+                "status": "submitted" if submit else "draft",
+            },
         )
-        report.template = template
-        report.values = values
-        report.narrative_text = narrative_text
-        report.status = "submitted" if submit else "draft"
-        report.save()
 
         try:
             if submit:
@@ -184,8 +187,11 @@ class ReportingViewSet(viewsets.ViewSet):
             else:
                 if item.status in ["REGISTERED", "RETURNED_FOR_CORRECTION"]:
                     transition_item_status(item, "IN_PROGRESS", request.user)
-        except (ValidationError, PermissionDenied):
-            pass
+        except (ValidationError, PermissionDenied) as e:
+            # Log the failure but still save the report to avoid data loss
+            logger.warning(
+                f"Report saved for item {item.id}, but status transition failed: {e}"
+            )
 
         serializer = ReportTemplateReportSerializer(report)
         return Response(serializer.data, status=status.HTTP_200_OK)
