@@ -77,8 +77,12 @@ class ServiceViewSet(viewsets.ModelViewSet):
         link = get_object_or_404(ServiceReportTemplate, service_id=pk, id=link_id)
         serializer = ServiceReportTemplateSerializer(link, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
+        # Check if is_default was provided before saving
+        is_default_provided = "is_default" in serializer.validated_data
+        is_default_value = serializer.validated_data.get("is_default", False)
         serializer.save()
-        if serializer.validated_data.get("is_default"):
+        # Use the saved instance's value, but only act if is_default was explicitly provided
+        if is_default_provided and link.is_default:
             ServiceReportTemplate.objects.filter(service_id=pk).exclude(id=link.id).update(is_default=False)
         return Response(ServiceReportTemplateSerializer(link).data)
 
@@ -197,7 +201,14 @@ class ServiceViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="most-used")
     def most_used(self, request):
-        """Return top 5 most used services based on service visit items."""
+        """
+        Return top 5 most used services based on service visit items.
+        
+        Note: This query uses Count aggregation which scans service_visit_items.
+        For large databases, consider adding an index on the service foreign key
+        in ServiceVisitItem (which should already exist) or implementing a 
+        denormalized counter if performance becomes an issue.
+        """
         queryset = Service.objects.filter(is_active=True).annotate(
             usage_count=Count("service_visit_items")
         ).order_by("-usage_count", "name")[:5]

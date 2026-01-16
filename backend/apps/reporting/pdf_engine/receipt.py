@@ -19,17 +19,11 @@ from reportlab.lib.colors import black, white, HexColor
 from .base import PDFBase, PDFStyles
 
 
-def build_receipt_pdf_reportlab(visit) -> ContentFile:
+def _load_receipt_settings(base: PDFBase):
     """
-    Generate receipt PDF for Visit model using ReportLab.
-    Replaces WeasyPrint-based build_receipt_pdf.
+    Helper function to load receipt settings and extract paths.
+    Returns a tuple of (receipt_settings, logo_path, header_image_path, footer_text).
     """
-    buffer = BytesIO()
-    doc = SimpleDocTemplate(buffer, pagesize=PDFBase.PAGE_SIZE)
-    styles = PDFStyles.get_styles()
-    base = PDFBase()
-    
-    # Get receipt settings
     receipt_settings = base.get_receipt_settings()
     logo_path = None
     header_image_path = None
@@ -41,11 +35,19 @@ def build_receipt_pdf_reportlab(visit) -> ContentFile:
             header_image_path = receipt_settings.header_image.path if hasattr(receipt_settings.header_image, 'path') else None
         if receipt_settings.footer_text:
             footer_text = receipt_settings.footer_text
+    return receipt_settings, logo_path, header_image_path, footer_text
+
+
+def _add_header_or_logo(story_or_section, header_image_path, logo_path, spacer_height_mm=4):
+    """
+    Helper function to add header image or logo (fallback) to a story or section.
     
-    # Build story (content)
-    story = []
-    
-    # Header
+    Args:
+        story_or_section: List to append elements to (story or section)
+        header_image_path: Path to header image (preferred)
+        logo_path: Path to logo image (fallback if header not available)
+        spacer_height_mm: Height of spacer to add after image (default 4mm)
+    """
     if header_image_path:
         header_image = Image(header_image_path)
         max_width = PDFBase.PAGE_WIDTH - PDFBase.MARGIN_LEFT - PDFBase.MARGIN_RIGHT
@@ -53,8 +55,8 @@ def build_receipt_pdf_reportlab(visit) -> ContentFile:
             scale = max_width / header_image.imageWidth
             header_image.drawWidth = max_width
             header_image.drawHeight = header_image.imageHeight * scale
-        story.append(header_image)
-        story.append(Spacer(1, 4 * mm))
+        story_or_section.append(header_image)
+        story_or_section.append(Spacer(1, spacer_height_mm * mm))
     elif logo_path:
         logo = Image(logo_path)
         max_height = 15 * mm
@@ -62,8 +64,29 @@ def build_receipt_pdf_reportlab(visit) -> ContentFile:
             scale = max_height / logo.imageHeight
             logo.drawHeight = max_height
             logo.drawWidth = logo.imageWidth * scale
-        story.append(logo)
-        story.append(Spacer(1, 4 * mm))
+        story_or_section.append(logo)
+        story_or_section.append(Spacer(1, spacer_height_mm * mm))
+
+
+def build_receipt_pdf_reportlab(visit) -> ContentFile:
+    """
+    Generate receipt PDF for Visit model using ReportLab.
+    Replaces WeasyPrint-based build_receipt_pdf.
+    """
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=PDFBase.PAGE_SIZE)
+    styles = PDFStyles.get_styles()
+    base = PDFBase()
+    
+    # Get receipt settings using helper
+    receipt_settings, logo_path, header_image_path, footer_text = _load_receipt_settings(base)
+    
+    # Build story (content)
+    story = []
+    
+    # Header - use helper function
+    _add_header_or_logo(story, header_image_path, logo_path, spacer_height_mm=4)
+    
     if receipt_settings and receipt_settings.header_text:
         story.append(Paragraph(receipt_settings.header_text, styles['title']))
     else:
@@ -201,17 +224,9 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
     doc = SimpleDocTemplate(buffer, pagesize=PDFBase.PAGE_SIZE)
     styles = PDFStyles.get_styles()  # Use static method
     base = PDFBase()
-    receipt_settings = base.get_receipt_settings()
-    logo_path = None
-    header_image_path = None
-    footer_text = "Computer generated receipt"
-    if receipt_settings:
-        if receipt_settings.logo_image:
-            logo_path = receipt_settings.logo_image.path if hasattr(receipt_settings.logo_image, 'path') else None
-        if receipt_settings.header_image:
-            header_image_path = receipt_settings.header_image.path if hasattr(receipt_settings.header_image, 'path') else None
-        if receipt_settings.footer_text:
-            footer_text = receipt_settings.footer_text
+    
+    # Get receipt settings using helper
+    receipt_settings, logo_path, header_image_path, footer_text = _load_receipt_settings(base)
     
     # Use existing receipt number from invoice (idempotent - should already be set)
     receipt_number = invoice.receipt_number or service_visit.visit_id
@@ -241,24 +256,8 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
         explicit parameters instead of relying on closure state.
         """
         section = []
-        if header_image_path:
-            header_image = Image(header_image_path)
-            max_width = PDFBase.PAGE_WIDTH - PDFBase.MARGIN_LEFT - PDFBase.MARGIN_RIGHT
-            if header_image.imageWidth and header_image.imageHeight:
-                scale = max_width / header_image.imageWidth
-                header_image.drawWidth = max_width
-                header_image.drawHeight = header_image.imageHeight * scale
-            section.append(header_image)
-            section.append(Spacer(1, 3 * mm))
-        elif logo_path:
-            logo = Image(logo_path)
-            max_height = 15 * mm
-            if logo.imageHeight and logo.imageWidth:
-                scale = max_height / logo.imageHeight
-                logo.drawHeight = max_height
-                logo.drawWidth = logo.imageWidth * scale
-            section.append(logo)
-            section.append(Spacer(1, 2 * mm))
+        # Use helper function for header/logo
+        _add_header_or_logo(section, header_image_path, logo_path, spacer_height_mm=3)
         
         if receipt_settings and receipt_settings.header_text:
             section.append(Paragraph(receipt_settings.header_text, styles['title']))
