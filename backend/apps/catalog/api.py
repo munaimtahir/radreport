@@ -177,3 +177,12 @@ class ServiceViewSet(viewsets.ModelViewSet):
             
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["get"], url_path="most-used")
+    def most_used(self, request):
+        """Return top 5 most used services based on service visit items."""
+        queryset = Service.objects.filter(is_active=True).annotate(
+            usage_count=Count("service_visit_items")
+        ).order_by("-usage_count", "name")[:5]
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
