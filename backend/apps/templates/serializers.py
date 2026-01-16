@@ -154,9 +154,9 @@ class ReportTemplateSerializer(serializers.ModelSerializer):
         model = ReportTemplate
         fields = [
             "id", "name", "code", "description", "category", "is_active",
-            "version", "created_at", "updated_at", "fields",
+            "version", "created_by", "updated_by", "created_at", "updated_at", "fields",
         ]
-        read_only_fields = ["created_at", "updated_at"]
+        read_only_fields = ["created_at", "updated_at", "created_by", "updated_by"]
 
     def create(self, validated_data):
         fields_data = validated_data.pop("fields", [])
@@ -197,7 +197,7 @@ class ReportTemplateDetailSerializer(serializers.ModelSerializer):
         model = ReportTemplate
         fields = [
             "id", "name", "code", "description", "category", "is_active",
-            "version", "created_at", "updated_at", "fields",
+            "version", "created_by", "updated_by", "created_at", "updated_at", "fields",
         ]
 
     def to_representation(self, instance):

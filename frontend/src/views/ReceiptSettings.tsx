@@ -83,15 +83,6 @@ export default function ReceiptSettings() {
     }
   };
 
-  const handleUpdateFooterText = async () => {
-    if (!token) return;
-    setLoading(true);
-    setError("");
-    setSuccess("");
-
-    try {
-      const API_BASE = (import.meta as any).env.VITE_API_BASE || "http://localhost:8000/api";
-
   const handleUploadLogo = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!token || !event.target.files?.[0]) return;
     setLoading(true);

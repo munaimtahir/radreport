@@ -71,10 +71,17 @@ class ReportTemplateViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(is_active=True)
         return queryset
 
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user, updated_by=self.request.user)
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user)
+
     def destroy(self, request, *args, **kwargs):
         template = self.get_object()
         template.is_active = False
-        template.save(update_fields=["is_active"])
+        template.updated_by = request.user
+        template.save(update_fields=["is_active", "updated_by"])
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=True, methods=["post"])
@@ -87,6 +94,8 @@ class ReportTemplateViewSet(viewsets.ModelViewSet):
             category=template.category,
             is_active=template.is_active,
             version=template.version,
+            created_by=request.user,
+            updated_by=request.user,
         )
         for field in template.fields.all():
             new_field = ReportTemplateField.objects.create(

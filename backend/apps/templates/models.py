@@ -1,5 +1,6 @@
 import uuid
 from django.db import models
+from django.conf import settings
 
 FIELD_TYPES = (
     ("short_text", "Short Text"),
@@ -103,6 +104,8 @@ class ReportTemplate(models.Model):
     category = models.CharField(max_length=120, blank=True, default="")
     is_active = models.BooleanField(default=True)
     version = models.PositiveIntegerField(default=1)
+    created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_report_templates")
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="updated_report_templates")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
