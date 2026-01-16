@@ -212,6 +212,26 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
     payment = service_visit.payments.first()
     
     def build_receipt_section(copy_label: str):
+        """
+        Build a single receipt section (e.g. "Patient Copy", "Office Copy").
+
+        This inner helper intentionally captures variables from the enclosing
+        build_service_visit_receipt_pdf_reportlab scope for convenience. It
+        depends on the following outer-scope values:
+
+        - receipt_settings
+        - header_image_path
+        - logo_path
+        - footer_text
+        - styles
+        - service_visit
+        - invoice
+        - payment
+
+        If this function needs to be tested independently or reused elsewhere,
+        consider extracting it to module scope and passing these values as
+        explicit parameters instead of relying on closure state.
+        """
         section = []
         if header_image_path:
             header_image = Image(header_image_path)
