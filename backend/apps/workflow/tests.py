@@ -339,3 +339,170 @@ class AuthMeEndpointTests(TestCase):
         
         response = auth_me(request)
         self.assertEqual(response.status_code, 401)
+
+
+class DashboardAPITests(TestCase):
+    """Tests for dashboard API endpoints"""
+    
+    @classmethod
+    def setUpTestData(cls):
+        user_model = get_user_model()
+        
+        # Create groups
+        cls.admin_group = Group.objects.create(name="admin")
+        cls.reg_group = Group.objects.create(name="registration")
+        
+        # Create admin user
+        cls.admin_user = user_model.objects.create_superuser(
+            username="admin", password="test", email="admin@test.com"
+        )
+        
+        # Create regular user
+        cls.regular_user = user_model.objects.create_user(
+            username="regular", password="test"
+        )
+        cls.regular_user.groups.add(cls.reg_group)
+        
+        # Create patient
+        cls.patient = Patient.objects.create(
+            name="Test Patient",
+            gender="M",
+            phone="1234567890"
+        )
+        
+        # Create modality and service
+        modality = Modality.objects.get_or_create(code="USG", defaults={"name": "Ultrasound"})[0]
+        cls.service = Service.objects.get_or_create(
+            modality=modality,
+            name="Test USG Service",
+            defaults={
+                "price": Decimal("500.00"),
+                "is_active": True
+            }
+        )[0]
+        
+        # Create a service visit with items
+        from apps.workflow.models import ServiceVisit, ServiceVisitItem
+        cls.visit = ServiceVisit.objects.create(
+            patient=cls.patient,
+            created_by=cls.admin_user
+        )
+        cls.item = ServiceVisitItem.objects.create(
+            service_visit=cls.visit,
+            service=cls.service,
+            service_name_snapshot="Test USG Service",
+            department_snapshot="USG",
+            price_snapshot=Decimal("500.00"),
+            status="IN_PROGRESS"
+        )
+    
+    def test_dashboard_summary_requires_auth(self):
+        """Test that dashboard summary requires authentication"""
+        from apps.workflow.dashboard_api import dashboard_summary
+        
+        factory = APIRequestFactory()
+        request = factory.get("/api/dashboard/summary/")
+        # No authentication
+        
+        response = dashboard_summary(request)
+        self.assertEqual(response.status_code, 401)
+    
+    def test_dashboard_summary_returns_kpis(self):
+        """Test that dashboard summary returns KPI counts"""
+        from apps.workflow.dashboard_api import dashboard_summary
+        
+        factory = APIRequestFactory()
+        request = factory.get("/api/dashboard/summary/")
+        force_authenticate(request, user=self.admin_user)
+        
+        response = dashboard_summary(request)
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.data
+        self.assertIn("total_patients_today", data)
+        self.assertIn("total_services_today", data)
+        self.assertIn("reports_pending", data)
+        self.assertIn("reports_verified", data)
+        self.assertIn("critical_delays", data)
+        self.assertIn("server_time", data)
+    
+    def test_dashboard_worklist_admin_sees_department(self):
+        """Test that admin users see department worklists"""
+        from apps.workflow.dashboard_api import dashboard_worklist
+        
+        factory = APIRequestFactory()
+        request = factory.get("/api/dashboard/worklist/?scope=department")
+        force_authenticate(request, user=self.admin_user)
+        
+        response = dashboard_worklist(request)
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.data
+        self.assertEqual(data["scope"], "department")
+        # Admin can see grouped_by_department or items
+        self.assertTrue("grouped_by_department" in data or "items" in data)
+    
+    def test_dashboard_worklist_non_admin_sees_my_only(self):
+        """Test that non-admin users only see their own worklist"""
+        from apps.workflow.dashboard_api import dashboard_worklist
+        
+        factory = APIRequestFactory()
+        request = factory.get("/api/dashboard/worklist/?scope=my")
+        force_authenticate(request, user=self.regular_user)
+        
+        response = dashboard_worklist(request)
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.data
+        self.assertEqual(data["scope"], "my")
+        self.assertIn("items", data)
+    
+    def test_dashboard_worklist_non_admin_cannot_access_department(self):
+        """Test that non-admin users cannot access department scope"""
+        from apps.workflow.dashboard_api import dashboard_worklist
+        
+        factory = APIRequestFactory()
+        request = factory.get("/api/dashboard/worklist/?scope=department")
+        force_authenticate(request, user=self.regular_user)
+        
+        response = dashboard_worklist(request)
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Invalid scope", str(response.data))
+    
+    def test_dashboard_flow_returns_counts(self):
+        """Test that dashboard flow returns step counts"""
+        from apps.workflow.dashboard_api import dashboard_flow
+        
+        factory = APIRequestFactory()
+        request = factory.get("/api/dashboard/flow/")
+        force_authenticate(request, user=self.admin_user)
+        
+        response = dashboard_flow(request)
+        self.assertEqual(response.status_code, 200)
+        
+        data = response.data
+        self.assertIn("registered_count", data)
+        self.assertIn("paid_count", data)
+        self.assertIn("performed_count", data)
+        self.assertIn("reported_count", data)
+        self.assertIn("verified_count", data)
+        self.assertIn("server_time", data)
+    
+    def test_health_endpoint_returns_status(self):
+        """Test that health endpoint returns status and checks"""
+        from rims_backend.urls import health
+        import json
+        
+        factory = APIRequestFactory()
+        request = factory.get("/api/health/")
+        # Health endpoint is public (AllowAny)
+        
+        response = health(request)
+        self.assertIn(response.status_code, [200, 503])  # 503 if DB fails
+        
+        data = json.loads(response.content)
+        self.assertIn("status", data)
+        self.assertIn("server_time", data)
+        self.assertIn("checks", data)
+        self.assertIn("db", data["checks"])
+        self.assertIn("latency_ms", data)

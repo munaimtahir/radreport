@@ -17,6 +17,9 @@ from apps.workflow.api import (
     ServiceCatalogViewSet, ServiceVisitViewSet, ServiceVisitItemViewSet,
     USGReportViewSet, OPDVitalsViewSet, OPDConsultViewSet, PDFViewSet
 )
+from apps.workflow.dashboard_api import (
+    dashboard_summary, dashboard_worklist, dashboard_flow
+)
 from apps.workflow.models import ServiceVisit, Invoice
 from apps.workflow.pdf import build_service_visit_receipt_pdf
 from django.http import HttpResponse, JsonResponse
@@ -49,25 +52,45 @@ router.register(r"pdf", PDFViewSet, basename="pdf")
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def health(request):
-    """Health check endpoint for load balancers and uptime monitors."""
+    """
+    Health check endpoint for load balancers and uptime monitors.
+    Enhanced for dashboard health card.
+    """
     from django.db import connection
+    import time
 
+    start_time = time.time()
     db_status = "ok"
     http_status = 200
+    checks = {}
+    
     try:
         with connection.cursor() as cursor:
             cursor.execute("SELECT 1")
+        checks["db"] = "ok"
     except Exception as exc:
         db_status = f"error: {exc}"
+        checks["db"] = "fail"
         http_status = 503
-
-    version = os.getenv("GIT_SHA") or os.getenv("COMMIT_SHA")
+    
+    # Check storage (basic check - media root exists)
+    try:
+        if os.path.exists(settings.MEDIA_ROOT):
+            checks["storage"] = "ok"
+        else:
+            checks["storage"] = "unknown"
+    except:
+        checks["storage"] = "unknown"
+    
+    latency_ms = int((time.time() - start_time) * 1000)
+    version = os.getenv("GIT_SHA") or os.getenv("COMMIT_SHA") or "unknown"
 
     return JsonResponse({
         "status": "ok" if db_status == "ok" else "degraded",
-        "db": db_status,
-        "time": timezone.now().isoformat(),
+        "server_time": timezone.now().isoformat(),
         "version": version,
+        "checks": checks,
+        "latency_ms": latency_ms,
     }, status=http_status)
 
 
@@ -139,6 +162,10 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/pdf/receipt/<uuid:visit_id>/", receipt_pdf_alt, name="receipt-pdf-alt"),  # Alternative route for compatibility
+    # Dashboard endpoints
+    path("api/dashboard/summary/", dashboard_summary, name="dashboard-summary"),
+    path("api/dashboard/worklist/", dashboard_worklist, name="dashboard-worklist"),
+    path("api/dashboard/flow/", dashboard_flow, name="dashboard-flow"),
     path("api/", include(router.urls)),
 ]
 
