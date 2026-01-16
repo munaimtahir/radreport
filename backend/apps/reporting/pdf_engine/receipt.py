@@ -350,7 +350,7 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
     story.append(build_receipt_section("Patient Copy"))
     story.append(Spacer(1, 4 * mm))
     story.append(HRFlowable(width="100%", thickness=0.5, color=HexColor("#999999")))
-    story.append(Paragraph("Cut / Tear Here", styles['small']))
+    story.append(Paragraph("Cut/Tear Here", styles['small']))
     story.append(Spacer(1, 4 * mm))
     story.append(build_receipt_section("Office Copy"))
     
