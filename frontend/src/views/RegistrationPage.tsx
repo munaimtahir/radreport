@@ -756,7 +756,7 @@ export default function RegistrationPage() {
         </div>
         <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Button onClick={savePatient} disabled={loading || patientLocked}>
-            Save Patient Registration
+            Save Patient &amp; Continue to Services
           </Button>
           {patientLocked && (
             <Button variant="secondary" onClick={() => setPatientLocked(false)}>
