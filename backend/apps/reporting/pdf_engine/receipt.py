@@ -43,6 +43,7 @@ LINE_HEIGHT = 3.5
 FOOTER_HEIGHT = 12
 SUMMARY_HEIGHT = 28
 MIN_FONT_SIZE = 8  # Minimum font size before splitting to multiple pages
+MAX_SERVICE_LINES = 2  # Maximum lines to display per service item
 
 
 def _wrap_text(text: str, font_name: str, font_size: float, max_width: float) -> List[str]:
@@ -211,7 +212,7 @@ def _calculate_service_layout(
                 "Helvetica",
                 font_size,
                 service_column_width,
-            )[:2]  # Limit to 2 lines per item
+            )[:MAX_SERVICE_LINES]  # Limit to MAX_SERVICE_LINES per item
             row_height = len(service_lines) * line_height_mm * mm + row_padding
             
             if total_height + row_height > available_height:
@@ -245,7 +246,7 @@ def _calculate_service_layout(
             "Helvetica",
             font_size,
             service_column_width,
-        )[:2]
+        )[:MAX_SERVICE_LINES]
         row_height = len(service_lines) * line_height_mm * mm + row_padding
         
         if total_height + row_height > available_height:
@@ -601,9 +602,10 @@ def _build_receipt_canvas(data: dict, receipt_settings, filename: str) -> Conten
     )
     
     if needs_split:
+        services_count = len(services)
         logger.info(
             "[RECEIPT PDF] Services require multiple pages. Splitting %d items across pages.",
-            len(services)
+            services_count
         )
         # Split services across multiple pages
         page_num = 0
