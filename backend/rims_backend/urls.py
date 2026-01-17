@@ -17,6 +17,10 @@ from apps.workflow.api import (
     ServiceCatalogViewSet, ServiceVisitViewSet, ServiceVisitItemViewSet,
     USGReportViewSet, OPDVitalsViewSet, OPDConsultViewSet, PDFViewSet
 )
+from apps.usg.api import (
+    UsgTemplateViewSet, UsgServiceProfileViewSet,
+    UsgStudyViewSet, UsgPublishedSnapshotViewSet
+)
 from apps.workflow.dashboard_api import (
     dashboard_summary, dashboard_worklist, dashboard_flow
 )
@@ -48,6 +52,11 @@ router.register(r"workflow/usg", USGReportViewSet, basename="usg-reports")
 router.register(r"workflow/opd/vitals", OPDVitalsViewSet, basename="opd-vitals")
 router.register(r"workflow/opd/consult", OPDConsultViewSet, basename="opd-consult")
 router.register(r"pdf", PDFViewSet, basename="pdf")
+# USG endpoints
+router.register(r"usg/templates", UsgTemplateViewSet, basename="usg-templates")
+router.register(r"usg/service-profiles", UsgServiceProfileViewSet, basename="usg-service-profiles")
+router.register(r"usg/studies", UsgStudyViewSet, basename="usg-studies")
+router.register(r"usg/snapshots", UsgPublishedSnapshotViewSet, basename="usg-snapshots")
 
 @api_view(["GET"])
 @permission_classes([AllowAny])

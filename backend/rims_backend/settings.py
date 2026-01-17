@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.studies",
     "apps.reporting",
     "apps.workflow",
+    "apps.usg",
 ]
 
 MIDDLEWARE = [

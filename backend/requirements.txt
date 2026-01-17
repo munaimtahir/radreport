@@ -9,3 +9,7 @@ Pillow>=10.0
 reportlab>=4.0
 gunicorn>=21.2
 whitenoise>=6.6
+google-auth>=2.27
+google-auth-oauthlib>=1.2
+google-auth-httplib2>=0.2
+google-api-python-client>=2.115
