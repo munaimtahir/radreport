@@ -377,11 +377,17 @@ export default function RegistrationPage() {
   const filteredServices = useMemo(() => {
     const query = serviceSearch.trim().toLowerCase();
     if (!query) return [] as Service[];
-    return services.filter((service) => {
-      const matchName = service.name.toLowerCase().includes(query);
-      const matchCode = service.code?.toLowerCase().includes(query);
-      return matchName || matchCode;
-    }).slice(0, 8);
+    try {
+      return services.filter((service) => {
+        if (!service || !service.name) return false;
+        const matchName = service.name.toLowerCase().includes(query);
+        const matchCode = service.code?.toLowerCase()?.includes(query) || false;
+        return matchName || matchCode;
+      }).slice(0, 8);
+    } catch (error) {
+      console.error("Error filtering services:", error);
+      return [] as Service[];
+    }
   }, [serviceSearch, services]);
 
   const addServiceToCart = (service: Service) => {
@@ -809,7 +815,7 @@ export default function RegistrationPage() {
                       backgroundColor: activeServiceIndex === index ? "#eef5ff" : "transparent",
                     }}
                   >
-                    <strong>{service.name}</strong> ({service.code || service.modality?.code || ""}) - Rs. {service.price || service.charges || 0}
+                    <strong>{service.name || "Unknown Service"}</strong> ({service.code || service.modality?.code || "N/A"}) - Rs. {service.price || service.charges || 0}
                   </div>
                 ))}
               </div>
@@ -826,7 +832,7 @@ export default function RegistrationPage() {
                     variant="secondary"
                     onClick={() => addServiceToCart(service)}
                   >
-                    {service.name}
+                    {service.name || "Unknown Service"}
                   </Button>
                 ))}
               </div>
@@ -845,7 +851,7 @@ export default function RegistrationPage() {
                     style={{ display: "flex", justifyContent: "space-between", padding: 10, borderBottom: "1px solid #eee" }}
                   >
                     <div>
-                      <strong>{service.name}</strong> ({service.code || service.modality?.code || ""})
+                      <strong>{service.name || "Unknown Service"}</strong> ({service.code || service.modality?.code || "N/A"})
                       <div style={{ fontSize: 12, color: "#666" }}>Rs. {service.price || service.charges || 0}</div>
                     </div>
                     <button
