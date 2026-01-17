@@ -56,12 +56,15 @@ class ConsultantProfileViewSet(viewsets.ModelViewSet):
 
         serializer = ConsultantBillingRuleInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        ConsultantBillingRule.objects.filter(consultant=consultant, is_active=True).update(is_active=False)
-        rule = ConsultantBillingRule.objects.create(
-            consultant=consultant,
-            is_active=True,
-            **serializer.validated_data,
-        )
+        from django.db import transaction
+        
+        with transaction.atomic():
+            ConsultantBillingRule.objects.filter(consultant=consultant, is_active=True).update(is_active=False)
+            rule = ConsultantBillingRule.objects.create(
+                consultant=consultant,
+                is_active=True,
+                **serializer.validated_data,
+            )
         return Response(ConsultantBillingRuleSerializer(rule).data, status=status.HTTP_201_CREATED)
 
 
@@ -119,52 +122,59 @@ class ConsultantSettlementViewSet(viewsets.ModelViewSet):
         consultant = get_object_or_404(ConsultantProfile, id=data["consultant_id"])
         preview = build_settlement_preview(consultant, data["date_from"], data["date_to"])
 
-        settlement = ConsultantSettlement.objects.create(
-            consultant=consultant,
-            date_from=data["date_from"],
-            date_to=data["date_to"],
-            gross_collected=preview["gross_collected"],
-            net_payable=preview["consultant_payable"],
-            clinic_share=preview["clinic_share"],
-            notes=data.get("notes"),
-            status=ConsultantSettlement.STATUS_DRAFT,
-        )
+        from django.db import transaction
+        
+        with transaction.atomic():
+            settlement = ConsultantSettlement.objects.create(
+                consultant=consultant,
+                date_from=data["date_from"],
+                date_to=data["date_to"],
+                gross_collected=preview["gross_collected"],
+                net_payable=preview["consultant_payable"],
+                clinic_share=preview["clinic_share"],
+                notes=data.get("notes"),
+                status=ConsultantSettlement.STATUS_DRAFT,
+            )
 
-        settlement.lines.bulk_create(
-            [
-                settlement.lines.model(
-                    settlement=settlement,
-                    service_item=line["service_item"],
-                    item_amount_snapshot=line["item_amount_snapshot"],
-                    paid_amount_snapshot=line["paid_amount_snapshot"],
-                    consultant_share_snapshot=line["consultant_share_snapshot"],
-                    clinic_share_snapshot=line["clinic_share_snapshot"],
-                    metadata={
-                        "visit_id": line["visit_id"],
-                        "patient_name": line["patient_name"],
-                        "service_name": line["service_name"],
-                    },
-                )
-                for line in preview["lines"]
-            ]
-        )
+            settlement.lines.bulk_create(
+                [
+                    settlement.lines.model(
+                        settlement=settlement,
+                        service_item=line["service_item"],
+                        item_amount_snapshot=line["item_amount_snapshot"],
+                        paid_amount_snapshot=line["paid_amount_snapshot"],
+                        consultant_share_snapshot=line["consultant_share_snapshot"],
+                        clinic_share_snapshot=line["clinic_share_snapshot"],
+                        metadata={
+                            "visit_id": line["visit_id"],
+                            "patient_name": line["patient_name"],
+                            "service_name": line["service_name"],
+                        },
+                    )
+                    for line in preview["lines"]
+                ]
+            )
 
         response_serializer = self.get_serializer(settlement)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"], url_path="finalize")
     def finalize(self, request, pk=None):
-        settlement = self.get_object()
-        if settlement.status == ConsultantSettlement.STATUS_FINALIZED:
-            return Response(self.get_serializer(settlement).data)
-        if settlement.status == ConsultantSettlement.STATUS_CANCELLED:
-            return Response(
-                {"detail": "Cancelled settlements cannot be finalized."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        from django.db import transaction
 
-        settlement.status = ConsultantSettlement.STATUS_FINALIZED
-        settlement.finalized_at = timezone.now()
-        settlement.finalized_by = request.user
-        settlement.save()
-        return Response(self.get_serializer(settlement).data)
+        with transaction.atomic():
+            settlement = get_object_or_404(self.get_queryset().select_for_update(), pk=pk)
+
+            if settlement.status == ConsultantSettlement.STATUS_FINALIZED:
+                return Response(self.get_serializer(settlement).data)
+            if settlement.status == ConsultantSettlement.STATUS_CANCELLED:
+                return Response(
+                    {"detail": "Cancelled settlements cannot be finalized."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+
+            settlement.status = ConsultantSettlement.STATUS_FINALIZED
+            settlement.finalized_at = timezone.now()
+            settlement.finalized_by = request.user
+            settlement.save()
+            return Response(self.get_serializer(settlement).data)

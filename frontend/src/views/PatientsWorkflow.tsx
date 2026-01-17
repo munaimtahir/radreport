@@ -182,7 +182,8 @@ export default function PatientsWorkflow() {
         link.click();
         document.body.removeChild(link);
       }
-      setTimeout(() => window.URL.revokeObjectURL(url), 60000);
+      // Revoke blob URL after 15 seconds (sufficient for browser to load PDF)
+      setTimeout(() => window.URL.revokeObjectURL(url), 15000);
     } catch (err: any) {
       setError(err.message || "Failed to open PDF");
     }
@@ -398,8 +399,19 @@ export default function PatientsWorkflow() {
                       </Button>
                       <Button
                         variant="secondary"
-                        disabled={!row.reports.available}
-                        onClick={() => handleOpenPdf(row.reports.items[0]?.pdf_url || undefined, `report_${row.mrn}.pdf`)}
+                        disabled={
+                          !row.reports.available ||
+                          !row.reports.items ||
+                          row.reports.items.length === 0
+                        }
+                        onClick={() => {
+                          const firstReport =
+                            row.reports.items && row.reports.items.length > 0
+                              ? row.reports.items[0]
+                              : undefined;
+                          const pdfUrl = firstReport?.pdf_url || undefined;
+                          handleOpenPdf(pdfUrl, `report_${row.mrn}.pdf`);
+                        }}
                       >
                         {row.reports.available ? "Print report" : "Report not published yet"}
                       </Button>
@@ -505,8 +517,19 @@ export default function PatientsWorkflow() {
                     </Button>
                     <Button
                       variant="secondary"
-                      disabled={!visit.reports.available}
-                      onClick={() => handleOpenPdf(visit.reports.items[0]?.pdf_url || undefined, `report_${visit.visit_code}.pdf`)}
+                      disabled={
+                        !visit.reports.available ||
+                        !visit.reports.items ||
+                        visit.reports.items.length === 0
+                      }
+                      onClick={() => {
+                        const firstReport =
+                          visit.reports.items && visit.reports.items.length > 0
+                            ? visit.reports.items[0]
+                            : undefined;
+                        const pdfUrl = firstReport?.pdf_url || undefined;
+                        handleOpenPdf(pdfUrl, `report_${visit.visit_code}.pdf`);
+                      }}
                     >
                       {visit.reports.available ? "Print report" : "Report not published yet"}
                     </Button>

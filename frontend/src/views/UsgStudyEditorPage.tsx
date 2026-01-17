@@ -75,8 +75,12 @@ const formatDateTime = (value?: string) => {
   return parsed.toLocaleString();
 };
 
+// Use a select when the number of options exceeds this threshold; otherwise use radio buttons.
+const SINGLE_CHOICE_SELECT_THRESHOLD = 5;
+
 const supportsMultiChoice = (field: TemplateField) => field.type === "multi_choice";
-const usesSelectForSingleChoice = (field: TemplateField) => (field.options || []).length > 5;
+const usesSelectForSingleChoice = (field: TemplateField) => 
+  (field.options || []).length > SINGLE_CHOICE_SELECT_THRESHOLD;
 const getErrorMessage = (err: any, fallback: string) => err?.message || fallback;
 
 export default function UsgStudyEditorPage() {
@@ -358,8 +362,12 @@ export default function UsgStudyEditorPage() {
     const apiBase = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
     const url = `${apiBase}/usg/studies/${studyId}/pdf/`;
     setError("");
-    const openedWindow = window.open(url, "_blank", "noopener,noreferrer");
-    if (!token) return;
+    // Open an empty window first to avoid popup blockers and show smoother UX
+    const openedWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (!token) {
+      if (openedWindow) openedWindow.close();
+      return;
+    }
     try {
       const response = await fetch(url, {
         headers: {
@@ -367,6 +375,7 @@ export default function UsgStudyEditorPage() {
         },
       });
       if (!response.ok) {
+        if (openedWindow) openedWindow.close();
         throw new Error("Failed to download PDF");
       }
       const blob = await response.blob();
@@ -377,6 +386,7 @@ export default function UsgStudyEditorPage() {
         window.open(blobUrl, "_blank", "noopener,noreferrer");
       }
     } catch (err: any) {
+      if (openedWindow && !openedWindow.closed) openedWindow.close();
       setError(getErrorMessage(err, "PDF retrieval failed"));
     }
   };
@@ -472,6 +482,7 @@ export default function UsgStudyEditorPage() {
                   textDecoration: "underline",
                   padding: 0,
                 }}
+                aria-label="Retry saving changes"
               >
                 Retry
               </button>
