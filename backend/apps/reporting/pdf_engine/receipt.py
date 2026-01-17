@@ -173,28 +173,16 @@ def _draw_receipt_copy(
     canvas.line(left_x, current_y, right_x, current_y)
     current_y -= 4 * mm
 
-    meta_rows = [
-        ("Receipt No:", data["receipt_number"]),
-        ("Visit ID:", data["visit_id"]),
-        ("Date:", data["date"]),
-        ("Cashier:", data["cashier"] or "-"),
-    ]
-    current_y = _draw_label_value_rows(
-        canvas,
-        meta_rows,
-        left_x,
-        current_y,
-        label_width=28 * mm,
-        value_width=content_width - 28 * mm,
-        font_size=8,
-        line_height=4 * mm,
-    )
+    column_gap = 6 * mm
+    column_width = (content_width - column_gap) / 2
+    left_column_x = left_x
+    right_column_x = left_x + column_width + column_gap
+    section_top_y = current_y
 
     canvas.setFont("Helvetica-Bold", 9)
     canvas.setFillColor(CLINIC_BLUE)
-    canvas.drawString(left_x, current_y, "Patient Information")
-    current_y -= 4.5 * mm
-
+    canvas.drawString(left_column_x, section_top_y, "Patient Information")
+    left_column_y = section_top_y - 4.5 * mm
     patient_rows = [
         ("Patient Reg No:", data["patient_reg_no"] or "-"),
         ("MRN:", data["mrn"] or "-"),
@@ -203,16 +191,39 @@ def _draw_receipt_copy(
         ("Gender:", data["gender"] or "-"),
         ("Phone:", data["phone"] or "-"),
     ]
-    current_y = _draw_label_value_rows(
+    left_column_y = _draw_label_value_rows(
         canvas,
         patient_rows,
-        left_x,
-        current_y,
-        label_width=32 * mm,
-        value_width=content_width - 32 * mm,
+        left_column_x,
+        left_column_y,
+        label_width=30 * mm,
+        value_width=column_width - 30 * mm,
         font_size=8,
         line_height=4 * mm,
     )
+
+    canvas.setFont("Helvetica-Bold", 9)
+    canvas.setFillColor(CLINIC_BLUE)
+    canvas.drawString(right_column_x, section_top_y, "Receipt Details")
+    right_column_y = section_top_y - 4.5 * mm
+    meta_rows = [
+        ("Receipt No:", data["receipt_number"]),
+        ("Visit ID:", data["visit_id"]),
+        ("Date:", data["date"]),
+        ("Cashier:", data["cashier"] or "-"),
+    ]
+    right_column_y = _draw_label_value_rows(
+        canvas,
+        meta_rows,
+        right_column_x,
+        right_column_y,
+        label_width=24 * mm,
+        value_width=column_width - 24 * mm,
+        font_size=8,
+        line_height=4 * mm,
+    )
+
+    current_y = min(left_column_y, right_column_y) - 2 * mm
 
     canvas.setFont("Helvetica-Bold", 9)
     canvas.setFillColor(CLINIC_BLUE)
