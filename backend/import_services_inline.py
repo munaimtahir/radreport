@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
-Import ultrasound services from CSV file
-This script will delete all existing services and import new ones from the CSV
+Import ultrasound services with inline CSV data
+This script will delete all existing services and import new ones
 """
 import os
 import sys
@@ -19,7 +19,7 @@ from apps.studies.models import OrderItem, Study
 from apps.workflow.models import ServiceVisit, ServiceVisitItem
 from apps.reporting.models import Report
 
-# Inline CSV data from rims_services_ultrasound_import.csv
+# Inline CSV data
 CSV_DATA = """service_code,name,department,billing_group,sub_category,price,currency,tat_min,unit,is_active
 US001,Doppler Obstetric Single,Radiology,Ultrasound,Doppler,3000,PKR,30,service,1
 US002,Doppler Obstetric Twins,Radiology,Ultrasound,Doppler,6000,PKR,45,service,1
@@ -58,8 +58,8 @@ US034,Doppler Neck,Radiology,Ultrasound,Doppler,3500,PKR,30,service,1
 US035,Ultrasound Breast (Bilateral),Radiology,Ultrasound,Gray Scale,5000,PKR,30,service,1
 US036,Ultrasound Twin Obstetrics (Non-Doppler),Radiology,Ultrasound,Gray Scale,3000,PKR,30,service,1"""
 
-def import_ultrasound_services(csv_path=None):
-    """Import services from the ultrasound CSV file or inline data"""
+def import_ultrasound_services():
+    """Import services from inline CSV data"""
     print("=" * 60)
     print("Importing Ultrasound Services")
     print("=" * 60)
@@ -100,84 +100,68 @@ def import_ultrasound_services(csv_path=None):
     print(f"✓ {'Created' if created else 'Exists'}: {modality.code} - {modality.name}")
     
     # Step 3: Import services from CSV
-    print("\n[3/3] Importing services from CSV...")
+    print("\n[3/3] Importing services from inline CSV...")
     created_count = 0
     errors = []
     
-    # Use CSV file if provided, otherwise use inline data
-    if csv_path and os.path.exists(csv_path):
-        print(f"Using CSV file: {csv_path}")
-        csvfile = open(csv_path, 'r', encoding='utf-8')
-    else:
-        print("Using inline CSV data")
-        csvfile = io.StringIO(CSV_DATA)
+    csvfile = io.StringIO(CSV_DATA)
+    reader = csv.DictReader(csvfile)
     
-    try:
-        reader = csv.DictReader(csvfile)
-        
-        for row_num, row in enumerate(reader, start=2):  # Start at 2 (header is row 1)
-            try:
-                # Skip empty rows
-                if not row.get('service_code', '').strip():
-                    continue
-                
-                service_code = row['service_code'].strip()
-                name = row['name'].strip()
-                department = row['department'].strip()
-                billing_group = row.get('billing_group', '').strip()
-                sub_category = row.get('sub_category', '').strip()
-                price = float(row['price'].strip())
-                currency = row.get('currency', 'PKR').strip()
-                tat_min = int(row['tat_min'].strip())
-                unit = row.get('unit', 'service').strip()
-                is_active = int(row.get('is_active', '1').strip()) == 1
-                
-                # Calculate tat_value and tat_unit from tat_minutes
-                # Round to nearest hour for tat_value (since it's an integer)
-                if tat_min < 60:
-                    tat_value = 1  # Round up to 1 hour
-                    tat_unit = "hours"
-                elif tat_min < 1440:  # Less than 24 hours
-                    # Round to nearest hour
-                    tat_value = round(tat_min / 60) if tat_min % 60 >= 30 else tat_min // 60
-                    if tat_value == 0:
-                        tat_value = 1
-                    tat_unit = "hours"
-                else:
-                    tat_value = round(tat_min / 1440) if tat_min % 1440 >= 720 else tat_min // 1440
-                    if tat_value == 0:
-                        tat_value = 1
-                    tat_unit = "days"
-                
-                # Create service with approximate tat_value/tat_unit
-                # The save() method will recalculate tat_minutes, so we'll override it after
-                service = Service.objects.create(
-                    code=service_code,
-                    modality=modality,
-                    name=name,
-                    category=department,
-                    price=price,
-                    charges=price,
-                    tat_value=tat_value,
-                    tat_unit=tat_unit,
-                    is_active=is_active,
-                )
-                
-                # Override tat_minutes with exact value from CSV (bypassing save() recalculation)
-                Service.objects.filter(id=service.id).update(tat_minutes=tat_min)
-                
-                created_count += 1
-                print(f"✓ Created: {service_code} - {name} (TAT: {tat_min} min, Price: {price})")
-                
-            except Exception as e:
-                error_msg = f"Row {row_num}: {str(e)}"
-                errors.append(error_msg)
-                print(f"✗ {error_msg}")
-    finally:
-        if isinstance(csvfile, io.StringIO):
-            csvfile.close()
-        elif csv_path:
-            csvfile.close()
+    for row_num, row in enumerate(reader, start=2):  # Start at 2 (header is row 1)
+        try:
+            # Skip empty rows
+            if not row.get('service_code', '').strip():
+                continue
+            
+            service_code = row['service_code'].strip()
+            name = row['name'].strip()
+            department = row['department'].strip()
+            billing_group = row.get('billing_group', '').strip()
+            sub_category = row.get('sub_category', '').strip()
+            price = float(row['price'].strip())
+            currency = row.get('currency', 'PKR').strip()
+            tat_min = int(row['tat_min'].strip())
+            unit = row.get('unit', 'service').strip()
+            is_active = int(row.get('is_active', '1').strip()) == 1
+            
+            # Calculate tat_value and tat_unit from tat_minutes
+            if tat_min < 60:
+                tat_value = 1  # Round up to 1 hour
+                tat_unit = "hours"
+            elif tat_min < 1440:  # Less than 24 hours
+                tat_value = round(tat_min / 60) if tat_min % 60 >= 30 else tat_min // 60
+                if tat_value == 0:
+                    tat_value = 1
+                tat_unit = "hours"
+            else:
+                tat_value = round(tat_min / 1440) if tat_min % 1440 >= 720 else tat_min // 1440
+                if tat_value == 0:
+                    tat_value = 1
+                tat_unit = "days"
+            
+            # Create service with approximate tat_value/tat_unit
+            service = Service.objects.create(
+                code=service_code,
+                modality=modality,
+                name=name,
+                category=department,
+                price=price,
+                charges=price,
+                tat_value=tat_value,
+                tat_unit=tat_unit,
+                is_active=is_active,
+            )
+            
+            # Override tat_minutes with exact value from CSV (bypassing save() recalculation)
+            Service.objects.filter(id=service.id).update(tat_minutes=tat_min)
+            
+            created_count += 1
+            print(f"✓ Created: {service_code} - {name} (Price: {price} PKR, TAT: {tat_min} min)")
+            
+        except Exception as e:
+            error_msg = f"Row {row_num}: {str(e)}"
+            errors.append(error_msg)
+            print(f"✗ {error_msg}")
     
     print("\n" + "=" * 60)
     print("✅ Import completed!")
@@ -192,12 +176,4 @@ def import_ultrasound_services(csv_path=None):
     print(f"\nTotal services in database: {Service.objects.count()}")
 
 if __name__ == "__main__":
-    csv_path = "/home/munaim/Downloads/rims_services_ultrasound_import.csv" if len(sys.argv) < 2 else sys.argv[1]
-    
-    # If CSV file doesn't exist, use inline data
-    if not os.path.exists(csv_path):
-        print(f"Note: CSV file not found at {csv_path}")
-        print("Using inline CSV data instead\n")
-        csv_path = None
-    
-    import_ultrasound_services(csv_path)
+    import_ultrasound_services()

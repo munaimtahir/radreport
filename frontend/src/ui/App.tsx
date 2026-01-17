@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route, Navigate, Link, useLocation } from "react-router-dom";
+import { Routes, Route, Navigate, Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth, AuthProvider } from "./auth";
 import { apiGet } from "./api";
 import Login from "../views/Login";
@@ -16,11 +16,13 @@ import FinalReportsPage from "../views/FinalReportsPage";
 import AccessDenied from "../views/AccessDenied";
 import ModuleDisabled from "../views/ModuleDisabled";
 import Footer from "./components/Footer";
+import { BrandLogo, BrandTitle } from "./components/brand";
+import { theme } from "../theme";
 
 function Shell() {
   const { token, logout, user, isLoading } = useAuth();
   const location = useLocation();
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
+  const navigate = useNavigate();
   const groups = user?.groups || [];
   const isSuperuser = user?.is_superuser || false;
   const canRegister = isSuperuser || groups.includes("registration");
@@ -36,69 +38,50 @@ function Shell() {
     return location.pathname === path || location.pathname.startsWith(path + "/");
   };
 
-  useEffect(() => {
-    if (token) {
-      // Try to fetch logo from receipt settings
-      apiGet("/receipt-settings/", token)
-        .then((data: any) => {
-          if (data?.logo_image_url) {
-            setLogoUrl(data.logo_image_url);
-          }
-        })
-        .catch(() => {
-          // Logo not available, continue without it
-        });
-    }
-  }, [token]);
-
   if (!token) return <Navigate to="/login" replace />;
   if (isLoading) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", minHeight: "100vh", fontFamily: "system-ui" }}>
+      <div style={{ 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center", 
+        minHeight: "100vh", 
+        fontFamily: theme.typography.fontFamily 
+      }}>
         Loading user...
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", fontFamily: "system-ui", flexDirection: "column" }}>
+    <div style={{ 
+      display: "flex", 
+      minHeight: "100vh", 
+      fontFamily: theme.typography.fontFamily, 
+      flexDirection: "column" 
+    }}>
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
         <aside
           style={{
             width: 240,
             padding: 20,
-            borderRight: "1px solid #e0e0e0",
-            backgroundColor: "#fafafa",
+            borderRight: `1px solid ${theme.colors.border}`,
+            backgroundColor: theme.colors.backgroundGray,
             display: "flex",
             flexDirection: "column",
           }}
         >
-          <div style={{ marginBottom: 24 }}>
-            {logoUrl ? (
-              <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
-                <img
-                  src={logoUrl}
-                  alt="Consultant Place Clinics Logo"
-                  style={{
-                    width: 60,
-                    height: 60,
-                    objectFit: "contain",
-                    display: "block",
-                  }}
-                  onError={(e) => {
-                    // Hide image if it fails to load
-                    (e.target as HTMLImageElement).style.display = "none";
-                  }}
-                />
-                <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, color: "#333", lineHeight: 1.3 }}>
-                  Consultant Place Clinics
-                </h2>
-              </div>
-            ) : (
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 600, color: "#333" }}>
-                Consultant Place Clinics
-              </h2>
-            )}
+          <div 
+            style={{ 
+              marginBottom: 24, 
+              cursor: "pointer" 
+            }}
+            onClick={() => navigate("/")}
+          >
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
+              <BrandLogo size="sm" variant="full" />
+              <BrandTitle size="sm" />
+            </div>
           </div>
           <nav style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
             <Link
@@ -106,17 +89,25 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: isActiveRoute("/") ? "#0B5ED7" : "#555",
-                backgroundColor: isActiveRoute("/") ? "#f0f7ff" : "transparent",
-                borderRadius: 6,
+                color: isActiveRoute("/") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                backgroundColor: isActiveRoute("/") ? theme.colors.brandBlueSoft : "transparent",
+                borderRadius: theme.radius.base,
                 fontSize: 14,
-                fontWeight: isActiveRoute("/") ? 500 : 400,
+                fontWeight: isActiveRoute("/") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                transition: theme.transitions.fast,
               }}
             >
               Dashboard
             </Link>
-            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e0e0e0" }}>
-              <div style={{ fontSize: 11, color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${theme.colors.border}` }}>
+              <div style={{ 
+                fontSize: 11, 
+                color: theme.colors.textTertiary, 
+                fontWeight: theme.typography.fontWeight.semibold, 
+                textTransform: "uppercase", 
+                letterSpacing: "0.5px", 
+                marginBottom: 8 
+              }}>
                 WORKFLOW
               </div>
             </div>
@@ -126,11 +117,12 @@ function Shell() {
                 style={{
                   padding: "10px 12px",
                   textDecoration: "none",
-                  color: isActiveRoute("/registration") ? "#0B5ED7" : "#555",
-                  backgroundColor: isActiveRoute("/registration") ? "#f0f7ff" : "transparent",
-                  borderRadius: 6,
+                  color: isActiveRoute("/registration") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                  backgroundColor: isActiveRoute("/registration") ? theme.colors.brandBlueSoft : "transparent",
+                  borderRadius: theme.radius.base,
                   fontSize: 14,
-                  fontWeight: isActiveRoute("/registration") ? 500 : 400,
+                  fontWeight: isActiveRoute("/registration") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                  transition: theme.transitions.fast,
                 }}
               >
                 Registration
@@ -142,11 +134,12 @@ function Shell() {
                 style={{
                   padding: "10px 12px",
                   textDecoration: "none",
-                  color: isActiveRoute("/worklists/usg") ? "#0B5ED7" : "#555",
-                  backgroundColor: isActiveRoute("/worklists/usg") ? "#f0f7ff" : "transparent",
-                  borderRadius: 6,
+                  color: isActiveRoute("/worklists/usg") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                  backgroundColor: isActiveRoute("/worklists/usg") ? theme.colors.brandBlueSoft : "transparent",
+                  borderRadius: theme.radius.base,
                   fontSize: 14,
-                  fontWeight: isActiveRoute("/worklists/usg") ? 500 : 400,
+                  fontWeight: isActiveRoute("/worklists/usg") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                  transition: theme.transitions.fast,
                 }}
               >
                 Report Entry
@@ -158,11 +151,12 @@ function Shell() {
                 style={{
                   padding: "10px 12px",
                   textDecoration: "none",
-                  color: isActiveRoute("/worklists/verification") ? "#0B5ED7" : "#555",
-                  backgroundColor: isActiveRoute("/worklists/verification") ? "#f0f7ff" : "transparent",
-                  borderRadius: 6,
+                  color: isActiveRoute("/worklists/verification") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                  backgroundColor: isActiveRoute("/worklists/verification") ? theme.colors.brandBlueSoft : "transparent",
+                  borderRadius: theme.radius.base,
                   fontSize: 14,
-                  fontWeight: isActiveRoute("/worklists/verification") ? 500 : 400,
+                  fontWeight: isActiveRoute("/worklists/verification") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                  transition: theme.transitions.fast,
                 }}
               >
                 Verification
@@ -173,18 +167,26 @@ function Shell() {
               style={{
                 padding: "10px 12px",
                 textDecoration: "none",
-                color: isActiveRoute("/reports") ? "#0B5ED7" : "#555",
-                backgroundColor: isActiveRoute("/reports") ? "#f0f7ff" : "transparent",
-                borderRadius: 6,
+                color: isActiveRoute("/reports") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                backgroundColor: isActiveRoute("/reports") ? theme.colors.brandBlueSoft : "transparent",
+                borderRadius: theme.radius.base,
                 fontSize: 14,
-                fontWeight: isActiveRoute("/reports") ? 500 : 400,
+                fontWeight: isActiveRoute("/reports") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                transition: theme.transitions.fast,
               }}
             >
               Final Reports
             </Link>
             {canAdmin && (
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e0e0e0" }}>
-                <div style={{ fontSize: 11, color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+              <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${theme.colors.border}` }}>
+                <div style={{ 
+                  fontSize: 11, 
+                  color: theme.colors.textTertiary, 
+                  fontWeight: theme.typography.fontWeight.semibold, 
+                  textTransform: "uppercase", 
+                  letterSpacing: "0.5px", 
+                  marginBottom: 8 
+                }}>
                   ADMIN
                 </div>
                 <Link
@@ -192,11 +194,12 @@ function Shell() {
                   style={{
                     padding: "10px 12px",
                     textDecoration: "none",
-                    color: isActiveRoute("/admin/report-templates") ? "#0B5ED7" : "#555",
-                    backgroundColor: isActiveRoute("/admin/report-templates") ? "#f0f7ff" : "transparent",
-                    borderRadius: 6,
+                    color: isActiveRoute("/admin/report-templates") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/admin/report-templates") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
                     fontSize: 14,
-                    fontWeight: isActiveRoute("/admin/report-templates") ? 500 : 400,
+                    fontWeight: isActiveRoute("/admin/report-templates") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
                   }}
                 >
                   Report Templates
@@ -206,11 +209,12 @@ function Shell() {
                   style={{
                     padding: "10px 12px",
                     textDecoration: "none",
-                    color: isActiveRoute("/admin/service-templates") ? "#0B5ED7" : "#555",
-                    backgroundColor: isActiveRoute("/admin/service-templates") ? "#f0f7ff" : "transparent",
-                    borderRadius: 6,
+                    color: isActiveRoute("/admin/service-templates") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/admin/service-templates") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
                     fontSize: 14,
-                    fontWeight: isActiveRoute("/admin/service-templates") ? 500 : 400,
+                    fontWeight: isActiveRoute("/admin/service-templates") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
                   }}
                 >
                   Service Templates
@@ -305,13 +309,14 @@ function Shell() {
             style={{
               marginTop: "auto",
               padding: "10px 16px",
-              backgroundColor: "#dc3545",
+              backgroundColor: theme.colors.danger,
               color: "white",
               border: "none",
-              borderRadius: 6,
+              borderRadius: theme.radius.base,
               cursor: "pointer",
               fontSize: 14,
-              fontWeight: 500,
+              fontWeight: theme.typography.fontWeight.medium,
+              transition: theme.transitions.fast,
             }}
           >
             Logout
@@ -324,7 +329,7 @@ function Shell() {
             display: "flex",
             flexDirection: "column",
             minHeight: 0,
-            backgroundColor: "#fff",
+            backgroundColor: theme.colors.background,
           }}
         >
           <div style={{ flex: 1, minHeight: 0, paddingBottom: 20 }}>

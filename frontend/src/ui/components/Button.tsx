@@ -1,4 +1,5 @@
 import React from "react";
+import { theme } from "../../theme";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: "primary" | "secondary" | "success" | "warning" | "danger";
@@ -14,33 +15,34 @@ export default function Button({
   const baseStyle: React.CSSProperties = {
     padding: "10px 20px",
     fontSize: 14,
-    fontWeight: 500,
+    fontWeight: theme.typography.fontWeight.medium,
     border: "none",
-    borderRadius: 6,
+    borderRadius: theme.radius.base,
     cursor: props.disabled ? "not-allowed" : "pointer",
-    transition: "background-color 0.2s",
+    transition: theme.transitions.base,
+    fontFamily: theme.typography.fontFamily,
     ...style,
   };
 
   const variantStyles: Record<string, React.CSSProperties> = {
     primary: {
-      backgroundColor: props.disabled ? "#ccc" : "#0B5ED7",
+      backgroundColor: props.disabled ? theme.colors.border : theme.colors.brandBlue,
       color: "white",
     },
     secondary: {
-      backgroundColor: props.disabled ? "#ccc" : "#6c757d",
+      backgroundColor: props.disabled ? theme.colors.border : theme.colors.brandOrange,
       color: "white",
     },
     success: {
-      backgroundColor: props.disabled ? "#ccc" : "#28a745",
+      backgroundColor: props.disabled ? theme.colors.border : theme.colors.success,
       color: "white",
     },
     warning: {
-      backgroundColor: props.disabled ? "#ccc" : "#ffc107",
-      color: "#000",
+      backgroundColor: props.disabled ? theme.colors.border : theme.colors.warning,
+      color: theme.colors.textPrimary,
     },
     danger: {
-      backgroundColor: props.disabled ? "#ccc" : "#dc3545",
+      backgroundColor: props.disabled ? theme.colors.border : theme.colors.danger,
       color: "white",
     },
   };

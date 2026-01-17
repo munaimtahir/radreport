@@ -167,8 +167,12 @@ class ReceiptSequence(models.Model):
 
 class ReceiptSettings(models.Model):
     """Receipt branding settings (singleton)"""
-    header_text = models.CharField(max_length=200, default="Consultants Clinic Place")
-    footer_text = models.TextField(blank=True, default="", help_text="Footer text displayed at bottom of receipt")
+    header_text = models.CharField(max_length=200, default="Consultant Place Clinic")
+    footer_text = models.TextField(
+        blank=True,
+        default="Adjacent Excel Labs, Near Arman Pan Shop Faisalabad Road Jaranwala\nFor information/Appointment: Tel: 041 4313 777 | WhatsApp: 03279640897",
+        help_text="Footer text displayed at bottom of receipt"
+    )
     logo_image = models.ImageField(upload_to="branding/", blank=True, null=True)
     header_image = models.ImageField(upload_to="branding/", blank=True, null=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -186,7 +190,13 @@ class ReceiptSettings(models.Model):
     @classmethod
     def get_settings(cls):
         """Get or create the singleton instance"""
-        obj, created = cls.objects.get_or_create(pk=1, defaults={"header_text": "Consultants Clinic Place"})
+        obj, created = cls.objects.get_or_create(
+            pk=1,
+            defaults={
+                "header_text": "Consultant Place Clinic",
+                "footer_text": "Adjacent Excel Labs, Near Arman Pan Shop Faisalabad Road Jaranwala\nFor information/Appointment: Tel: 041 4313 777 | WhatsApp: 03279640897"
+            }
+        )
         return obj
     
     def __str__(self):

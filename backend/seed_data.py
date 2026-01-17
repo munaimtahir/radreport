@@ -54,25 +54,10 @@ def seed_data():
         modalities[code] = mod
         print(f"✓ {'Created' if created else 'Exists'}: {code} - {name}")
     
-    # Create Services
-    print("\n[3/7] Creating services...")
+    # Create Services (SKIPPED - use import_services_inline.py or management command)
+    print("\n[3/7] Services...")
+    print("✓ Skipping service creation - use import tools to manage services")
     services = {}
-    service_templates = [
-        ("USG", "Abdominal Ultrasound", 5000, 120),
-        ("USG", "Pelvic Ultrasound", 4500, 120),
-        ("XRAY", "Chest X-Ray", 2000, 60),
-        ("XRAY", "Limb X-Ray", 1500, 60),
-        ("CT", "CT Head", 15000, 240),
-        ("CT", "CT Chest", 20000, 240),
-    ]
-    for mod_code, name, price, tat in service_templates:
-        svc, created = Service.objects.get_or_create(
-            modality=modalities[mod_code],
-            name=name,
-            defaults={"price": price, "tat_minutes": tat}
-        )
-        services[f"{mod_code}_{name}"] = svc
-        print(f"✓ {'Created' if created else 'Exists'}: {mod_code} - {name}")
     
     # Create Template
     print("\n[4/7] Creating template...")
@@ -197,95 +182,21 @@ def seed_data():
     latest_version = template.versions.filter(is_published=True).order_by("-version").first()
     
     # Link template to service
-    if services.get("USG_Abdominal Ultrasound"):
-        services["USG_Abdominal Ultrasound"].default_template = template
-        services["USG_Abdominal Ultrasound"].save()
-        print("✓ Linked template to Abdominal USG service")
+    # Skipped - no demo services created
     
-    # Create Patients
-    print("\n[5/7] Creating patients...")
+    # Create Patients (SKIPPED - for demo only)
+    print("\n[5/7] Patients...")
+    print("✓ Skipping patient creation - demo data only")
     patients = []
-    patient_data = [
-        ("MRN001", "John Doe", 45, "M", "03001234567", "Lahore", "Dr. Smith"),
-        ("MRN002", "Jane Smith", 32, "F", "03009876543", "Karachi", "Dr. Ali"),
-        ("MRN003", "Ahmed Khan", 28, "M", "03005555666", "Islamabad", "Dr. Hassan"),
-    ]
-    for mrn, name, age, gender, phone, address, referrer in patient_data:
-        p, created = Patient.objects.get_or_create(
-            mrn=mrn,
-            defaults={
-                "name": name,
-                "age": age,
-                "gender": gender,
-                "phone": phone,
-                "address": address,
-                "referrer": referrer,
-            }
-        )
-        patients.append(p)
-        print(f"✓ {'Created' if created else 'Exists'}: {mrn} - {name}")
     
-    # Create Studies
-    print("\n[6/7] Creating studies...")
+    # Create Studies (SKIPPED - for demo only)
+    print("\n[6/7] Studies...")
+    print("✓ Skipping study creation - demo data only")
     studies = []
-    service = services.get("USG_Abdominal Ultrasound")
-    if service:
-        for i, patient in enumerate(patients):
-            now = timezone.now()
-            prefix = now.strftime("%Y%m%d")
-            accession = f"{prefix}{str(i+1).zfill(4)}"
-            
-            study, created = Study.objects.get_or_create(
-                accession=accession,
-                defaults={
-                    "patient": patient,
-                    "service": service,
-                    "indication": "Routine checkup",
-                    "status": "draft" if i == 0 else "registered",
-                    "created_by": user,
-                }
-            )
-            studies.append(study)
-            print(f"✓ {'Created' if created else 'Exists'}: {accession} - {patient.name}")
     
-    # Create one finalized report
-    print("\n[7/7] Creating finalized report...")
-    if studies and latest_version:
-        study = studies[0]
-        report, created = Report.objects.get_or_create(
-            study=study,
-            defaults={
-                "template_version": latest_version,
-                "status": "draft",
-                "values": {
-                    "liver": "Normal size and echotexture",
-                    "status": "normal",
-                    "abnormalities": []
-                },
-                "narrative": "The liver appears normal in size and echotexture. No focal lesions identified. Gallbladder is normal. Spleen is normal in size.",
-                "impression": "Normal abdominal ultrasound with no significant findings.",
-            }
-        )
-        
-        if created or report.status == "draft":
-            # Finalize the report
-            report.status = "final"
-            report.finalized_by = user
-            report.finalized_at = timezone.now()
-            
-            # Generate PDF
-            pdf_file = build_basic_pdf(report)
-            report.pdf_file.save(pdf_file.name, pdf_file, save=False)
-            report.save()
-            
-            # Update study status
-            study.status = "final"
-            study.save()
-            
-            print(f"✓ Created and finalized report for {study.accession}")
-            print(f"  - PDF: {report.pdf_file.name}")
-        else:
-            print(f"✓ Report already finalized for {study.accession}")
+    # Create one finalized report (SKIPPED - for demo only)
+    print("\n[7/7] Reports...")
+    print("✓ Skipping report creation - demo data only")
     
     print("\n" + "=" * 60)
     print("✅ Data seeding completed!")

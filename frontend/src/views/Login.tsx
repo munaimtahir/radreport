@@ -1,7 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../ui/auth";
-import { login, apiGet } from "../ui/api";
+import { login } from "../ui/api";
+import { BrandHeader } from "../ui/components/brand";
+import { theme } from "../theme";
 
 export default function Login() {
   const { setToken } = useAuth();
@@ -10,28 +12,6 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [logoUrl, setLogoUrl] = useState<string | null>(null);
-
-  useEffect(() => {
-    // Fetch logo from public endpoint (no auth required)
-    const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
-    fetch(`${API_BASE}/receipt-settings/public/`)
-      .then((res) => {
-        if (res.ok) {
-          return res.json();
-        }
-        return null;
-      })
-      .then((data: any) => {
-        if (data?.logo_image_url) {
-          setLogoUrl(data.logo_image_url);
-        }
-      })
-      .catch(() => {
-        // Logo not available, continue without it
-        // Logo will be visible after login in the main app
-      });
-  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,8 +35,8 @@ export default function Login() {
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
-        fontFamily: "system-ui",
-        backgroundColor: "#f5f5f5",
+        fontFamily: theme.typography.fontFamily,
+        backgroundColor: theme.colors.backgroundLight,
       }}
     >
       <div
@@ -64,39 +44,13 @@ export default function Login() {
           maxWidth: 420,
           width: "100%",
           padding: 40,
-          backgroundColor: "white",
-          borderRadius: 8,
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+          backgroundColor: theme.colors.background,
+          borderRadius: theme.radius.md,
+          boxShadow: theme.shadows.md,
         }}
       >
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          {logoUrl ? (
-            <>
-              <img
-                src={logoUrl}
-                alt="Consultant Place Clinics Logo"
-                style={{
-                  width: 120,
-                  height: 120,
-                  objectFit: "contain",
-                  marginBottom: 20,
-                  display: "block",
-                  margin: "0 auto 20px auto",
-                }}
-                onError={(e) => {
-                  // Hide image if it fails to load
-                  (e.target as HTMLImageElement).style.display = "none";
-                }}
-              />
-              <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: "#333" }}>
-                Consultant Place Clinics
-              </h1>
-            </>
-          ) : (
-            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 600, color: "#333" }}>
-              Consultant Place Clinics
-            </h1>
-          )}
+        <div style={{ marginBottom: 32 }}>
+          <BrandHeader logoSize="lg" titleSize="md" layout="vertical" align="center" />
         </div>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>
@@ -110,9 +64,10 @@ export default function Login() {
                 width: "100%",
                 padding: 12,
                 fontSize: 14,
-                border: "1px solid #ddd",
-                borderRadius: 6,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.radius.base,
                 boxSizing: "border-box",
+                fontFamily: theme.typography.fontFamily,
               }}
             />
           </div>
@@ -127,9 +82,10 @@ export default function Login() {
                 width: "100%",
                 padding: 12,
                 fontSize: 14,
-                border: "1px solid #ddd",
-                borderRadius: 6,
+                border: `1px solid ${theme.colors.border}`,
+                borderRadius: theme.radius.base,
                 boxSizing: "border-box",
+                fontFamily: theme.typography.fontFamily,
               }}
             />
           </div>
@@ -139,7 +95,7 @@ export default function Login() {
                 padding: "12px 16px",
                 backgroundColor: "#fee",
                 border: "1px solid #fcc",
-                borderRadius: 6,
+                borderRadius: theme.radius.base,
                 color: "#c33",
                 fontSize: 14,
               }}
@@ -153,19 +109,30 @@ export default function Login() {
             style={{
               padding: 12,
               fontSize: 16,
-              fontWeight: 500,
-              backgroundColor: loading ? "#ccc" : "#0B5ED7",
+              fontWeight: theme.typography.fontWeight.medium,
+              backgroundColor: loading ? theme.colors.border : theme.colors.brandBlue,
               color: "white",
               border: "none",
-              borderRadius: 6,
+              borderRadius: theme.radius.base,
               cursor: loading ? "not-allowed" : "pointer",
+              transition: theme.transitions.base,
+            }}
+            onMouseEnter={(e) => {
+              if (!loading) {
+                (e.target as HTMLButtonElement).style.backgroundColor = theme.colors.brandBlueDark;
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!loading) {
+                (e.target as HTMLButtonElement).style.backgroundColor = theme.colors.brandBlue;
+              }
             }}
           >
             {loading ? "Logging in..." : "Login"}
           </button>
         </form>
-        <p style={{ marginTop: 20, color: "#666", fontSize: 12, textAlign: "center" }}>
-          Use your Django superuser credentials to login.
+        <p style={{ marginTop: 20, color: theme.colors.textSecondary, fontSize: 12, textAlign: "center" }}>
+          Use your credentials to login
         </p>
       </div>
     </div>

@@ -15,10 +15,52 @@ from reportlab.platypus import (
     Image,
     HRFlowable,
     KeepTogether,
+    Flowable,
 )
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.lib.colors import black, white, HexColor
 from .base import PDFBase, PDFStyles
+
+
+# Locked clinic branding footer (fallback constant)
+LOCKED_FOOTER_TEXT = "Adjacent Excel Labs, Near Arman Pan Shop Faisalabad Road Jaranwala\nFor information/Appointment: Tel: 041 4313 777 | WhatsApp: 03279640897"
+
+# Clinic brand colors
+CLINIC_BLUE = HexColor('#0B5ED7')
+ACCENT_ORANGE = HexColor('#F39C12')
+LIGHT_GREY = HexColor('#9AA0A6')
+
+
+class DottedSeparator(Flowable):
+    """Custom flowable for dotted tear separator line"""
+    
+    def __init__(self, width='100%', dash_length=3, gap_length=3, color=LIGHT_GREY):
+        Flowable.__init__(self)
+        self.width = width
+        self.dash_length = dash_length
+        self.gap_length = gap_length
+        self.color = color
+        self.height = 3 * mm
+    
+    def wrap(self, availWidth, availHeight):
+        """Calculate the space needed"""
+        if isinstance(self.width, str) and self.width.endswith('%'):
+            percent = float(self.width[:-1])
+            self.actual_width = availWidth * (percent / 100.0)
+        else:
+            self.actual_width = self.width if isinstance(self.width, (int, float)) else availWidth
+        return (self.actual_width, self.height)
+    
+    def draw(self):
+        """Draw the dotted line on the canvas"""
+        canvas = self.canv
+        canvas.saveState()
+        canvas.setStrokeColor(self.color)
+        canvas.setLineWidth(0.5)
+        canvas.setDash([self.dash_length, self.gap_length])
+        canvas.line(0, self.height / 2, self.actual_width, self.height / 2)
+        canvas.restoreState()
 
 
 def build_receipt_pdf_reportlab(visit) -> ContentFile:
@@ -188,7 +230,8 @@ def build_receipt_pdf_reportlab(visit) -> ContentFile:
 def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> ContentFile:
     """
     Generate dual-copy receipt PDF for ServiceVisit (workflow) using ReportLab.
-    Creates Patient Copy (top) and Office Copy (bottom) on one A4 page with tear line.
+    Creates Patient copy (top) and Office copy (bottom) on one A4 page with dotted tear line.
+    Locked specifications enforced: A4 portrait, two identical copies except labels, clinic branding.
     """
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=PDFBase.PAGE_SIZE)
@@ -197,40 +240,49 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
     receipt_settings = base.get_receipt_settings()
     logo_path = None
     header_image_path = None
-    footer_text = "Computer generated receipt"
+    header_text = "Consultant Place Clinic"
+    footer_text = LOCKED_FOOTER_TEXT  # Use locked footer as default
+    
     if receipt_settings:
         if receipt_settings.logo_image:
             logo_path = receipt_settings.logo_image.path if hasattr(receipt_settings.logo_image, 'path') else None
         if receipt_settings.header_image:
             header_image_path = receipt_settings.header_image.path if hasattr(receipt_settings.header_image, 'path') else None
-        if receipt_settings.footer_text:
+        if receipt_settings.header_text:
+            header_text = receipt_settings.header_text
+        # Use footer_text from settings if present; otherwise use locked constant
+        if receipt_settings.footer_text and receipt_settings.footer_text.strip():
             footer_text = receipt_settings.footer_text
     
     receipt_number = invoice.receipt_number or service_visit.visit_id
     payment = service_visit.payments.first()
     
+    # Create custom footer style (centered, light grey, no italics)
+    footer_style = ParagraphStyle(
+        'ReceiptFooter',
+        parent=styles['body'],
+        fontSize=8,
+        textColor=LIGHT_GREY,
+        alignment=1,  # CENTER
+        fontName='Helvetica',
+        spaceAfter=0,
+        spaceBefore=0,
+    )
+    
     def build_receipt_section(copy_label: str):
         """
-        Build a single receipt section (e.g. "Patient Copy", "Office Copy").
-
-        This inner helper intentionally captures variables from the enclosing
-        build_service_visit_receipt_pdf_reportlab scope for convenience. It
-        depends on the following outer-scope values:
-
-        - receipt_settings
-        - header_image_path
-        - logo_path
-        - footer_text
-        - styles
-        - service_visit
-        - invoice
-        - payment
-
-        If this function needs to be tested independently or reused elsewhere,
-        consider extracting it to module scope and passing these values as
-        explicit parameters instead of relying on closure state.
+        Build a single receipt section ("Patient copy" or "Office copy").
+        Each section is self-contained and bounded to fit on half A4 page.
+        
+        This inner helper captures variables from the enclosing scope:
+        - receipt_settings, header_image_path, logo_path, footer_text, header_text
+        - styles, service_visit, invoice, payment, receipt_number, footer_style
+        
+        If needed for testing or reuse, extract to module scope with explicit params.
         """
         section = []
+        
+        # Logo / Header Image
         if header_image_path:
             header_image = Image(header_image_path)
             max_width = PDFBase.PAGE_WIDTH - PDFBase.MARGIN_LEFT - PDFBase.MARGIN_RIGHT
@@ -239,7 +291,7 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
                 header_image.drawWidth = max_width
                 header_image.drawHeight = header_image.imageHeight * scale
             section.append(header_image)
-            section.append(Spacer(1, 3 * mm))
+            section.append(Spacer(1, 2 * mm))
         elif logo_path:
             logo = Image(logo_path)
             max_height = 15 * mm
@@ -250,12 +302,42 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
             section.append(logo)
             section.append(Spacer(1, 2 * mm))
         
-        if receipt_settings and receipt_settings.header_text:
-            section.append(Paragraph(receipt_settings.header_text, styles['title']))
-        section.append(Paragraph("RECEIPT", styles['title']))
-        section.append(Paragraph(copy_label, styles['subheading']))
-        section.append(Spacer(1, 6 * mm))
+        # Clinic name header
+        if header_text:
+            clinic_header_style = ParagraphStyle(
+                'ClinicHeader',
+                parent=styles['title'],
+                fontSize=14,
+                fontName='Helvetica-Bold',
+                textColor=black,
+                alignment=1,  # CENTER
+            )
+            section.append(Paragraph(header_text, clinic_header_style))
         
+        # RECEIPT title
+        receipt_title_style = ParagraphStyle(
+            'ReceiptTitle',
+            parent=styles['title'],
+            fontSize=16,
+            fontName='Helvetica-Bold',
+            textColor=black,
+            alignment=1,  # CENTER
+        )
+        section.append(Paragraph("RECEIPT", receipt_title_style))
+        
+        # Copy label (Patient copy / Office copy) - exact casing enforced
+        copy_label_style = ParagraphStyle(
+            'CopyLabel',
+            parent=styles['subheading'],
+            fontSize=10,
+            fontName='Helvetica-Bold',
+            textColor=LIGHT_GREY,
+            alignment=1,  # CENTER
+        )
+        section.append(Paragraph(copy_label, copy_label_style))
+        section.append(Spacer(1, 4 * mm))
+        
+        # Receipt metadata
         metadata_data = [
             ['Receipt No:', receipt_number],
             ['Visit ID:', service_visit.visit_id],
@@ -264,16 +346,25 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
         if payment and payment.received_by:
             metadata_data.append(['Cashier:', payment.received_by.username])
         
-        metadata_table = Table(metadata_data, colWidths=[80 * mm, 100 * mm])
+        metadata_table = Table(metadata_data, colWidths=[70 * mm, 95 * mm])
         metadata_table.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ]))
         section.append(metadata_table)
-        section.append(Spacer(1, 5 * mm))
+        section.append(Spacer(1, 3 * mm))
         
-        section.append(Paragraph("Patient Information", styles['heading']))
+        # Patient Information
+        patient_heading_style = ParagraphStyle(
+            'PatientHeading',
+            parent=styles['heading'],
+            fontSize=11,
+            fontName='Helvetica-Bold',
+            textColor=black,
+        )
+        section.append(Paragraph("Patient Information", patient_heading_style))
         patient_data = [
             ['Patient Reg No:', service_visit.patient.patient_reg_no or service_visit.patient.mrn],
             ['MRN:', service_visit.patient.mrn],
@@ -287,35 +378,56 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
         if service_visit.patient.phone:
             patient_data.append(['Phone:', service_visit.patient.phone])
         
-        patient_table = Table(patient_data, colWidths=[80 * mm, 100 * mm])
+        patient_table = Table(patient_data, colWidths=[70 * mm, 95 * mm])
         patient_table.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
         ]))
         section.append(patient_table)
-        section.append(Spacer(1, 5 * mm))
+        section.append(Spacer(1, 3 * mm))
         
-        section.append(Paragraph("Service Information", styles['heading']))
+        # Service Information
+        section.append(Paragraph("Service Information", patient_heading_style))
         items = service_visit.items.all()
+        
+        MAX_ITEMS_DISPLAY = 10  # Clamp displayed items to ensure fit on half page
         if items:
             service_rows = []
-            for item in items:
+            item_list = list(items)
+            display_items = item_list[:MAX_ITEMS_DISPLAY]
+            
+            for item in display_items:
                 service_rows.append([item.service_name_snapshot, f"Rs. {item.price_snapshot:.2f}"])
+            
+            # If more items exist, add a summary row
+            if len(item_list) > MAX_ITEMS_DISPLAY:
+                remaining = len(item_list) - MAX_ITEMS_DISPLAY
+                service_rows.append([f"(+ {remaining} more items)", ""])
+            
             service_table = Table(
                 [['Service', 'Amount']] + service_rows,
-                colWidths=[120 * mm, 60 * mm]
+                colWidths=[115 * mm, 50 * mm]
             )
+            # Clean clinic styling: blue header, subtle borders
             service_table.setStyle(TableStyle([
                 ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                ('FONTSIZE', (0, 0), (-1, 0), 9),
                 ('FONTNAME', (0, 1), (-1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('FONTSIZE', (0, 1), (-1, -1), 9),
                 ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
-                ('BACKGROUND', (0, 0), (-1, 0), HexColor('#E0E0E0')),
-                ('GRID', (0, 0), (-1, -1), 1, black),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('BACKGROUND', (0, 0), (-1, 0), CLINIC_BLUE),
+                ('TEXTCOLOR', (0, 0), (-1, 0), white),
+                ('GRID', (0, 0), (-1, -1), 0.5, LIGHT_GREY),
+                ('ROWBACKGROUNDS', (0, 1), (-1, -1), [white, HexColor('#F9F9F9')]),
+                ('TOPPADDING', (0, 0), (-1, -1), 4),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
             ]))
             section.append(service_table)
         else:
+            # Fallback for single service
             if service_visit.service:
                 service_data = [
                     ['Service:', service_visit.service.name],
@@ -323,16 +435,17 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
                 ]
             else:
                 service_data = [['Service:', 'Multiple Services']]
-            service_table = Table(service_data, colWidths=[80 * mm, 100 * mm])
+            service_table = Table(service_data, colWidths=[70 * mm, 95 * mm])
             service_table.setStyle(TableStyle([
                 ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
                 ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-                ('FONTSIZE', (0, 0), (-1, -1), 10),
+                ('FONTSIZE', (0, 0), (-1, -1), 9),
             ]))
             section.append(service_table)
-        section.append(Spacer(1, 5 * mm))
+        section.append(Spacer(1, 3 * mm))
         
-        section.append(Paragraph("Payment Summary", styles['heading']))
+        # Payment Summary
+        section.append(Paragraph("Payment Summary", patient_heading_style))
         amounts_data = [
             ['Total Amount:', f"Rs. {invoice.total_amount:.2f}"],
         ]
@@ -343,7 +456,18 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
                 discount_label += f" ({invoice.discount_percentage:.2f}%)"
             amounts_data.append([f"{discount_label}:", f"Rs. {invoice.discount:.2f}"])
         
-        amounts_data.append(['<b>Net Amount:</b>', f"<b>Rs. {invoice.net_amount:.2f}</b>"])
+        # Net Amount row with orange accent (emphasized but print-friendly)
+        net_amount_style = ParagraphStyle(
+            'NetAmount',
+            parent=styles['body'],
+            fontSize=10,
+            fontName='Helvetica-Bold',
+            textColor=ACCENT_ORANGE,
+        )
+        amounts_data.append([
+            Paragraph('<b>Net Amount:</b>', net_amount_style),
+            Paragraph(f"<b>Rs. {invoice.net_amount:.2f}</b>", net_amount_style)
+        ])
         amounts_data.append(['Paid Amount:', f"Rs. {payment.amount_paid if payment else invoice.net_amount:.2f}"])
         
         if invoice.balance_amount > 0:
@@ -351,26 +475,31 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
         
         amounts_data.append(['Payment Method:', (payment.method if payment else 'cash').upper()])
         
-        amounts_table = Table(amounts_data, colWidths=[80 * mm, 100 * mm])
+        amounts_table = Table(amounts_data, colWidths=[70 * mm, 95 * mm])
         amounts_table.setStyle(TableStyle([
             ('FONTNAME', (0, 0), (0, -1), 'Helvetica-Bold'),
             ('FONTNAME', (1, 0), (1, -1), 'Helvetica'),
-            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('FONTSIZE', (0, 0), (-1, -1), 9),
             ('ALIGN', (1, 0), (1, -1), 'RIGHT'),
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('TOPPADDING', (0, 0), (-1, -1), 2),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
         ]))
         section.append(amounts_table)
-        section.append(Spacer(1, 6 * mm))
+        section.append(Spacer(1, 4 * mm))
         
-        section.append(Paragraph(footer_text, styles['footer']))
+        # Footer (locked clinic details)
+        section.append(Paragraph(footer_text.replace('\n', '<br/>'), footer_style))
+        
         return KeepTogether(section)
     
+    # Build story with dual copies and dotted separator
     story = []
-    story.append(build_receipt_section("Patient Copy"))
-    story.append(Spacer(1, 4 * mm))
-    story.append(HRFlowable(width="100%", thickness=0.5, color=HexColor("#999999")))
-    story.append(Paragraph("Cut/Tear Here", styles['small']))
-    story.append(Spacer(1, 4 * mm))
-    story.append(build_receipt_section("Office Copy"))
+    story.append(build_receipt_section("Patient copy"))
+    story.append(Spacer(1, 3 * mm))
+    story.append(DottedSeparator(width="100%", dash_length=3, gap_length=3, color=LIGHT_GREY))
+    story.append(Spacer(1, 3 * mm))
+    story.append(build_receipt_section("Office copy"))
     
     # Build PDF
     doc.build(story)

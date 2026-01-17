@@ -22,8 +22,8 @@ export default function ReceiptSettings() {
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
   const [settings, setSettings] = useState<ReceiptSettings>({
-    header_text: "Consultants Clinic Place",
-    footer_text: "",
+    header_text: "Consultant Place Clinic",
+    footer_text: "Adjacent Excel Labs, Near Arman Pan Shop Faisalabad Road Jaranwala\nFor information/Appointment: Tel: 041 4313 777 | WhatsApp: 03279640897",
   });
   const [logoPreview, setLogoPreview] = useState<string>("");
   const [headerPreview, setHeaderPreview] = useState<string>("");
@@ -173,7 +173,7 @@ export default function ReceiptSettings() {
             value={settings.header_text}
             onChange={(e) => setSettings({ ...settings, header_text: e.target.value })}
             style={{ width: "100%", padding: 8 }}
-            placeholder="Consultants Clinic Place"
+            placeholder="Consultant Place Clinic"
           />
         </div>
         <div style={{ marginBottom: 15 }}>
@@ -182,7 +182,7 @@ export default function ReceiptSettings() {
             value={settings.footer_text || ""}
             onChange={(e) => setSettings({ ...settings, footer_text: e.target.value })}
             style={{ width: "100%", padding: 8, minHeight: 100 }}
-            placeholder="Footer text displayed at bottom of receipt"
+            placeholder="Adjacent Excel Labs, Near Arman Pan Shop Faisalabad Road Jaranwala&#10;For information/Appointment: Tel: 041 4313 777 | WhatsApp: 03279640897"
           />
         </div>
         <Button onClick={handleUpdateHeaderText} disabled={loading}>
