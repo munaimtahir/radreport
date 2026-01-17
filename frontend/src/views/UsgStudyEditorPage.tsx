@@ -639,7 +639,7 @@ export default function UsgStudyEditorPage() {
                                 <label key={option.value} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                   <input
                                     type="radio"
-                                    name={`radio-${field.field_key}`}
+                                    name={"radio-" + field.field_key}
                                     checked={value === option.value}
                                     disabled={isDisabled}
                                     onChange={() => handleFieldChange(field, option.value)}

@@ -4,7 +4,7 @@ from django.db.models import Sum
 
 from apps.workflow.models import ServiceVisit
 
-from .models import ConsultantBillingRule, ConsultantSettlementLine
+from .models import ConsultantBillingRule, ConsultantSettlement, ConsultantSettlementLine
 
 MONEY_QUANT = Decimal("0.01")
 

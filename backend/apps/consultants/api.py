@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
@@ -56,7 +57,6 @@ class ConsultantProfileViewSet(viewsets.ModelViewSet):
 
         serializer = ConsultantBillingRuleInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        from django.db import transaction
         
         with transaction.atomic():
             ConsultantBillingRule.objects.filter(consultant=consultant, is_active=True).update(is_active=False)
@@ -122,8 +122,6 @@ class ConsultantSettlementViewSet(viewsets.ModelViewSet):
         consultant = get_object_or_404(ConsultantProfile, id=data["consultant_id"])
         preview = build_settlement_preview(consultant, data["date_from"], data["date_to"])
 
-        from django.db import transaction
-        
         with transaction.atomic():
             settlement = ConsultantSettlement.objects.create(
                 consultant=consultant,
@@ -160,8 +158,6 @@ class ConsultantSettlementViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=["post"], url_path="finalize")
     def finalize(self, request, pk=None):
-        from django.db import transaction
-
         with transaction.atomic():
             settlement = get_object_or_404(self.get_queryset().select_for_update(), pk=pk)
 
