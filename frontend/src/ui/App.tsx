@@ -9,6 +9,7 @@ import Templates from "../views/Templates";
 import ReceiptSettings from "../views/ReceiptSettings";
 import ReportTemplates from "../views/ReportTemplates";
 import ServiceTemplates from "../views/ServiceTemplates";
+import ConsultantSettlementsPage from "../views/ConsultantSettlementsPage";
 import RegistrationPage from "../views/RegistrationPage";
 import USGWorklistPage from "../views/USGWorklistPage";
 import VerificationWorklistPage from "../views/VerificationWorklistPage";
@@ -240,6 +241,21 @@ function Shell() {
                 >
                   Service Templates
                 </Link>
+                <Link
+                  to="/admin/consultant-settlements"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/admin/consultant-settlements") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/admin/consultant-settlements") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/admin/consultant-settlements") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
+                  }}
+                >
+                  Consultant Settlements
+                </Link>
               </div>
             )}
             {/* PHASE C: Legacy routes hidden from navigation - accessible via direct URL for admin only */}
@@ -401,6 +417,10 @@ function Shell() {
               <Route
                 path="/admin/service-templates"
                 element={canAdmin ? <ServiceTemplates /> : <AccessDenied />}
+              />
+              <Route
+                path="/admin/consultant-settlements"
+                element={canAdmin ? <ConsultantSettlementsPage /> : <AccessDenied />}
               />
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />

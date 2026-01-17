@@ -68,6 +68,13 @@ class ServiceVisit(models.Model):
     # Assignment
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_service_visits")
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="assigned_service_visits")
+    booked_consultant = models.ForeignKey(
+        "consultants.ConsultantProfile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="booked_visits",
+    )
     
     # Timestamps
     registered_at = models.DateTimeField(auto_now_add=True)
@@ -161,6 +168,13 @@ class ServiceVisitItem(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     service_visit = models.ForeignKey(ServiceVisit, on_delete=models.CASCADE, related_name="items")
     service = models.ForeignKey("catalog.Service", on_delete=models.PROTECT, related_name="service_visit_items")
+    consultant = models.ForeignKey(
+        "consultants.ConsultantProfile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="service_visit_items",
+    )
     
     # Snapshots at time of billing
     service_name_snapshot = models.CharField(max_length=150, help_text="Service name at time of order")

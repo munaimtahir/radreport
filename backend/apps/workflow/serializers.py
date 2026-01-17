@@ -6,6 +6,7 @@ from .models import (
     USGReport, OPDVitals, OPDConsult, StatusAuditLog
 )
 from apps.patients.models import Patient
+from apps.consultants.models import ConsultantProfile
 from apps.patients.serializers import PatientSerializer
 from apps.catalog.models import Service as CatalogService
 
@@ -237,6 +238,11 @@ class OPDConsultSerializer(serializers.ModelSerializer):
         return None
 
 
+class ServiceVisitItemInputSerializer(serializers.Serializer):
+    service_id = serializers.UUIDField()
+    consultant_id = serializers.UUIDField(required=False, allow_null=True)
+
+
 class ServiceVisitCreateSerializer(serializers.Serializer):
     """Serializer for creating service visit at registration with multiple services"""
     patient_id = serializers.UUIDField(required=False, allow_null=True)
@@ -251,12 +257,19 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
     # Service fields - NEW: supports multiple services
     service_ids = serializers.ListField(
         child=serializers.UUIDField(),
-        required=True,
+        required=False,
         min_length=1,
         help_text="List of catalog.Service IDs to order"
     )
+    service_items = serializers.ListField(
+        child=ServiceVisitItemInputSerializer(),
+        required=False,
+        help_text="Optional list of {service_id, consultant_id} entries",
+    )
     # Legacy single service_id (for backward compatibility)
     service_id = serializers.UUIDField(required=False, allow_null=True)
+
+    booked_consultant_id = serializers.UUIDField(required=False, allow_null=True)
     
     # Billing fields
     subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, required=True)
@@ -277,10 +290,11 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
         if not patient_id and not any(data.get(field) for field in patient_fields):
             raise serializers.ValidationError("Either patient_id or patient name must be provided")
         
-        # Ensure service_ids or service_id is provided
+        # Ensure service_ids/service_items or service_id is provided
+        service_items = data.get("service_items") or []
         service_ids = data.get("service_ids", [])
         service_id = data.get("service_id")
-        if not service_ids and not service_id:
+        if not service_ids and not service_id and not service_items:
             raise serializers.ValidationError("Either service_ids or service_id must be provided")
         
         return data
@@ -302,27 +316,48 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
                 patient = Patient.objects.create(**patient_data)
             
             # Get services - support both new (service_ids) and legacy (service_id) formats
+            service_items = validated_data.get("service_items") or []
             service_ids = validated_data.get("service_ids", [])
             legacy_service_id = validated_data.get("service_id")
-            
+
             if not service_ids and legacy_service_id:
                 service_ids = [legacy_service_id]
-            
+            if service_items:
+                service_ids = [item.get("service_id") for item in service_items if item.get("service_id")]
+
             services = CatalogService.objects.filter(id__in=service_ids, is_active=True)
             if services.count() != len(service_ids):
                 raise serializers.ValidationError("One or more services not found or inactive")
+
+            booked_consultant = None
+            booked_consultant_id = validated_data.get("booked_consultant_id")
+            if booked_consultant_id:
+                try:
+                    booked_consultant = ConsultantProfile.objects.get(id=booked_consultant_id)
+                except ConsultantProfile.DoesNotExist:
+                    raise serializers.ValidationError("Booked consultant not found")
             
             # Create service visit (without legacy service FK)
             service_visit = ServiceVisit.objects.create(
                 patient=patient,
                 status="REGISTERED",
                 created_by=request.user if request else None,
+                booked_consultant=booked_consultant,
             )
             
             # Create ServiceVisitItems with snapshots
             items = []
             subtotal = Decimal("0")
-            for service in services:
+            service_lookup = {str(service.id): service for service in services}
+            if service_items:
+                items_payload = service_items
+            else:
+                items_payload = [{"service_id": str(service.id)} for service in services]
+
+            for payload in items_payload:
+                service = service_lookup.get(str(payload.get("service_id")))
+                if not service:
+                    raise serializers.ValidationError("One or more services not found or inactive")
                 # Set department_snapshot: prefer modality code (USG, CT, etc.) for workflow filtering
                 # Fallback to category (Radiology, OPD, etc.) if no modality
                 dept_snapshot = ""
@@ -330,10 +365,18 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
                     dept_snapshot = service.modality.code  # USG, CT, XRAY, etc.
                 elif service.category:
                     dept_snapshot = service.category  # Radiology, OPD, etc.
-                
+                item_consultant = booked_consultant
+                consultant_id = payload.get("consultant_id")
+                if consultant_id:
+                    try:
+                        item_consultant = ConsultantProfile.objects.get(id=consultant_id)
+                    except ConsultantProfile.DoesNotExist:
+                        raise serializers.ValidationError("Item consultant not found")
+
                 item = ServiceVisitItem.objects.create(
                     service_visit=service_visit,
                     service=service,
+                    consultant=item_consultant,
                     service_name_snapshot=service.name,
                     department_snapshot=dept_snapshot,
                     price_snapshot=service.price,

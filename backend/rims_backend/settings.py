@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "apps.reporting",
     "apps.workflow",
     "apps.usg",
+    "apps.consultants",
 ]
 
 MIDDLEWARE = [

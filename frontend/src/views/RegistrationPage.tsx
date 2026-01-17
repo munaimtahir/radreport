@@ -35,6 +35,11 @@ interface Service {
   is_active: boolean;
 }
 
+interface Consultant {
+  id: string;
+  display_name: string;
+}
+
 interface ParsedNotes {
   fatherHusband: string;
   cnic: string;
@@ -194,6 +199,8 @@ export default function RegistrationPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [mostUsedServices, setMostUsedServices] = useState<Service[]>([]);
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
+  const [consultants, setConsultants] = useState<Consultant[]>([]);
+  const [bookedConsultantId, setBookedConsultantId] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [activeServiceIndex, setActiveServiceIndex] = useState(-1);
   const [discountPercentage, setDiscountPercentage] = useState("");
@@ -202,6 +209,7 @@ export default function RegistrationPage() {
   useEffect(() => {
     if (token) {
       loadServices();
+      loadConsultants();
     }
   }, [token]);
 
@@ -235,6 +243,17 @@ export default function RegistrationPage() {
       await loadMostUsedServices(serviceList);
     } catch (err: any) {
       setError(err.message || "Failed to load services");
+    }
+  };
+
+  const loadConsultants = async () => {
+    if (!token) return;
+    try {
+      const data = await apiGet("/consultants/", token);
+      const results = data.results || data || [];
+      setConsultants(results);
+    } catch (err: any) {
+      setError(err.message || "Failed to load consultants");
     }
   };
 
@@ -521,6 +540,7 @@ export default function RegistrationPage() {
       const visitData = {
         patient_id: selectedPatient.id,
         service_ids: selectedServices.map((service) => service.id),
+        booked_consultant_id: bookedConsultantId || null,
         subtotal,
         total_amount: totalAmount,
         discount: discountAmount,
@@ -782,6 +802,23 @@ export default function RegistrationPage() {
       {selectedPatient && (
         <div style={{ border: "1px solid #ddd", padding: 20, borderRadius: 8 }}>
           <h2>Service Registration</h2>
+
+          <div style={{ marginBottom: 16 }}>
+            <label style={{ display: "block", marginBottom: 6 }}>Booked Under Consultant</label>
+            <select
+              value={bookedConsultantId}
+              onChange={(e) => setBookedConsultantId(e.target.value)}
+              onKeyDown={handleEnterAsTab}
+              style={{ width: "100%", padding: 8 }}
+            >
+              <option value="">Select consultant</option>
+              {consultants.map((consultant) => (
+                <option key={consultant.id} value={consultant.id}>
+                  {consultant.display_name}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div style={{ marginBottom: 16, position: "relative" }}>
             <label style={{ display: "block", marginBottom: 6 }}>Service Search</label>
