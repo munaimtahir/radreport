@@ -45,6 +45,11 @@ SUMMARY_HEIGHT = 28
 MIN_FONT_SIZE = 8  # Minimum font size before splitting to multiple pages
 MAX_SERVICE_LINES = 2  # Maximum lines to display per service item
 
+# Approximate layout heights for calculating service area (in mm)
+APPROX_HEADER_SECTION_HEIGHT = 80  # Header + logo + patient info + receipt details
+APPROX_FOOTER_SECTION_HEIGHT = 40  # Payment summary + footer
+APPROX_NON_SERVICE_HEIGHT = 120  # Total approximate height used by non-service sections
+
 
 def _wrap_text(text: str, font_name: str, font_size: float, max_width: float) -> List[str]:
     """
@@ -480,7 +485,7 @@ def _draw_receipt_copy(
             "Helvetica",
             font_size,
             service_column_width,
-        )[:2]
+        )[:MAX_SERVICE_LINES]
         
         start_y = current_y
         for line in service_lines:
@@ -592,8 +597,9 @@ def _build_receipt_canvas(data: dict, receipt_settings, filename: str) -> Conten
     service_column_width = (receipt_width - padding * 2) * 0.7
     
     # Approximate available height for services (accounting for header, patient info, etc.)
-    # Header + logo + patient info + receipt details ≈ 80mm, payment summary + footer ≈ 40mm
-    approx_available_height = half_height - 120 * mm
+    # Header + logo + patient info + receipt details ≈ APPROX_HEADER_SECTION_HEIGHT
+    # Payment summary + footer ≈ APPROX_FOOTER_SECTION_HEIGHT
+    approx_available_height = half_height - APPROX_NON_SERVICE_HEIGHT * mm
     
     font_size, line_height_mm, items_count, needs_split = _calculate_service_layout(
         services,
