@@ -13,6 +13,10 @@ import RegistrationPage from "../views/RegistrationPage";
 import USGWorklistPage from "../views/USGWorklistPage";
 import VerificationWorklistPage from "../views/VerificationWorklistPage";
 import FinalReportsPage from "../views/FinalReportsPage";
+import UsgPatientLookupPage from "../views/UsgPatientLookupPage";
+import UsgPatientProfilePage from "../views/UsgPatientProfilePage";
+import UsgVisitDetailPage from "../views/UsgVisitDetailPage";
+import UsgStudyEditorPage from "../views/UsgStudyEditorPage";
 import AccessDenied from "../views/AccessDenied";
 import ModuleDisabled from "../views/ModuleDisabled";
 import Footer from "./components/Footer";
@@ -143,6 +147,23 @@ function Shell() {
                 }}
               >
                 Report Entry
+              </Link>
+            )}
+            {canPerform && (
+              <Link
+                to="/usg/patients"
+                style={{
+                  padding: "10px 12px",
+                  textDecoration: "none",
+                  color: isActiveRoute("/usg") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                  backgroundColor: isActiveRoute("/usg") ? theme.colors.brandBlueSoft : "transparent",
+                  borderRadius: theme.radius.base,
+                  fontSize: 14,
+                  fontWeight: isActiveRoute("/usg") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                  transition: theme.transitions.fast,
+                }}
+              >
+                USG Patients
               </Link>
             )}
             {canVerify && (
@@ -343,6 +364,22 @@ function Shell() {
               <Route
                 path="/worklists/usg"
                 element={canPerform ? <USGWorklistPage /> : <AccessDenied />}
+              />
+              <Route
+                path="/usg/patients"
+                element={canPerform ? <UsgPatientLookupPage /> : <AccessDenied />}
+              />
+              <Route
+                path="/usg/patients/:patientId"
+                element={canPerform ? <UsgPatientProfilePage /> : <AccessDenied />}
+              />
+              <Route
+                path="/usg/visits/:visitId"
+                element={canPerform ? <UsgVisitDetailPage /> : <AccessDenied />}
+              />
+              <Route
+                path="/usg/studies/:studyId"
+                element={canPerform ? <UsgStudyEditorPage /> : <AccessDenied />}
               />
               <Route
                 path="/worklists/verification"
