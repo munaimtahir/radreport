@@ -1209,9 +1209,8 @@ class PDFViewSet(viewsets.ViewSet):
         from .pdf import build_service_visit_receipt_pdf
         pdf_file = build_service_visit_receipt_pdf(service_visit, invoice)
         
-        # Create descriptive filename: receipt_VisitID_ReceiptNumber.pdf
-        # e.g., receipt_SV202601170003_2601-005.pdf
-        filename = f"receipt_{service_visit.visit_id}_{invoice.receipt_number}.pdf"
+        # Create filename based on visit ID for receipts.
+        filename = f"receipt_{service_visit.visit_id}.pdf"
         
         response = HttpResponse(pdf_file.read(), content_type="application/pdf")
         response["Content-Disposition"] = f'inline; filename="{filename}"'

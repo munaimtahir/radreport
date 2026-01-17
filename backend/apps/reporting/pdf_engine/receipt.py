@@ -70,16 +70,20 @@ def _draw_image_fit(
     max_height: float,
     align_center: bool = False,
 ) -> Tuple[float, float]:
-    image = ImageReader(image_path)
-    image_width, image_height = image.getSize()
-    if not image_width or not image_height:
+    try:
+        image = ImageReader(image_path)
+        image_width, image_height = image.getSize()
+        if not image_width or not image_height:
+            return 0.0, 0.0
+        scale = min(max_width / image_width, max_height / image_height)
+        draw_width = image_width * scale
+        draw_height = image_height * scale
+        draw_x = x + (max_width - draw_width) / 2 if align_center else x
+        canvas.drawImage(image, draw_x, y, width=draw_width, height=draw_height, mask="auto")
+        return draw_width, draw_height
+    except Exception:
+        logger.exception("Failed to load or draw image at path '%s'", image_path)
         return 0.0, 0.0
-    scale = min(max_width / image_width, max_height / image_height)
-    draw_width = image_width * scale
-    draw_height = image_height * scale
-    draw_x = x + (max_width - draw_width) / 2 if align_center else x
-    canvas.drawImage(image, draw_x, y, width=draw_width, height=draw_height, mask="auto")
-    return draw_width, draw_height
 
 
 def _draw_label_value_rows(
@@ -143,14 +147,15 @@ def _draw_receipt_copy(
             align_center=True,
         )
         current_y -= header_height + 2 * mm
-    elif logo_path:
-        logo_height = 15 * mm
+
+    if logo_path:
+        logo_height = 14 * mm
         _draw_image_fit(
             canvas,
             logo_path,
             left_x,
             current_y - logo_height,
-            25 * mm,
+            30 * mm,
             logo_height,
             align_center=False,
         )
@@ -311,7 +316,7 @@ def _draw_receipt_copy(
         canvas.drawCentredString(x + width / 2, footer_y + (len(footer_lines) - idx - 1) * 3.2, line)
 
 
-def _build_receipt_canvas(data: dict, receipt_settings) -> ContentFile:
+def _build_receipt_canvas(data: dict, receipt_settings, filename: str) -> ContentFile:
     buffer = BytesIO()
     canvas = pdf_canvas.Canvas(buffer, pagesize=A4)
 
@@ -362,7 +367,7 @@ def _build_receipt_canvas(data: dict, receipt_settings) -> ContentFile:
         logger.error("[RECEIPT PDF] Generated PDF does not start with %PDF signature!")
         raise ValueError("Generated PDF is invalid")
 
-    return ContentFile(pdf_bytes, name="receipt.pdf")
+    return ContentFile(pdf_bytes, name=filename)
 
 
 def build_receipt_pdf_reportlab(visit) -> ContentFile:
@@ -409,7 +414,8 @@ def build_receipt_pdf_reportlab(visit) -> ContentFile:
         "payment_method": (visit.payment_method or "cash").upper(),
     }
 
-    return _build_receipt_canvas(data, receipt_settings)
+    filename = f"receipt_{data['visit_id']}.pdf"
+    return _build_receipt_canvas(data, receipt_settings, filename)
 
 
 def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> ContentFile:
@@ -453,4 +459,5 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
         "payment_method": payment_method,
     }
 
-    return _build_receipt_canvas(data, receipt_settings)
+    filename = f"receipt_{data['visit_id']}.pdf"
+    return _build_receipt_canvas(data, receipt_settings, filename)
