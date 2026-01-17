@@ -7,13 +7,16 @@
 export const theme = {
   // Brand Colors - Primary
   colors: {
-    // Brand Blue (from logo 'C')
+    // Brand Blue (from logo 'C') - PRIMARY INTERACTIVE COLOR
+    // Use for: Main buttons, service chips, active states, selected items
     brandBlue: '#0B5ED7',
     brandBlueDark: '#094BB8',
     brandBlueLight: '#3D80E0',
     brandBlueSoft: '#E8F2FF',
     
-    // Brand Orange (from logo 'P')
+    // Brand Orange (from logo 'P') - ACCENT ONLY
+    // Use for: Warnings, secondary emphasis, small badges/dots/icons
+    // AVOID: Full-width UI elements, primary buttons, service pills
     brandOrange: '#FF6B35',
     brandOrangeDark: '#E65520',
     brandOrangeLight: '#FF8A5C',

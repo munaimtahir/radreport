@@ -5,6 +5,7 @@ import PageHeader from "../ui/components/PageHeader";
 import ErrorAlert from "../ui/components/ErrorAlert";
 import SuccessAlert from "../ui/components/SuccessAlert";
 import Button from "../ui/components/Button";
+import { theme } from "../theme";
 
 interface Patient {
   id: string;
@@ -831,13 +832,32 @@ export default function RegistrationPage() {
               <h3 style={{ marginBottom: 8 }}>Most Used Services</h3>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {mostUsedServices.map((service) => (
-                  <Button
+                  <button
                     key={service.id}
-                    variant="secondary"
                     onClick={() => addServiceToCart(service)}
+                    style={{
+                      padding: "8px 16px",
+                      fontSize: 14,
+                      fontWeight: 500,
+                      backgroundColor: theme.colors.brandBlueSoft,
+                      color: theme.colors.brandBlue,
+                      border: "none",
+                      borderRadius: theme.radius.base,
+                      cursor: "pointer",
+                      transition: theme.transitions.fast,
+                      fontFamily: theme.typography.fontFamily,
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.brandBlue;
+                      e.currentTarget.style.color = "white";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = theme.colors.brandBlueSoft;
+                      e.currentTarget.style.color = theme.colors.brandBlue;
+                    }}
                   >
                     {service.name || "Unknown Service"}
-                  </Button>
+                  </button>
                 ))}
               </div>
             </div>
