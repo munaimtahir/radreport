@@ -13,6 +13,17 @@ interface Template {
   name: string;
 }
 
+interface ServiceProfile {
+  id: string;
+  service_code: string;
+  template: string;
+  template_detail?: {
+    id: string;
+    code: string;
+    name: string;
+  };
+}
+
 interface UsgStudy {
   id: string;
   service_code: string;
@@ -41,11 +52,12 @@ export default function UsgVisitReportsTab({ visitId, patientId, patientName, pa
   const navigate = useNavigate();
   const [studies, setStudies] = useState<UsgStudy[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
+  const [serviceProfiles, setServiceProfiles] = useState<ServiceProfile[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [selectedTemplateId, setSelectedTemplateId] = useState("");
+  const [selectedOptionId, setSelectedOptionId] = useState("");
 
   const loadStudies = async () => {
     if (!token) return;
@@ -63,11 +75,19 @@ export default function UsgVisitReportsTab({ visitId, patientId, patientName, pa
       const data = await apiGet("/usg/templates/", token);
       const list = data.results || data || [];
       setTemplates(list);
-      if (!selectedTemplateId && list.length > 0) {
-        setSelectedTemplateId(list[0].id);
-      }
     } catch (err: any) {
       setError(err.message || "Failed to load templates");
+    }
+  };
+
+  const loadServiceProfiles = async () => {
+    if (!token) return;
+    try {
+      const data = await apiGet("/usg/service-profiles/", token);
+      const list = data.results || data || [];
+      setServiceProfiles(list);
+    } catch (err: any) {
+      setError(err.message || "Failed to load service profiles");
     }
   };
 
@@ -79,12 +99,36 @@ export default function UsgVisitReportsTab({ visitId, patientId, patientName, pa
   useEffect(() => {
     if (!token || !showModal) return;
     loadTemplates();
+    loadServiceProfiles();
   }, [token, showModal]);
+
+  const studyOptions = useMemo(() => {
+    if (serviceProfiles.length > 0) {
+      return serviceProfiles.map((profile) => ({
+        id: profile.id,
+        label: `${profile.service_code} — ${profile.template_detail?.name || "Template"}`,
+        serviceCode: profile.service_code,
+        templateId: profile.template,
+      }));
+    }
+    return templates.map((template) => ({
+      id: template.id,
+      label: template.name,
+      serviceCode: template.code === "USG_PELVIS_BASE" ? "USG_PELVIS" : template.code,
+      templateId: template.id,
+    }));
+  }, [serviceProfiles, templates]);
+
+  useEffect(() => {
+    if (!selectedOptionId && studyOptions.length > 0) {
+      setSelectedOptionId(studyOptions[0].id);
+    }
+  }, [selectedOptionId, studyOptions]);
 
   const handleCreateStudy = async () => {
     if (!token) return;
-    if (!selectedTemplateId) {
-      setError("Please select a template.");
+    if (!selectedOptionId) {
+      setError("Please select a study type.");
       return;
     }
     if (!patientId) {
@@ -94,12 +138,15 @@ export default function UsgVisitReportsTab({ visitId, patientId, patientName, pa
     setLoading(true);
     setError("");
     try {
-      const template = templates.find((item) => item.id === selectedTemplateId);
+      const selected = studyOptions.find((item) => item.id === selectedOptionId);
+      if (!selected) {
+        throw new Error("Selected study option is unavailable.");
+      }
       const payload = {
         patient: patientId,
         visit: visitId,
-        service_code: template?.code || "USG_ABDOMEN",
-        template: selectedTemplateId,
+        service_code: selected.serviceCode || "USG_ABDOMEN",
+        template: selected.templateId,
       };
       const study = await apiPost("/usg/studies/", token, payload);
       setSuccess("USG study created.");
@@ -203,10 +250,10 @@ export default function UsgVisitReportsTab({ visitId, patientId, patientName, pa
             <p style={{ marginTop: 4, color: theme.colors.textSecondary, fontSize: 13 }}>
               Patient: {patientName || ""} {patientMrn ? `• MRN ${patientMrn}` : ""}
             </p>
-            <label style={{ display: "block", marginBottom: 6 }}>Select template</label>
+            <label style={{ display: "block", marginBottom: 6 }}>Select study type</label>
             <select
-              value={selectedTemplateId}
-              onChange={(event) => setSelectedTemplateId(event.target.value)}
+              value={selectedOptionId}
+              onChange={(event) => setSelectedOptionId(event.target.value)}
               style={{
                 width: "100%",
                 padding: 8,
@@ -214,9 +261,9 @@ export default function UsgVisitReportsTab({ visitId, patientId, patientName, pa
                 border: `1px solid ${theme.colors.border}`,
               }}
             >
-              {templates.map((template) => (
-                <option key={template.id} value={template.id}>
-                  {template.name}
+              {studyOptions.map((option) => (
+                <option key={option.id} value={option.id}>
+                  {option.label}
                 </option>
               ))}
             </select>

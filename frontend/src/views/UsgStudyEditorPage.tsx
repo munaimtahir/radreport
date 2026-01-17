@@ -1,9 +1,9 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { apiGet, apiPost, apiPut } from "../ui/api";
 import { useAuth } from "../ui/auth";
 import PageHeader from "../ui/components/PageHeader";
-import ErrorAlert from "../ui/components/ErrorAlert";
+import ErrorBanner from "../ui/components/ErrorBanner";
 import SuccessAlert from "../ui/components/SuccessAlert";
 import Button from "../ui/components/Button";
 import { theme } from "../theme";
@@ -52,6 +52,15 @@ interface UsgStudy {
   service_code: string;
   status: string;
   published_at?: string;
+  hidden_sections?: string[];
+  forced_na_fields?: string[];
+  service_profile?: {
+    service_code: string;
+    template: string;
+    template_code: string;
+    hidden_sections: string[];
+    forced_na_fields: string[];
+  } | null;
   template_detail?: {
     schema_json: TemplateSchema;
   };
@@ -67,12 +76,14 @@ const formatDateTime = (value?: string) => {
 };
 
 const supportsMultiChoice = (field: TemplateField) => field.type === "multi_choice";
+const usesSelectForSingleChoice = (field: TemplateField) => (field.options || []).length > 5;
+const getErrorMessage = (err: any, fallback: string) => err?.message || fallback;
 
 export default function UsgStudyEditorPage() {
   const { studyId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { token } = useAuth();
+  const { token, user } = useAuth();
   const [study, setStudy] = useState<UsgStudy | null>(null);
   const [values, setValues] = useState<Record<string, FieldValue>>({});
   const [sectionIncludes, setSectionIncludes] = useState<Record<string, boolean>>({});
@@ -80,10 +91,20 @@ export default function UsgStudyEditorPage() {
   const [previewText, setPreviewText] = useState<string>("");
   const [showPreview, setShowPreview] = useState(false);
   const [error, setError] = useState("");
+  const [previewError, setPreviewError] = useState("");
   const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
+  const [dirtyKeys, setDirtyKeys] = useState<Set<string>>(new Set());
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved" | "error">("idle");
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+  const [hiddenSections, setHiddenSections] = useState<string[]>([]);
+  const [forcedNaFields, setForcedNaFields] = useState<string[]>([]);
   const [publishing, setPublishing] = useState(false);
   const [showPublishConfirm, setShowPublishConfirm] = useState(false);
+  const autosaveTimerRef = useRef<number | null>(null);
+  const valuesRef = useRef(values);
+  const locationRef = useRef(location);
+  const skipNavigationPromptRef = useRef(false);
 
   useEffect(() => {
     if (!token || !studyId) return;
@@ -100,18 +121,37 @@ export default function UsgStudyEditorPage() {
             is_not_applicable: item.is_not_applicable,
           };
         });
+        const profileHidden = data.service_profile?.hidden_sections || data.hidden_sections || [];
+        const profileForced = data.service_profile?.forced_na_fields || data.forced_na_fields || [];
+        setHiddenSections(profileHidden);
+        setForcedNaFields(profileForced);
+        const enforcedDirty = new Set<string>();
+        profileForced.forEach((fieldKey) => {
+          const current = initialValues[fieldKey];
+          const needsOverride = !current || !current.is_not_applicable || current.value_json !== null;
+          if (needsOverride) {
+            initialValues[fieldKey] = {
+              field_key: fieldKey,
+              value_json: null,
+              is_not_applicable: true,
+            };
+            enforcedDirty.add(fieldKey);
+          }
+        });
         setValues(initialValues);
+        setDirtyKeys(enforcedDirty);
         const sections = data.template_detail?.schema_json.sections || [];
         const includes: Record<string, boolean> = {};
         sections.forEach((section: TemplateSection) => {
           includes[section.section_key] = true;
         });
         setSectionIncludes(includes);
-        if (sections.length > 0) {
-          setActiveSection(sections[0].section_key);
+        const firstVisible = sections.find((section: TemplateSection) => !profileHidden.includes(section.section_key));
+        if (firstVisible) {
+          setActiveSection(firstVisible.section_key);
         }
       } catch (err: any) {
-        setError(err.message || "Failed to load study");
+        setError(getErrorMessage(err, "Failed to load study"));
       }
     };
     loadStudy();
@@ -127,22 +167,95 @@ export default function UsgStudyEditorPage() {
     }
   }, [location.search, studyId, token]);
 
+  useEffect(() => {
+    valuesRef.current = values;
+  }, [values]);
+
   const schema = study?.template_detail?.schema_json;
   const sections = schema?.sections || [];
   const isPublished = study?.status === "published" || study?.is_locked;
+  const canAutosave = study?.status === "draft" || study?.status === "verified";
+  const isEditingDisabled = isPublished;
+  const hiddenSectionsSet = new Set(hiddenSections);
+  const forcedNaSet = new Set(forcedNaFields);
+  const visibleSections = sections.filter((section) => !hiddenSectionsSet.has(section.section_key));
+  const hasUnsavedChanges = dirtyKeys.size > 0 || saveStatus === "saving";
+  const canPublish = !!user && (user.is_superuser || (user.groups || []).includes("verification"));
+
+  useEffect(() => {
+    if (!visibleSections.find((section) => section.section_key === activeSection) && visibleSections.length > 0) {
+      setActiveSection(visibleSections[0].section_key);
+    }
+  }, [activeSection, visibleSections]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) {
+      locationRef.current = location;
+      return;
+    }
+    if (skipNavigationPromptRef.current) {
+      skipNavigationPromptRef.current = false;
+      locationRef.current = location;
+      return;
+    }
+    if (location.pathname !== locationRef.current.pathname || location.search !== locationRef.current.search) {
+      const confirmLeave = window.confirm("You have unsaved changes. Leave without saving?");
+      if (!confirmLeave) {
+        skipNavigationPromptRef.current = true;
+        navigate(`${locationRef.current.pathname}${locationRef.current.search}`, { replace: true });
+        return;
+      }
+    }
+    locationRef.current = location;
+  }, [hasUnsavedChanges, location, navigate]);
+
+  useEffect(() => {
+    const handler = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    if (!token || !studyId) return;
+    if (!canAutosave || isEditingDisabled || publishing) return;
+    if (dirtyKeys.size === 0) return;
+    if (autosaveTimerRef.current) {
+      window.clearTimeout(autosaveTimerRef.current);
+    }
+    autosaveTimerRef.current = window.setTimeout(() => {
+      void saveValues(new Set(dirtyKeys), true);
+    }, 1200);
+    return () => {
+      if (autosaveTimerRef.current) {
+        window.clearTimeout(autosaveTimerRef.current);
+      }
+    };
+  }, [dirtyKeys, canAutosave, isEditingDisabled, publishing, token, studyId]);
 
   const handleFieldChange = (field: TemplateField, value: any) => {
+    if (forcedNaSet.has(field.field_key)) return;
     setValues((prev) => ({
       ...prev,
       [field.field_key]: {
         field_key: field.field_key,
         value_json: value,
-        is_not_applicable: prev[field.field_key]?.is_not_applicable || false,
+        is_not_applicable: false,
       },
     }));
+    setDirtyKeys((prev) => {
+      const next = new Set(prev);
+      next.add(field.field_key);
+      return next;
+    });
+    setSaveStatus("idle");
   };
 
   const handleNotApplicable = (field: TemplateField, checked: boolean) => {
+    if (forcedNaSet.has(field.field_key)) return;
     setValues((prev) => ({
       ...prev,
       [field.field_key]: {
@@ -151,6 +264,12 @@ export default function UsgStudyEditorPage() {
         is_not_applicable: checked,
       },
     }));
+    setDirtyKeys((prev) => {
+      const next = new Set(prev);
+      next.add(field.field_key);
+      return next;
+    });
+    setSaveStatus("idle");
   };
 
   const handleSectionToggle = (sectionKey: string, enabled: boolean) => {
@@ -160,42 +279,65 @@ export default function UsgStudyEditorPage() {
     }));
   };
 
-  const saveDraft = async () => {
+  const saveValues = async (keys: Set<string> | null, isAutosave = false) => {
     if (!token || !studyId) return;
-    if (isPublished) return;
-    setSaving(true);
+    if (isEditingDisabled || !canAutosave) return;
+    if (publishing) return;
+    if (!isAutosave) {
+      setSaving(true);
+    }
+    setSaveStatus("saving");
     setError("");
+    const currentValues = valuesRef.current;
+    const fieldKeys = keys ? Array.from(keys) : Object.keys(currentValues);
     try {
       const payload = {
-        values: Object.values(values).map((item) => ({
-          field_key: item.field_key,
-          value_json: item.value_json,
-          is_not_applicable: item.is_not_applicable,
+        values: fieldKeys.map((fieldKey) => ({
+          field_key: fieldKey,
+          value_json: currentValues[fieldKey]?.value_json ?? null,
+          is_not_applicable: currentValues[fieldKey]?.is_not_applicable || false,
         })),
       };
       await apiPut(`/usg/studies/${studyId}/values/`, token, payload);
-      setSuccess("Saved");
+      let remainingKeys = new Set<string>();
+      setDirtyKeys((prev) => {
+        if (!keys) return new Set();
+        const next = new Set(prev);
+        keys.forEach((key) => next.delete(key));
+        remainingKeys = next;
+        return next;
+      });
+      setLastSavedAt(new Date());
+      setSaveStatus(remainingKeys.size === 0 ? "saved" : "idle");
+      if (!isAutosave) {
+        setSuccess("Saved");
+      }
     } catch (err: any) {
-      setError(err.message || "Save failed");
+      const message = getErrorMessage(err, "Save failed");
+      setError(message);
+      setSaveStatus("error");
     } finally {
-      setSaving(false);
+      if (!isAutosave) {
+        setSaving(false);
+      }
     }
   };
 
   const renderPreview = async () => {
     if (!token || !studyId) return;
-    setError("");
+    setPreviewError("");
     try {
       const data = await apiPost(`/usg/studies/${studyId}/render/`, token, {});
       setPreviewText(data.full_report || data.narrative || "");
       setShowPreview(true);
     } catch (err: any) {
-      setError(err.message || "Failed to render preview");
+      setPreviewError(getErrorMessage(err, "Failed to render preview"));
     }
   };
 
   const publishReport = async () => {
     if (!token || !studyId) return;
+    if (!canPublish) return;
     setPublishing(true);
     setError("");
     try {
@@ -205,7 +347,7 @@ export default function UsgStudyEditorPage() {
       const refreshed = await apiGet(`/usg/studies/${studyId}/`, token);
       setStudy(refreshed);
     } catch (err: any) {
-      setError(err.message || "Publish failed");
+      setError(getErrorMessage(err, "Publish failed"));
     } finally {
       setPublishing(false);
     }
@@ -215,7 +357,28 @@ export default function UsgStudyEditorPage() {
     if (!studyId) return;
     const apiBase = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
     const url = `${apiBase}/usg/studies/${studyId}/pdf/`;
-    window.open(url, "_blank", "noopener,noreferrer");
+    setError("");
+    const openedWindow = window.open(url, "_blank", "noopener,noreferrer");
+    if (!token) return;
+    try {
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error("Failed to download PDF");
+      }
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      if (openedWindow && !openedWindow.closed) {
+        openedWindow.location.href = blobUrl;
+      } else {
+        window.open(blobUrl, "_blank", "noopener,noreferrer");
+      }
+    } catch (err: any) {
+      setError(getErrorMessage(err, "PDF retrieval failed"));
+    }
   };
 
   const handleCopyPreview = async () => {
@@ -224,11 +387,11 @@ export default function UsgStudyEditorPage() {
       await navigator.clipboard.writeText(previewText);
       setSuccess("Preview text copied.");
     } catch (err: any) {
-      setError(err.message || "Copy failed");
+      setError(getErrorMessage(err, "Copy failed"));
     }
   };
 
-  const activeSectionData = sections.find((section) => section.section_key === activeSection);
+  const activeSectionData = visibleSections.find((section) => section.section_key === activeSection);
 
   return (
     <div style={{ maxWidth: 1400, margin: "0 auto" }}>
@@ -237,7 +400,7 @@ export default function UsgStudyEditorPage() {
         subtitle={`${study?.patient_name || ""} • MRN ${study?.patient_mrn || ""} • Visit ${study?.visit_number || ""}`}
       />
 
-      {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
+      {error && <ErrorBanner message={error} onDismiss={() => setError("")} />}
       {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
 
       <div style={{
@@ -258,24 +421,61 @@ export default function UsgStudyEditorPage() {
           <div style={{ fontSize: 13, color: theme.colors.textSecondary, marginTop: 4 }}>
             Status: {study?.status || "-"}
           </div>
+          {isPublished && (
+            <div style={{ fontSize: 12, color: theme.colors.success, marginTop: 6 }}>
+              Published {study?.published_at ? `• ${formatDateTime(study.published_at)}` : ""}
+            </div>
+          )}
         </div>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
           <Button variant="secondary" onClick={() => navigate(-1)}>
             Back to Visit
           </Button>
-          <Button variant="secondary" onClick={saveDraft} disabled={saving || isPublished}>
-            {saving ? "Saving..." : "Save Draft"}
-          </Button>
-          <Button variant="secondary" onClick={renderPreview}>
-            Preview Narrative
-          </Button>
-          <Button variant="primary" onClick={() => setShowPublishConfirm(true)} disabled={publishing || isPublished}>
-            Publish
-          </Button>
+          {!isPublished && (
+            <>
+              <Button variant="secondary" onClick={() => saveValues(null)} disabled={saving || !canAutosave}>
+                {saving ? "Saving..." : "Save Draft"}
+              </Button>
+              <Button variant="secondary" onClick={renderPreview}>
+                Preview Narrative
+              </Button>
+              {canPublish && (
+                <Button variant="primary" onClick={() => setShowPublishConfirm(true)} disabled={publishing}>
+                  Publish
+                </Button>
+              )}
+            </>
+          )}
           {isPublished && (
             <Button variant="secondary" onClick={handleViewPdf}>
               View PDF
             </Button>
+          )}
+        </div>
+        <div style={{ fontSize: 12, color: theme.colors.textSecondary, minWidth: 160, textAlign: "right" }}>
+          {saveStatus === "saving" && (
+            <span>Saving…</span>
+          )}
+          {saveStatus === "saved" && lastSavedAt && (
+            <span>Saved {lastSavedAt.toLocaleTimeString()}</span>
+          )}
+          {saveStatus === "error" && (
+            <span style={{ color: theme.colors.danger }}>
+              Save failed —{" "}
+              <button
+                onClick={() => saveValues(new Set(dirtyKeys))}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: theme.colors.danger,
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                  padding: 0,
+                }}
+              >
+                Retry
+              </button>
+            </span>
           )}
         </div>
       </div>
@@ -289,7 +489,7 @@ export default function UsgStudyEditorPage() {
           height: "fit-content",
         }}>
           <div style={{ fontSize: 12, color: theme.colors.textTertiary, marginBottom: 8 }}>Sections</div>
-          {sections.map((section) => (
+          {visibleSections.map((section) => (
             <button
               key={section.section_key}
               type="button"
@@ -328,7 +528,7 @@ export default function UsgStudyEditorPage() {
                       type="checkbox"
                       checked={sectionIncludes[activeSectionData.section_key] ?? true}
                       onChange={(event) => handleSectionToggle(activeSectionData.section_key, event.target.checked)}
-                      disabled={isPublished}
+                      disabled={isEditingDisabled}
                     />
                     Include in report
                   </label>
@@ -342,8 +542,9 @@ export default function UsgStudyEditorPage() {
                 <div style={{ display: "grid", gap: 16 }}>
                   {activeSectionData.fields.map((field) => {
                     const value = values[field.field_key]?.value_json;
-                    const isNA = values[field.field_key]?.is_not_applicable || false;
-                    const isDisabled = isPublished || isNA;
+                    const isForcedNA = forcedNaSet.has(field.field_key);
+                    const isNA = isForcedNA || values[field.field_key]?.is_not_applicable || false;
+                    const isDisabled = isEditingDisabled || isNA || isForcedNA;
                     return (
                       <div key={field.field_key} style={{ display: "grid", gap: 6 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
@@ -354,13 +555,13 @@ export default function UsgStudyEditorPage() {
                                 type="checkbox"
                                 checked={isNA}
                                 onChange={(event) => handleNotApplicable(field, event.target.checked)}
-                                disabled={isPublished}
+                                disabled={isEditingDisabled || isForcedNA}
                               />
                               Not applicable
                             </label>
                           )}
                         </div>
-                        {field.type === "single_choice" && (
+                        {field.type === "single_choice" && usesSelectForSingleChoice(field) && (
                           <select
                             value={value ?? ""}
                             onChange={(event) => handleFieldChange(field, event.target.value || null)}
@@ -379,6 +580,21 @@ export default function UsgStudyEditorPage() {
                               </option>
                             ))}
                           </select>
+                        )}
+                        {field.type === "single_choice" && !usesSelectForSingleChoice(field) && (
+                          <div style={{ display: "grid", gap: 8 }}>
+                            {(field.options || []).map((option) => (
+                              <label key={option.value} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <input
+                                  type="radio"
+                                  checked={value === option.value}
+                                  disabled={isDisabled}
+                                  onChange={() => handleFieldChange(field, option.value)}
+                                />
+                                {option.label}
+                              </label>
+                            ))}
+                          </div>
                         )}
                         {supportsMultiChoice(field) && (
                           <div style={{ display: "grid", gap: 8 }}>
@@ -409,6 +625,12 @@ export default function UsgStudyEditorPage() {
                             type="number"
                             value={value ?? ""}
                             onChange={(event) => handleFieldChange(field, event.target.value ? Number(event.target.value) : null)}
+                            onKeyDown={(event) => {
+                              if (["e", "E", "+", "-"].includes(event.key)) {
+                                event.preventDefault();
+                              }
+                            }}
+                            inputMode="decimal"
                             disabled={isDisabled}
                             style={{
                               padding: 8,
@@ -453,12 +675,24 @@ export default function UsgStudyEditorPage() {
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <strong>Preview</strong>
             <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
-              <input type="checkbox" checked={showPreview} onChange={(event) => setShowPreview(event.target.checked)} />
+              <input
+                type="checkbox"
+                checked={showPreview}
+                onChange={(event) => setShowPreview(event.target.checked)}
+                disabled={isEditingDisabled}
+              />
               Show
             </label>
           </div>
-          {showPreview ? (
+          {isEditingDisabled ? (
+            <div style={{ marginTop: 12, color: theme.colors.textTertiary, fontSize: 13 }}>
+              Preview is locked for published studies. Use View PDF instead.
+            </div>
+          ) : showPreview ? (
             <div style={{ marginTop: 12 }}>
+              {previewError && (
+                <ErrorBanner message={previewError} onDismiss={() => setPreviewError("")} />
+              )}
               <div style={{
                 backgroundColor: theme.colors.backgroundGray,
                 padding: 12,

@@ -43,6 +43,40 @@ export async function apiDelete(path: string, token: string | null) {
   return apiRequest(path, token, { method: "DELETE" });
 }
 
+function buildQuery(params: Record<string, string | number | undefined | null>) {
+  const searchParams = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    searchParams.set(key, String(value));
+  });
+  const query = searchParams.toString();
+  return query ? `?${query}` : "";
+}
+
+export async function listWorkflowPatients(
+  token: string | null,
+  params: {
+    search?: string;
+    date_from?: string;
+    date_to?: string;
+    status?: string;
+    page?: number;
+    page_size?: number;
+  }
+) {
+  const query = buildQuery(params as Record<string, string | number>);
+  return apiGet(`/workflow/patients/${query}`, token);
+}
+
+export async function getPatientTimeline(
+  token: string | null,
+  patientId: string,
+  params?: { date_from?: string; date_to?: string }
+) {
+  const query = buildQuery(params || {});
+  return apiGet(`/workflow/patients/${patientId}/timeline/${query}`, token);
+}
+
 export async function login(username: string, password: string) {
   // Use relative path for production
   const isProd = (import.meta as any).env.PROD;

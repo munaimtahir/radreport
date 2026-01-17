@@ -63,6 +63,9 @@ class UsgStudySerializer(serializers.ModelSerializer):
     template_detail = UsgTemplateSerializer(source='template', read_only=True)
     field_values = UsgFieldValueSerializer(many=True, read_only=True)
     is_locked = serializers.BooleanField(read_only=True)
+    service_profile = serializers.SerializerMethodField()
+    hidden_sections = serializers.SerializerMethodField()
+    forced_na_fields = serializers.SerializerMethodField()
     
     class Meta:
         model = UsgStudy
@@ -72,7 +75,8 @@ class UsgStudySerializer(serializers.ModelSerializer):
             'template', 'template_detail', 'status',
             'created_by', 'verified_by', 'published_by',
             'created_at', 'verified_at', 'published_at',
-            'lock_reason', 'field_values', 'is_locked'
+            'lock_reason', 'field_values', 'is_locked',
+            'service_profile', 'hidden_sections', 'forced_na_fields'
         ]
         read_only_fields = [
             'id', 'created_at', 'verified_at', 'published_at',
@@ -88,6 +92,37 @@ class UsgStudySerializer(serializers.ModelSerializer):
                     "Cannot modify a published study"
                 )
         return attrs
+
+    def _get_service_profile(self, obj):
+        if not hasattr(self, '_service_profile_cache'):
+            self._service_profile_cache = {}
+        cache_key = obj.service_code
+        if cache_key not in self._service_profile_cache:
+            self._service_profile_cache[cache_key] = UsgServiceProfile.objects.select_related('template').filter(
+                service_code=obj.service_code
+            ).first()
+        return self._service_profile_cache[cache_key]
+
+    def get_service_profile(self, obj):
+        profile = self._get_service_profile(obj)
+        if not profile:
+            return None
+        return {
+            'id': str(profile.id),
+            'service_code': profile.service_code,
+            'template': str(profile.template_id),
+            'template_code': profile.template.code,
+            'hidden_sections': profile.hidden_sections,
+            'forced_na_fields': profile.forced_na_fields,
+        }
+
+    def get_hidden_sections(self, obj):
+        profile = self._get_service_profile(obj)
+        return profile.hidden_sections if profile else []
+
+    def get_forced_na_fields(self, obj):
+        profile = self._get_service_profile(obj)
+        return profile.forced_na_fields if profile else []
 
 
 class UsgPublishedSnapshotSerializer(serializers.ModelSerializer):

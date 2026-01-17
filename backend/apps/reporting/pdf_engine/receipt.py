@@ -7,6 +7,7 @@ import logging
 import os
 from io import BytesIO
 from typing import Iterable, List, Optional, Tuple
+from decimal import Decimal
 
 from django.core.files.base import ContentFile
 from reportlab.lib.colors import HexColor, black
@@ -804,6 +805,45 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
         "net_amount": f"Rs. {invoice.net_amount:.2f}",
         "paid_amount": f"Rs. {paid_amount:.2f}",
         "payment_method": payment_method,
+    }
+
+    filename = f"receipt_{data['visit_id']}.pdf"
+    return _build_receipt_canvas(data, receipt_settings, filename)
+
+
+def build_receipt_snapshot_pdf(snapshot) -> ContentFile:
+    """Generate receipt PDF from immutable snapshot data."""
+    base = PDFBase()
+    receipt_settings = base.get_receipt_settings()
+
+    services = []
+    for item in snapshot.items_json or []:
+        name = item.get("name", "")
+        line_total = item.get("line_total")
+        try:
+            line_total_value = Decimal(str(line_total))
+        except Exception:
+            line_total_value = Decimal("0")
+        services.append((name, f"Rs. {line_total_value:.2f}"))
+
+    total_amount = Decimal(snapshot.subtotal) - Decimal(snapshot.discount)
+
+    data = {
+        "receipt_number": str(snapshot.receipt_number),
+        "visit_id": str(snapshot.service_visit.visit_id),
+        "date": snapshot.issued_at.strftime("%Y-%m-%d %H:%M:%S"),
+        "cashier": snapshot.cashier_name or "",
+        "patient_reg_no": snapshot.patient_reg_no or snapshot.patient_mrn or "",
+        "mrn": snapshot.patient_mrn or "",
+        "patient_name": snapshot.patient_name or "",
+        "age": snapshot.patient_age or "",
+        "gender": snapshot.patient_gender or "",
+        "phone": snapshot.patient_phone or "",
+        "services": services,
+        "total_amount": f"Rs. {total_amount:.2f}",
+        "net_amount": f"Rs. {total_amount:.2f}",
+        "paid_amount": f"Rs. {Decimal(snapshot.total_paid):.2f}",
+        "payment_method": (snapshot.payment_method or "cash").upper(),
     }
 
     filename = f"receipt_{data['visit_id']}.pdf"

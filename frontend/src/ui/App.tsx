@@ -9,7 +9,9 @@ import Templates from "../views/Templates";
 import ReceiptSettings from "../views/ReceiptSettings";
 import ReportTemplates from "../views/ReportTemplates";
 import ServiceTemplates from "../views/ServiceTemplates";
+import ConsultantSettlementsPage from "../views/ConsultantSettlementsPage";
 import RegistrationPage from "../views/RegistrationPage";
+import PatientsWorkflow from "../views/PatientsWorkflow";
 import USGWorklistPage from "../views/USGWorklistPage";
 import VerificationWorklistPage from "../views/VerificationWorklistPage";
 import FinalReportsPage from "../views/FinalReportsPage";
@@ -33,6 +35,7 @@ function Shell() {
   const canPerform = isSuperuser || groups.includes("performance");
   const canVerify = isSuperuser || groups.includes("verification");
   const canAdmin = isSuperuser;
+  const canWorkflow = isSuperuser || canRegister || canPerform || canVerify;
 
   // Helper function to check if a route is active (handles sub-routes)
   const isActiveRoute = (path: string) => {
@@ -130,6 +133,23 @@ function Shell() {
                 }}
               >
                 Registration
+              </Link>
+            )}
+            {canWorkflow && (
+              <Link
+                to="/patients/workflow"
+                style={{
+                  padding: "10px 12px",
+                  textDecoration: "none",
+                  color: isActiveRoute("/patients/workflow") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                  backgroundColor: isActiveRoute("/patients/workflow") ? theme.colors.brandBlueSoft : "transparent",
+                  borderRadius: theme.radius.base,
+                  fontSize: 14,
+                  fontWeight: isActiveRoute("/patients/workflow") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                  transition: theme.transitions.fast,
+                }}
+              >
+                Patient workflow
               </Link>
             )}
             {canPerform && (
@@ -239,6 +259,21 @@ function Shell() {
                   }}
                 >
                   Service Templates
+                </Link>
+                <Link
+                  to="/admin/consultant-settlements"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/admin/consultant-settlements") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/admin/consultant-settlements") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/admin/consultant-settlements") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
+                  }}
+                >
+                  Consultant Settlements
                 </Link>
               </div>
             )}
@@ -362,6 +397,10 @@ function Shell() {
                 element={canRegister ? <RegistrationPage /> : <AccessDenied />}
               />
               <Route
+                path="/patients/workflow"
+                element={canWorkflow ? <PatientsWorkflow /> : <AccessDenied />}
+              />
+              <Route
                 path="/worklists/usg"
                 element={canPerform ? <USGWorklistPage /> : <AccessDenied />}
               />
@@ -401,6 +440,10 @@ function Shell() {
               <Route
                 path="/admin/service-templates"
                 element={canAdmin ? <ServiceTemplates /> : <AccessDenied />}
+              />
+              <Route
+                path="/admin/consultant-settlements"
+                element={canAdmin ? <ConsultantSettlementsPage /> : <AccessDenied />}
               />
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />
