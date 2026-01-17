@@ -19,8 +19,8 @@ interface Service {
   name: string;
   category: string;
   modality: { code: string; name: string };
-  charges: number;
-  price: number;
+  charges: number | string;
+  price: number | string;
   tat_value: number;
   tat_unit: string;
   is_active: boolean;

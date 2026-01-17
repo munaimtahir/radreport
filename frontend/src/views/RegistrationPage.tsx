@@ -23,8 +23,8 @@ interface Service {
   id: string;
   code: string;
   name: string;
-  price: number;
-  charges: number;
+  price: number | string;
+  charges: number | string;
   category: string;
   usage_count?: number;
   modality: {
@@ -481,7 +481,11 @@ export default function RegistrationPage() {
     return Math.min(Math.max(numeric, 0), 100);
   };
 
-  const subtotal = selectedServices.reduce((sum, service) => sum + (service.price || service.charges || 0), 0);
+  const subtotal = selectedServices.reduce((sum, service) => {
+    const price = typeof service.price === 'number' ? service.price : parseFloat(service.price as any) || 0;
+    const charges = typeof service.charges === 'number' ? service.charges : parseFloat(service.charges as any) || 0;
+    return sum + (price || charges || 0);
+  }, 0);
   const discountPercentValue = clampDiscountPercentage(discountPercentage);
   const discountAmount = (subtotal * discountPercentValue) / 100;
   const totalAmount = subtotal;
