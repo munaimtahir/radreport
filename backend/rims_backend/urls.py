@@ -15,7 +15,8 @@ from apps.reporting.api import ReportViewSet, ReportingViewSet
 from apps.audit.api import AuditLogViewSet
 from apps.workflow.api import (
     ServiceCatalogViewSet, ServiceVisitViewSet, ServiceVisitItemViewSet,
-    USGReportViewSet, OPDVitalsViewSet, OPDConsultViewSet, PDFViewSet
+    USGReportViewSet, OPDVitalsViewSet, OPDConsultViewSet, PDFViewSet,
+    PatientWorkflowViewSet,
 )
 from apps.usg.api import (
     UsgTemplateViewSet, UsgServiceProfileViewSet,
@@ -26,7 +27,8 @@ from apps.workflow.dashboard_api import (
     dashboard_summary, dashboard_worklist, dashboard_flow
 )
 from apps.workflow.models import ServiceVisit, Invoice
-from apps.workflow.pdf import build_service_visit_receipt_pdf
+from apps.workflow.pdf import build_receipt_pdf_from_snapshot
+from apps.workflow.receipts import get_receipt_snapshot_data
 from django.http import HttpResponse, JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from django.conf import settings
@@ -52,6 +54,7 @@ router.register(r"workflow/items", ServiceVisitItemViewSet, basename="service-vi
 router.register(r"workflow/usg", USGReportViewSet, basename="usg-reports")
 router.register(r"workflow/opd/vitals", OPDVitalsViewSet, basename="opd-vitals")
 router.register(r"workflow/opd/consult", OPDConsultViewSet, basename="opd-consult")
+router.register(r"workflow/patients", PatientWorkflowViewSet, basename="workflow-patients")
 router.register(r"pdf", PDFViewSet, basename="pdf")
 # USG endpoints
 router.register(r"usg/templates", UsgTemplateViewSet, basename="usg-templates")
@@ -60,6 +63,9 @@ router.register(r"usg/studies", UsgStudyViewSet, basename="usg-studies")
 router.register(r"usg/snapshots", UsgPublishedSnapshotViewSet, basename="usg-snapshots")
 router.register(r"consultants", ConsultantProfileViewSet, basename="consultants")
 router.register(r"consultant-settlements", ConsultantSettlementViewSet, basename="consultant-settlements")
+
+workflow_visit_receipt = ServiceVisitViewSet.as_view({"get": "receipt_reprint"})
+workflow_visit_receipt_pdf = ServiceVisitViewSet.as_view({"get": "receipt_reprint_pdf"})
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
@@ -158,8 +164,9 @@ def receipt_pdf_alt(request, visit_id):
                 invoice.receipt_number = ReceiptSequence.get_next_receipt_number()
                 invoice.save()
     
-    # Generate receipt PDF
-    pdf_file = build_service_visit_receipt_pdf(service_visit, invoice)
+    # Generate receipt PDF using snapshot data
+    snapshot = get_receipt_snapshot_data(service_visit, invoice)
+    pdf_file = build_receipt_pdf_from_snapshot(snapshot)
     response = HttpResponse(pdf_file.read(), content_type="application/pdf")
     response["Content-Disposition"] = f'inline; filename="receipt_{invoice.receipt_number or service_visit.visit_id}.pdf"'
     return response
@@ -174,6 +181,8 @@ urlpatterns = [
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path("api/docs/", SpectacularSwaggerView.as_view(url_name="schema"), name="swagger-ui"),
     path("api/pdf/receipt/<uuid:visit_id>/", receipt_pdf_alt, name="receipt-pdf-alt"),  # Alternative route for compatibility
+    path("api/visits/<uuid:visit_id>/receipt/", workflow_visit_receipt, name="workflow-visit-receipt"),
+    path("api/visits/<uuid:visit_id>/receipt/pdf/", workflow_visit_receipt_pdf, name="workflow-visit-receipt-pdf"),
     # Dashboard endpoints
     path("api/dashboard/summary/", dashboard_summary, name="dashboard-summary"),
     path("api/dashboard/worklist/", dashboard_worklist, name="dashboard-worklist"),

@@ -1,13 +1,17 @@
 import logging
+from decimal import Decimal
+from datetime import datetime, time
 
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from django.http import HttpResponse
 from django.utils import timezone
 from django.conf import settings
 from django.db import transaction
 from django.db import models
+from django.db.models import Exists, OuterRef, Q, Subquery
 from pathlib import Path
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -21,6 +25,7 @@ from .serializers import (
     PaymentSerializer, USGReportSerializer, OPDVitalsSerializer,
     OPDConsultSerializer, ServiceVisitCreateSerializer, StatusTransitionSerializer
 )
+from .pdf import build_receipt_pdf_from_snapshot
 from apps.catalog.models import Service as CatalogService
 from apps.catalog.serializers import ServiceSerializer
 from .permissions import (
@@ -32,9 +37,161 @@ from .transitions import transition_item_status, get_allowed_transitions
 from django.core.exceptions import ValidationError, SuspiciousFileOperation
 from rest_framework.exceptions import PermissionDenied, NotFound
 from apps.patients.models import Patient
+from .receipts import get_receipt_snapshot_data
 
 logger = logging.getLogger(__name__)
 
+
+WORKFLOW_STATUS_CHOICES = (
+    "registered",
+    "services_added",
+    "paid",
+    "sample_collected",
+    "report_pending",
+    "report_ready",
+    "report_published",
+)
+
+
+def _parse_date_param(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValidationError(f"Invalid date format: {value}. Expected YYYY-MM-DD.") from exc
+
+
+def _date_range_from_params(request):
+    date_from = _parse_date_param(request.query_params.get("date_from"))
+    date_to = _parse_date_param(request.query_params.get("date_to"))
+    tz = timezone.get_current_timezone()
+    start = None
+    end = None
+    if date_from:
+        start = timezone.make_aware(datetime.combine(date_from, time.min), tz)
+    if date_to:
+        end = timezone.make_aware(datetime.combine(date_to, time.max), tz)
+    return start, end
+
+
+def _is_numeric_search(value: str) -> bool:
+    if not value:
+        return False
+    digits = "".join(ch for ch in value if ch.isdigit())
+    return bool(digits)
+
+
+def _compute_workflow_status(service_visit):
+    """
+    Compute workflow status for display.
+
+    Mapping:
+    - registered: no items yet
+    - services_added: items exist but no payment recorded
+    - paid: payment recorded, no work started
+    - sample_collected: any item in IN_PROGRESS
+    - report_pending: items waiting verification or finalized but not published
+    - report_ready: report finalized but not published
+    - report_published: report published (PDF available)
+    """
+    items = list(service_visit.items.all())
+    if not items:
+        return "registered"
+
+    total_paid = sum((payment.amount_paid for payment in service_visit.payments.all()), Decimal("0"))
+    if total_paid <= 0:
+        return "services_added"
+
+    report_published = False
+    report_ready = False
+    for item in items:
+        report = getattr(item, "usg_report", None)
+        if not report:
+            continue
+        if report.published_pdf_path:
+            report_published = True
+        elif report.report_status in ("FINAL", "AMENDED"):
+            report_ready = True
+
+    if report_published:
+        return "report_published"
+    if report_ready:
+        return "report_ready"
+
+    if any(item.status in ("PENDING_VERIFICATION", "RETURNED_FOR_CORRECTION", "FINALIZED") for item in items):
+        return "report_pending"
+    if any(item.status == "IN_PROGRESS" for item in items):
+        return "sample_collected"
+
+    return "paid"
+
+
+def _build_receipt_info(service_visit):
+    invoice = getattr(service_visit, "invoice", None)
+    if not invoice or not invoice.receipt_number:
+        return {
+            "available": False,
+            "receipt_id": None,
+            "pdf_url": None,
+        }
+    return {
+        "available": True,
+        "receipt_id": str(invoice.id),
+        "pdf_url": f"/api/workflow/visits/{service_visit.id}/receipt/pdf/",
+    }
+
+
+def _build_reports_info(service_visit):
+    items = []
+    available = False
+    for item in service_visit.items.all():
+        report = getattr(item, "usg_report", None)
+        if not report:
+            continue
+        report_status = report.report_status.lower()
+        pdf_url = None
+        if report.published_pdf_path:
+            report_status = "published"
+            pdf_url = f"/api/pdf/{service_visit.id}/report/"
+            available = True
+        items.append(
+            {
+                "service_name": item.service_name_snapshot,
+                "status": report_status,
+                "pdf_url": pdf_url,
+            }
+        )
+    return {
+        "available": available,
+        "items": items,
+    }
+
+
+def _serialize_receipt_snapshot(snapshot, service_visit):
+    total_amount = Decimal(snapshot.subtotal) - Decimal(snapshot.discount)
+    return {
+        "visit_id": str(service_visit.id),
+        "visit_code": service_visit.visit_id,
+        "receipt_number": snapshot.receipt_number,
+        "issued_at": snapshot.issued_at.isoformat(),
+        "patient": {
+            "name": snapshot.patient_name,
+            "mrn": snapshot.patient_mrn,
+            "reg_no": snapshot.patient_reg_no,
+            "age": snapshot.patient_age,
+            "gender": snapshot.patient_gender,
+            "phone": snapshot.patient_phone,
+        },
+        "items": snapshot.items_json,
+        "subtotal": str(snapshot.subtotal),
+        "discount": str(snapshot.discount),
+        "total_amount": str(total_amount),
+        "total_paid": str(snapshot.total_paid),
+        "payment_method": snapshot.payment_method,
+        "cashier": snapshot.cashier_name,
+        "pdf_url": f"/api/workflow/visits/{service_visit.id}/receipt/pdf/",
+    }
 
 def _resolve_media_path(relative_path):
     media_root = Path(settings.MEDIA_ROOT).resolve()
@@ -175,6 +332,40 @@ class ServiceVisitViewSet(viewsets.ModelViewSet):
         
         response_serializer = ServiceVisitSerializer(service_visit, context={"request": request})
         return Response(response_serializer.data)
+
+    @action(detail=True, methods=["get"], url_path="receipt", permission_classes=[IsAnyDesk])
+    def receipt_reprint(self, request, pk=None):
+        """Read-only receipt payload for reprinting."""
+        service_visit = self.get_object()
+        try:
+            invoice = service_visit.invoice
+        except Invoice.DoesNotExist:
+            return Response({"detail": "Invoice not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not invoice.receipt_number:
+            return Response({"detail": "Receipt not finalized"}, status=status.HTTP_404_NOT_FOUND)
+
+        snapshot = get_receipt_snapshot_data(service_visit, invoice)
+        return Response(_serialize_receipt_snapshot(snapshot, service_visit))
+
+    @action(detail=True, methods=["get"], url_path="receipt/pdf", permission_classes=[IsAnyDesk])
+    def receipt_reprint_pdf(self, request, pk=None):
+        """Read-only receipt PDF for reprinting."""
+        service_visit = self.get_object()
+        try:
+            invoice = service_visit.invoice
+        except Invoice.DoesNotExist:
+            return Response({"detail": "Invoice not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        if not invoice.receipt_number:
+            return Response({"detail": "Receipt not finalized"}, status=status.HTTP_404_NOT_FOUND)
+
+        snapshot = get_receipt_snapshot_data(service_visit, invoice)
+        pdf_file = build_receipt_pdf_from_snapshot(snapshot)
+        filename = f"receipt_{service_visit.visit_id}.pdf"
+        response = HttpResponse(pdf_file.read(), content_type="application/pdf")
+        response["Content-Disposition"] = f'inline; filename="{filename}"'
+        return response
 
 
 class ServiceVisitItemViewSet(viewsets.ReadOnlyModelViewSet):
@@ -1176,6 +1367,188 @@ class OPDConsultViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
+class PatientWorkflowViewSet(viewsets.ViewSet):
+    """Patient workflow viewer APIs (list and timeline)."""
+    permission_classes = [IsAnyDesk]
+
+    def _get_pagination(self, request):
+        paginator = PageNumberPagination()
+        page_size = request.query_params.get("page_size", None)
+        if page_size:
+            try:
+                paginator.page_size = max(1, min(int(page_size), 100))
+            except ValueError:
+                paginator.page_size = 20
+        else:
+            paginator.page_size = 20
+        return paginator
+
+    def _base_patient_queryset(self, request):
+        search = (request.query_params.get("search") or "").strip()
+        start, end = _date_range_from_params(request)
+
+        latest_visit = ServiceVisit.objects.filter(patient=OuterRef("pk"))
+        if start:
+            latest_visit = latest_visit.filter(registered_at__gte=start)
+        if end:
+            latest_visit = latest_visit.filter(registered_at__lte=end)
+
+        patient_queryset = Patient.objects.all()
+
+        if search:
+            patient_filter = (
+                Q(name__icontains=search)
+                | Q(phone__icontains=search)
+                | Q(mrn__icontains=search)
+                | Q(patient_reg_no__icontains=search)
+            )
+            if _is_numeric_search(search):
+                digits = "".join(ch for ch in search if ch.isdigit())
+                patient_filter = patient_filter | Q(phone__icontains=digits)
+
+            visit_search = ServiceVisit.objects.filter(
+                patient=OuterRef("pk")
+            ).filter(
+                Q(visit_id__icontains=search)
+                | Q(invoice__receipt_number__icontains=search)
+            )
+            patient_queryset = patient_queryset.filter(patient_filter | Exists(visit_search))
+
+        patient_queryset = patient_queryset.annotate(
+            latest_visit_id=Subquery(latest_visit.order_by("-registered_at").values("id")[:1]),
+            last_visit_at=Subquery(latest_visit.order_by("-registered_at").values("registered_at")[:1]),
+        ).filter(latest_visit_id__isnull=False)
+
+        return patient_queryset.order_by("-last_visit_at")
+
+    def list(self, request):
+        status_filter = (request.query_params.get("status") or "").strip().lower()
+        start, end = _date_range_from_params(request)
+
+        if status_filter and status_filter not in WORKFLOW_STATUS_CHOICES:
+            return Response(
+                {"detail": f"Invalid status filter '{status_filter}'."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        patient_queryset = self._base_patient_queryset(request)
+
+        paginator = self._get_pagination(request)
+
+        if status_filter:
+            patient_list = list(patient_queryset)
+            latest_visit_ids = [p.latest_visit_id for p in patient_list if p.latest_visit_id]
+            visits = ServiceVisit.objects.filter(
+                id__in=latest_visit_ids
+            ).select_related(
+                "patient", "invoice"
+            ).prefetch_related(
+                "items__usg_report", "payments"
+            )
+            visit_map = {visit.id: visit for visit in visits}
+
+            filtered_patients = []
+            for patient in patient_list:
+                visit = visit_map.get(patient.latest_visit_id)
+                if not visit:
+                    continue
+                workflow_status = _compute_workflow_status(visit)
+                if workflow_status == status_filter:
+                    filtered_patients.append(patient)
+
+            page = paginator.paginate_queryset(filtered_patients, request, view=self)
+        else:
+            page = paginator.paginate_queryset(patient_queryset, request, view=self)
+
+        latest_visit_ids = [p.latest_visit_id for p in page if p.latest_visit_id]
+        visits = ServiceVisit.objects.filter(
+            id__in=latest_visit_ids
+        ).select_related(
+            "patient", "invoice"
+        ).prefetch_related(
+            "items__usg_report", "payments"
+        )
+        visit_map = {visit.id: visit for visit in visits}
+
+        results = []
+        for patient in page:
+            visit = visit_map.get(patient.latest_visit_id)
+            if not visit:
+                continue
+            workflow_status = _compute_workflow_status(visit)
+            if status_filter and workflow_status != status_filter:
+                continue
+            results.append(
+                {
+                    "patient_id": str(patient.id),
+                    "mrn": patient.mrn,
+                    "reg_no": patient.patient_reg_no,
+                    "name": patient.name,
+                    "age": patient.age,
+                    "sex": patient.gender,
+                    "phone": patient.phone,
+                    "last_visit_at": patient.last_visit_at.isoformat() if patient.last_visit_at else None,
+                    "latest_visit_id": str(visit.id),
+                    "workflow_status": workflow_status,
+                    "receipt": _build_receipt_info(visit),
+                    "reports": _build_reports_info(visit),
+                }
+            )
+
+        response = paginator.get_paginated_response(results)
+        response.data["date_from"] = start.isoformat() if start else None
+        response.data["date_to"] = end.isoformat() if end else None
+        return response
+
+    @action(detail=True, methods=["get"], url_path="timeline")
+    def timeline(self, request, pk=None):
+        start, end = _date_range_from_params(request)
+
+        try:
+            patient = Patient.objects.get(id=pk)
+        except Patient.DoesNotExist:
+            return Response({"detail": "Patient not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        visits = ServiceVisit.objects.filter(patient=patient)
+        if start:
+            visits = visits.filter(registered_at__gte=start)
+        if end:
+            visits = visits.filter(registered_at__lte=end)
+        visits = visits.select_related("patient", "invoice").prefetch_related(
+            "items__usg_report", "payments"
+        ).order_by("-registered_at")
+
+        visit_results = []
+        for visit in visits:
+            visit_results.append(
+                {
+                    "visit_id": str(visit.id),
+                    "visit_code": visit.visit_id,
+                    "registered_at": visit.registered_at.isoformat(),
+                    "workflow_status": _compute_workflow_status(visit),
+                    "receipt": _build_receipt_info(visit),
+                    "reports": _build_reports_info(visit),
+                }
+            )
+
+        return Response(
+            {
+                "patient": {
+                    "id": str(patient.id),
+                    "mrn": patient.mrn,
+                    "reg_no": patient.patient_reg_no,
+                    "name": patient.name,
+                    "age": patient.age,
+                    "sex": patient.gender,
+                    "phone": patient.phone,
+                },
+                "date_from": start.isoformat() if start else None,
+                "date_to": end.isoformat() if end else None,
+                "visits": visit_results,
+            }
+        )
+
+
 class PDFViewSet(viewsets.ViewSet):
     """PDF generation and serving"""
     permission_classes = [permissions.IsAuthenticated]
@@ -1205,9 +1578,9 @@ class PDFViewSet(viewsets.ViewSet):
                     invoice.receipt_number = ReceiptSequence.get_next_receipt_number()
                     invoice.save()
         
-        # Generate receipt PDF
-        from .pdf import build_service_visit_receipt_pdf
-        pdf_file = build_service_visit_receipt_pdf(service_visit, invoice)
+        # Generate receipt PDF using snapshot data
+        snapshot = get_receipt_snapshot_data(service_visit, invoice)
+        pdf_file = build_receipt_pdf_from_snapshot(snapshot)
         
         # Create filename based on visit ID for receipts.
         filename = f"receipt_{service_visit.visit_id}.pdf"
