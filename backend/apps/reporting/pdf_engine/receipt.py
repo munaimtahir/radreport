@@ -100,7 +100,12 @@ def _wrap_text(text: str, font_name: str, font_size: float, max_width: float) ->
                             high = mid - 1
                     if fit_len == 0:
                         # Fallback: force progress to avoid infinite loop
+                        # This only occurs if max_width is too small for even a single character
                         fit_len = 1
+                        logger.warning(
+                            "[PDF] max_width too small for character in word '%s...', forcing single character",
+                            remaining[:10]
+                        )
                     segment = remaining[:fit_len]
                     lines.append(segment)
                     remaining = remaining[fit_len:]
@@ -204,7 +209,6 @@ def _calculate_service_layout(
     """
     font_size = initial_font_size
     line_height_mm = initial_line_height
-    row_padding = ROW_PADDING
     
     # Try progressively smaller font sizes
     while font_size >= MIN_FONT_SIZE:
@@ -218,7 +222,7 @@ def _calculate_service_layout(
                 font_size,
                 service_column_width,
             )[:MAX_SERVICE_LINES]  # Limit to MAX_SERVICE_LINES per item
-            row_height = len(service_lines) * line_height_mm * mm + row_padding
+            row_height = len(service_lines) * line_height_mm * mm + ROW_PADDING
             
             if total_height + row_height > available_height:
                 break
@@ -252,7 +256,7 @@ def _calculate_service_layout(
             font_size,
             service_column_width,
         )[:MAX_SERVICE_LINES]
-        row_height = len(service_lines) * line_height_mm * mm + row_padding
+        row_height = len(service_lines) * line_height_mm * mm + ROW_PADDING
         
         if total_height + row_height > available_height:
             break
@@ -628,6 +632,11 @@ def _build_receipt_canvas(data: dict, receipt_settings, filename: str) -> Conten
             
             # Ensure we make progress
             if items_count == 0:
+                logger.warning(
+                    "[RECEIPT PDF] Cannot fit any service items in available space on page %d. "
+                    "Forcing one item to avoid infinite loop, but this may cause visual issues.",
+                    page_num
+                )
                 items_count = 1
             
             current_page_services = remaining_services[:items_count]
