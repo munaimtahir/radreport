@@ -70,16 +70,20 @@ def _draw_image_fit(
     max_height: float,
     align_center: bool = False,
 ) -> Tuple[float, float]:
-    image = ImageReader(image_path)
-    image_width, image_height = image.getSize()
-    if not image_width or not image_height:
+    try:
+        image = ImageReader(image_path)
+        image_width, image_height = image.getSize()
+        if not image_width or not image_height:
+            return 0.0, 0.0
+        scale = min(max_width / image_width, max_height / image_height)
+        draw_width = image_width * scale
+        draw_height = image_height * scale
+        draw_x = x + (max_width - draw_width) / 2 if align_center else x
+        canvas.drawImage(image, draw_x, y, width=draw_width, height=draw_height, mask="auto")
+        return draw_width, draw_height
+    except Exception:
+        logger.exception("Failed to load or draw image at path '%s'", image_path)
         return 0.0, 0.0
-    scale = min(max_width / image_width, max_height / image_height)
-    draw_width = image_width * scale
-    draw_height = image_height * scale
-    draw_x = x + (max_width - draw_width) / 2 if align_center else x
-    canvas.drawImage(image, draw_x, y, width=draw_width, height=draw_height, mask="auto")
-    return draw_width, draw_height
 
 
 def _draw_label_value_rows(
