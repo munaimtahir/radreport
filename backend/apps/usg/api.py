@@ -72,7 +72,16 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """Set created_by on creation"""
-        serializer.save(created_by=self.request.user)
+        service_code = serializer.validated_data.get('service_code')
+        profile = None
+        if service_code:
+            profile = UsgServiceProfile.objects.select_related('template').filter(
+                service_code=service_code
+            ).first()
+        if profile:
+            serializer.save(created_by=self.request.user, template=profile.template)
+        else:
+            serializer.save(created_by=self.request.user)
 
     def update(self, request, *args, **kwargs):
         """Block updates to published studies"""
