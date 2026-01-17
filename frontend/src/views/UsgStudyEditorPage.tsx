@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { apiGet, apiPost, apiPut } from "../ui/api";
 import { useAuth } from "../ui/auth";
@@ -109,6 +109,14 @@ export default function UsgStudyEditorPage() {
   const valuesRef = useRef(values);
   const locationRef = useRef(location);
   const skipNavigationPromptRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!token || !studyId) return;
@@ -180,9 +188,14 @@ export default function UsgStudyEditorPage() {
   const isPublished = study?.status === "published" || study?.is_locked;
   const canAutosave = study?.status === "draft" || study?.status === "verified";
   const isEditingDisabled = isPublished;
-  const hiddenSectionsSet = new Set(hiddenSections);
+  
+  // Memoize visibleSections to prevent unnecessary re-renders
+  const visibleSections = useMemo(() => {
+    const hiddenSectionsSet = new Set(hiddenSections);
+    return sections.filter((section) => !hiddenSectionsSet.has(section.section_key));
+  }, [sections, hiddenSections]);
+  
   const forcedNaSet = new Set(forcedNaFields);
-  const visibleSections = sections.filter((section) => !hiddenSectionsSet.has(section.section_key));
   const hasUnsavedChanges = dirtyKeys.size > 0 || saveStatus === "saving";
   const canPublish = !!user && (user.is_superuser || (user.groups || []).includes("verification"));
 
@@ -303,6 +316,10 @@ export default function UsgStudyEditorPage() {
         })),
       };
       await apiPut(`/usg/studies/${studyId}/values/`, token, payload);
+      
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) return;
+      
       let remainingKeys = new Set<string>();
       setDirtyKeys((prev) => {
         if (!keys) return new Set();
@@ -317,6 +334,8 @@ export default function UsgStudyEditorPage() {
         setSuccess("Saved");
       }
     } catch (err: any) {
+      // Check if component is still mounted before updating state
+      if (!isMountedRef.current) return;
       const message = getErrorMessage(err, "Save failed");
       setError(message);
       setSaveStatus("error");
@@ -593,19 +612,43 @@ export default function UsgStudyEditorPage() {
                           </select>
                         )}
                         {field.type === "single_choice" && !usesSelectForSingleChoice(field) && (
-                          <div style={{ display: "grid", gap: 8 }}>
-                            {(field.options || []).map((option) => (
-                              <label key={option.value} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                                <input
-                                  type="radio"
-                                  checked={value === option.value}
-                                  disabled={isDisabled}
-                                  onChange={() => handleFieldChange(field, option.value)}
-                                />
-                                {option.label}
-                              </label>
-                            ))}
-                          </div>
+                          <fieldset
+                            style={{
+                              border: "none",
+                              margin: 0,
+                              padding: 0,
+                            }}
+                          >
+                            <legend
+                              style={{
+                                position: "absolute",
+                                width: 1,
+                                height: 1,
+                                padding: 0,
+                                margin: -1,
+                                overflow: "hidden",
+                                clip: "rect(0, 0, 0, 0)",
+                                whiteSpace: "nowrap",
+                                border: 0,
+                              }}
+                            >
+                              {field.label}
+                            </legend>
+                            <div style={{ display: "grid", gap: 8 }}>
+                              {(field.options || []).map((option) => (
+                                <label key={option.value} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <input
+                                    type="radio"
+                                    name={`radio-${field.field_key}`}
+                                    checked={value === option.value}
+                                    disabled={isDisabled}
+                                    onChange={() => handleFieldChange(field, option.value)}
+                                  />
+                                  {option.label}
+                                </label>
+                              ))}
+                            </div>
+                          </fieldset>
                         )}
                         {supportsMultiChoice(field) && (
                           <div style={{ display: "grid", gap: 8 }}>
