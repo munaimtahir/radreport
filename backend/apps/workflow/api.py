@@ -169,7 +169,7 @@ def _build_reports_info(service_visit):
 
 
 def _serialize_receipt_snapshot(snapshot, service_visit):
-    total_amount = Decimal(snapshot.subtotal) - Decimal(snapshot.discount)
+    total_amount = snapshot.subtotal - snapshot.discount
     return {
         "visit_id": str(service_visit.id),
         "visit_code": service_visit.visit_id,
@@ -1476,8 +1476,6 @@ class PatientWorkflowViewSet(viewsets.ViewSet):
             if not visit:
                 continue
             workflow_status = _compute_workflow_status(visit)
-            if status_filter and workflow_status != status_filter:
-                continue
             results.append(
                 {
                     "patient_id": str(patient.id),

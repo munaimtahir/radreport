@@ -10,6 +10,7 @@ interface ErrorBannerProps {
 export default function ErrorBanner({ message, onDismiss, actionLabel, onAction }: ErrorBannerProps) {
   return (
     <div
+      role="alert"
       style={{
         padding: "12px 16px",
         backgroundColor: "#fff3f3",
@@ -44,6 +45,7 @@ export default function ErrorBanner({ message, onDismiss, actionLabel, onAction 
         {onDismiss && (
           <button
             onClick={onDismiss}
+            aria-label="Dismiss error"
             style={{
               background: "none",
               border: "none",

@@ -4,7 +4,7 @@ from django.db.models import Sum
 
 from apps.workflow.models import ServiceVisit
 
-from .models import ConsultantBillingRule, ConsultantSettlementLine
+from .models import ConsultantBillingRule, ConsultantSettlement, ConsultantSettlementLine
 
 MONEY_QUANT = Decimal("0.01")
 
@@ -26,12 +26,12 @@ def get_consultant_percent(consultant, as_of_date):
 
 
 def build_settlement_preview(consultant, date_from, date_to):
+    # Exclude items already included in ANY finalized settlement for this consultant
+    # regardless of the settlement's date range to prevent double settlements
     settled_item_ids = set(
         ConsultantSettlementLine.objects.filter(
-            settlement__status="FINALIZED",
-            service_item__consultant=consultant,
-            service_item__service_visit__registered_at__date__gte=date_from,
-            service_item__service_visit__registered_at__date__lte=date_to,
+            settlement__consultant=consultant,
+            settlement__status=ConsultantSettlement.STATUS_FINALIZED,
         ).values_list("service_item_id", flat=True)
     )
 

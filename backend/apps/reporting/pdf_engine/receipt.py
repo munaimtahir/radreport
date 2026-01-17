@@ -3,6 +3,7 @@ Receipt PDF generation using ReportLab.
 Dual-copy A4 receipt layout with fixed canvas positioning.
 Supports both Visit (legacy) and ServiceVisit (workflow) models.
 """
+import decimal
 import logging
 import os
 from io import BytesIO
@@ -821,12 +822,16 @@ def build_receipt_snapshot_pdf(snapshot) -> ContentFile:
         name = item.get("name", "")
         line_total = item.get("line_total")
         try:
-            line_total_value = Decimal(str(line_total))
-        except Exception:
+            # Handle None or empty values explicitly
+            if line_total is None or line_total == "":
+                line_total_value = Decimal("0")
+            else:
+                line_total_value = Decimal(str(line_total))
+        except (ValueError, TypeError, decimal.InvalidOperation):
             line_total_value = Decimal("0")
         services.append((name, f"Rs. {line_total_value:.2f}"))
 
-    total_amount = Decimal(snapshot.subtotal) - Decimal(snapshot.discount)
+    total_amount = snapshot.subtotal - snapshot.discount
 
     data = {
         "receipt_number": str(snapshot.receipt_number),
@@ -842,7 +847,7 @@ def build_receipt_snapshot_pdf(snapshot) -> ContentFile:
         "services": services,
         "total_amount": f"Rs. {total_amount:.2f}",
         "net_amount": f"Rs. {total_amount:.2f}",
-        "paid_amount": f"Rs. {Decimal(snapshot.total_paid):.2f}",
+        "paid_amount": f"Rs. {snapshot.total_paid:.2f}",
         "payment_method": (snapshot.payment_method or "cash").upper(),
     }
 
