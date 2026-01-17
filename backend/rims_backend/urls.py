@@ -21,6 +21,7 @@ from apps.usg.api import (
     UsgTemplateViewSet, UsgServiceProfileViewSet,
     UsgStudyViewSet, UsgPublishedSnapshotViewSet
 )
+from apps.consultants.api import ConsultantProfileViewSet, ConsultantSettlementViewSet
 from apps.workflow.dashboard_api import (
     dashboard_summary, dashboard_worklist, dashboard_flow
 )
@@ -57,6 +58,8 @@ router.register(r"usg/templates", UsgTemplateViewSet, basename="usg-templates")
 router.register(r"usg/service-profiles", UsgServiceProfileViewSet, basename="usg-service-profiles")
 router.register(r"usg/studies", UsgStudyViewSet, basename="usg-studies")
 router.register(r"usg/snapshots", UsgPublishedSnapshotViewSet, basename="usg-snapshots")
+router.register(r"consultants", ConsultantProfileViewSet, basename="consultants")
+router.register(r"consultant-settlements", ConsultantSettlementViewSet, basename="consultant-settlements")
 
 @api_view(["GET"])
 @permission_classes([AllowAny])
