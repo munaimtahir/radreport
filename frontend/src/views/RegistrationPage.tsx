@@ -32,7 +32,6 @@ interface Service {
     name: string;
   };
   is_active: boolean;
-  usage_count?: number;
 }
 
 interface ParsedNotes {
@@ -202,7 +201,6 @@ export default function RegistrationPage() {
   useEffect(() => {
     if (token) {
       loadServices();
-      loadMostUsedServices();
     }
   }, [token]);
 
