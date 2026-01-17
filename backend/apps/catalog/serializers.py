@@ -8,12 +8,17 @@ class ModalitySerializer(serializers.ModelSerializer):
 
 class ServiceSerializer(serializers.ModelSerializer):
     modality_display = serializers.CharField(source="modality.code", read_only=True)
-    modality = ModalitySerializer(read_only=True)
+    modality = serializers.PrimaryKeyRelatedField(queryset=Modality.objects.all(), required=True)
     usage_count = serializers.SerializerMethodField()
 
     def get_usage_count(self, obj):
         return getattr(obj, "usage_count", 0)
-    
+
     class Meta:
         model = Service
-        fields = "__all__"
+        fields = [
+            'id', 'code', 'modality', 'name', 'category', 'price', 'charges',
+            'default_price', 'tat_value', 'tat_unit', 'tat_minutes', 'turnaround_time',
+            'default_template', 'requires_radiologist_approval', 'is_active',
+            'modality_display', 'usage_count'
+        ]
