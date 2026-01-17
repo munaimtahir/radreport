@@ -126,7 +126,7 @@ export default function UsgStudyEditorPage() {
         setHiddenSections(profileHidden);
         setForcedNaFields(profileForced);
         const enforcedDirty = new Set<string>();
-        profileForced.forEach((fieldKey) => {
+        profileForced.forEach((fieldKey: string) => {
           const current = initialValues[fieldKey];
           const needsOverride = !current || !current.is_not_applicable || current.value_json !== null;
           if (needsOverride) {
