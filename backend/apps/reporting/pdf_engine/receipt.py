@@ -510,4 +510,6 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
     # Sanity check
     assert pdf_bytes[:4] == b'%PDF', "Generated PDF does not start with %PDF"
     
-    return ContentFile(pdf_bytes, name=f"receipt_{receipt_number}.pdf")
+    # Use descriptive filename: receipt_VisitID_ReceiptNumber.pdf
+    filename = f"receipt_{service_visit.visit_id}_{receipt_number}.pdf"
+    return ContentFile(pdf_bytes, name=filename)
