@@ -1,0 +1,468 @@
+{
+  "code": "USG_PELVIS_BASE",
+  "name": "USG Pelvis – Base",
+  "category": "pelvis",
+  "version": 1,
+  "sections": [
+    {
+      "section_key": "study_info",
+      "title": "Study Information",
+      "include_toggle": false,
+      "fields": [
+        {
+          "field_key": "study_type",
+          "label": "Study Type",
+          "type": "single_choice",
+          "required": true,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "USG Pelvis", "value": "usg_pelvis"}
+          ]
+        },
+        {
+          "field_key": "study_technique_instrument_used",
+          "label": "Study Technique / Instrument Used",
+          "type": "multi_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Transabdominal", "value": "transabdominal"},
+            {"label": "Transvaginal", "value": "transvaginal"},
+            {"label": "Convex probe", "value": "convex_probe"},
+            {"label": "Linear probe", "value": "linear_probe"},
+            {"label": "Color Doppler", "value": "color_doppler"}
+          ]
+        },
+        {
+          "field_key": "clinical_indication",
+          "label": "Clinical Indication",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "scan_quality",
+          "label": "Scan Quality",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Good", "value": "good"},
+            {"label": "Fair", "value": "fair"},
+            {"label": "Limited", "value": "limited"}
+          ]
+        },
+        {
+          "field_key": "scan_limitation_reason",
+          "label": "Scan Limitation Reason",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "bladder",
+      "title": "Urinary Bladder (Pelvic View)",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "bladder_distension",
+          "label": "Bladder Distension",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Adequate", "value": "adequate"},
+            {"label": "Underfilled", "value": "underfilled"},
+            {"label": "Overdistended", "value": "overdistended"}
+          ]
+        },
+        {
+          "field_key": "bladder_wall_thickness",
+          "label": "Wall Thickness",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Thickened", "value": "thickened"}
+          ]
+        },
+        {
+          "field_key": "bladder_mass",
+          "label": "Mass/Lesion",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "None", "value": "none"},
+            {"label": "Present", "value": "present"}
+          ]
+        },
+        {
+          "field_key": "bladder_notes",
+          "label": "Bladder Notes",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "uterus",
+      "title": "Uterus",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "uterus_orientation",
+          "label": "Orientation",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Anteverted", "value": "anteverted"},
+            {"label": "Retroverted", "value": "retroverted"},
+            {"label": "Neutral", "value": "neutral"}
+          ]
+        },
+        {
+          "field_key": "uterus_length_cm",
+          "label": "Uterus Length (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "uterus_ap_cm",
+          "label": "Uterus AP (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "uterus_transverse_cm",
+          "label": "Uterus Transverse (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "myometrium_appearance",
+          "label": "Myometrium",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Heterogeneous", "value": "heterogeneous"}
+          ]
+        },
+        {
+          "field_key": "endometrium_thickness_mm",
+          "label": "Endometrium Thickness (mm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "endometrium_appearance",
+          "label": "Endometrium Appearance",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Thickened", "value": "thickened"},
+            {"label": "Irregular", "value": "irregular"}
+          ]
+        },
+        {
+          "field_key": "fibroids_masses",
+          "label": "Fibroids/Masses",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "None", "value": "none"},
+            {"label": "Present", "value": "present"}
+          ]
+        },
+        {
+          "field_key": "fibroids_masses_details",
+          "label": "Fibroids/Masses Details",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "cervix",
+      "title": "Cervix",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "cervix_appearance",
+          "label": "Appearance",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Bulky", "value": "bulky"},
+            {"label": "Lesion", "value": "lesion"}
+          ]
+        },
+        {
+          "field_key": "cervix_notes",
+          "label": "Cervix Notes",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "right_ovary",
+      "title": "Right Ovary",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "right_ovary_visualized",
+          "label": "Visualization",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Visualized", "value": "visualized"},
+            {"label": "Not visualized", "value": "not_visualized"}
+          ]
+        },
+        {
+          "field_key": "right_ovary_length_cm",
+          "label": "Length (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "right_ovary_ap_cm",
+          "label": "AP (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "right_ovary_transverse_cm",
+          "label": "Transverse (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "right_ovary_follicles",
+          "label": "Follicles/Cysts",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Multiple follicles", "value": "multiple"},
+            {"label": "Simple cyst", "value": "simple_cyst"},
+            {"label": "Complex cyst", "value": "complex_cyst"}
+          ]
+        },
+        {
+          "field_key": "right_ovary_mass",
+          "label": "Mass",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "None", "value": "none"},
+            {"label": "Present", "value": "present"}
+          ]
+        },
+        {
+          "field_key": "right_ovary_mass_details",
+          "label": "Mass Details",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "left_ovary",
+      "title": "Left Ovary",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "left_ovary_visualized",
+          "label": "Visualization",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Visualized", "value": "visualized"},
+            {"label": "Not visualized", "value": "not_visualized"}
+          ]
+        },
+        {
+          "field_key": "left_ovary_length_cm",
+          "label": "Length (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "left_ovary_ap_cm",
+          "label": "AP (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "left_ovary_transverse_cm",
+          "label": "Transverse (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "left_ovary_follicles",
+          "label": "Follicles/Cysts",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Multiple follicles", "value": "multiple"},
+            {"label": "Simple cyst", "value": "simple_cyst"},
+            {"label": "Complex cyst", "value": "complex_cyst"}
+          ]
+        },
+        {
+          "field_key": "left_ovary_mass",
+          "label": "Mass",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "None", "value": "none"},
+            {"label": "Present", "value": "present"}
+          ]
+        },
+        {
+          "field_key": "left_ovary_mass_details",
+          "label": "Mass Details",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "adnexa",
+      "title": "Adnexa",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "adnexa_right",
+          "label": "Right Adnexa",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "adnexa_left",
+          "label": "Left Adnexa",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "pod",
+      "title": "Pouch of Douglas / Free Fluid",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "free_fluid",
+          "label": "Free Fluid",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "None", "value": "none"},
+            {"label": "Minimal", "value": "minimal"},
+            {"label": "Moderate", "value": "moderate"},
+            {"label": "Large", "value": "large"}
+          ]
+        },
+        {
+          "field_key": "free_fluid_notes",
+          "label": "Free Fluid Notes",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "other_findings",
+      "title": "Other Findings",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "pelvic_lymph_nodes",
+          "label": "Pelvic Lymph Nodes",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Not enlarged", "value": "not_enlarged"},
+            {"label": "Enlarged", "value": "enlarged"}
+          ]
+        },
+        {
+          "field_key": "other_pelvic_findings",
+          "label": "Other Pelvic Findings",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "impression",
+      "title": "Impression",
+      "include_toggle": false,
+      "fields": [
+        {
+          "field_key": "impression_text",
+          "label": "Impression",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "notes",
+      "title": "Notes",
+      "include_toggle": false,
+      "fields": [
+        {
+          "field_key": "notes_text",
+          "label": "Notes",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    }
+  ]
+}
