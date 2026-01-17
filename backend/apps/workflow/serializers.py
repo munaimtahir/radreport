@@ -5,6 +5,7 @@ from .models import (
     ServiceVisit, ServiceVisitItem, Invoice, Payment,
     USGReport, OPDVitals, OPDConsult, StatusAuditLog
 )
+from .receipts import create_receipt_snapshot
 from apps.patients.models import Patient
 from apps.patients.serializers import PatientSerializer
 from apps.catalog.models import Service as CatalogService
@@ -386,6 +387,9 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
                 # Recalculate balance after payment
                 invoice.calculate_balance()
                 invoice.save()
+
+            # Snapshot receipt data once issued (immutable, read-only reprints)
+            create_receipt_snapshot(service_visit, invoice)
             
             # PHASE C: Update derived status after creating items
             service_visit.update_derived_status()

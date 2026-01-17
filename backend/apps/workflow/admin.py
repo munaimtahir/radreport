@@ -1,7 +1,7 @@
 from django.contrib import admin
 from .models import (
     ServiceCatalog, ServiceVisit, ServiceVisitItem, Invoice, Payment,
-    USGReport, OPDVitals, OPDConsult, StatusAuditLog
+    USGReport, OPDVitals, OPDConsult, StatusAuditLog, ReceiptSnapshot
 )
 
 
@@ -47,6 +47,13 @@ class PaymentAdmin(admin.ModelAdmin):
     list_display = ["service_visit", "amount_paid", "method", "received_by", "received_at"]
     list_filter = ["method", "received_at"]
     search_fields = ["service_visit__visit_id"]
+
+
+@admin.register(ReceiptSnapshot)
+class ReceiptSnapshotAdmin(admin.ModelAdmin):
+    list_display = ["service_visit", "receipt_number", "issued_at", "total_paid", "payment_method"]
+    search_fields = ["service_visit__visit_id", "receipt_number", "patient_name"]
+    readonly_fields = ["created_at"]
 
 
 @admin.register(USGReport)

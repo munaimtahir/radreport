@@ -279,6 +279,40 @@ class Payment(models.Model):
         return f"Payment {self.amount_paid} for {self.service_visit.visit_id}"
 
 
+class ReceiptSnapshot(models.Model):
+    """Immutable snapshot of receipt data at time of issuance."""
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    service_visit = models.OneToOneField(ServiceVisit, on_delete=models.CASCADE, related_name="receipt_snapshot")
+    receipt_number = models.CharField(max_length=20, db_index=True)
+    issued_at = models.DateTimeField()
+
+    items_json = models.JSONField(default=list, help_text="[{name, qty, unit_price, line_total}]")
+    subtotal = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    discount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    total_paid = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default="cash")
+
+    patient_name = models.CharField(max_length=200, blank=True, default="")
+    patient_phone = models.CharField(max_length=30, blank=True, default="")
+    patient_reg_no = models.CharField(max_length=30, blank=True, default="")
+    patient_mrn = models.CharField(max_length=30, blank=True, default="")
+    patient_age = models.CharField(max_length=20, blank=True, default="")
+    patient_gender = models.CharField(max_length=20, blank=True, default="")
+    cashier_name = models.CharField(max_length=150, blank=True, default="")
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-issued_at"]
+        indexes = [
+            models.Index(fields=["receipt_number"]),
+            models.Index(fields=["issued_at"]),
+        ]
+
+    def __str__(self):
+        return f"ReceiptSnapshot {self.receipt_number} ({self.service_visit.visit_id})"
+
+
 class USGReport(models.Model):
     """USG report data - PHASE D: Canonical ultrasound reporting standard"""
     

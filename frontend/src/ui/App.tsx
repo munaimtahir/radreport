@@ -10,6 +10,7 @@ import ReceiptSettings from "../views/ReceiptSettings";
 import ReportTemplates from "../views/ReportTemplates";
 import ServiceTemplates from "../views/ServiceTemplates";
 import RegistrationPage from "../views/RegistrationPage";
+import PatientsWorkflow from "../views/PatientsWorkflow";
 import USGWorklistPage from "../views/USGWorklistPage";
 import VerificationWorklistPage from "../views/VerificationWorklistPage";
 import FinalReportsPage from "../views/FinalReportsPage";
@@ -33,6 +34,7 @@ function Shell() {
   const canPerform = isSuperuser || groups.includes("performance");
   const canVerify = isSuperuser || groups.includes("verification");
   const canAdmin = isSuperuser;
+  const canWorkflow = isSuperuser || canRegister || canPerform || canVerify;
 
   // Helper function to check if a route is active (handles sub-routes)
   const isActiveRoute = (path: string) => {
@@ -130,6 +132,23 @@ function Shell() {
                 }}
               >
                 Registration
+              </Link>
+            )}
+            {canWorkflow && (
+              <Link
+                to="/patients/workflow"
+                style={{
+                  padding: "10px 12px",
+                  textDecoration: "none",
+                  color: isActiveRoute("/patients/workflow") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                  backgroundColor: isActiveRoute("/patients/workflow") ? theme.colors.brandBlueSoft : "transparent",
+                  borderRadius: theme.radius.base,
+                  fontSize: 14,
+                  fontWeight: isActiveRoute("/patients/workflow") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                  transition: theme.transitions.fast,
+                }}
+              >
+                Patient workflow
               </Link>
             )}
             {canPerform && (
@@ -360,6 +379,10 @@ function Shell() {
               <Route
                 path="/registration"
                 element={canRegister ? <RegistrationPage /> : <AccessDenied />}
+              />
+              <Route
+                path="/patients/workflow"
+                element={canWorkflow ? <PatientsWorkflow /> : <AccessDenied />}
               />
               <Route
                 path="/worklists/usg"
