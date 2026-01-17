@@ -1,0 +1,582 @@
+{
+  "code": "USG_ABDOMEN_BASE",
+  "name": "USG Abdomen – Base",
+  "category": "abdomen",
+  "version": 1,
+  "sections": [
+    {
+      "section_key": "study_info",
+      "title": "Study Information",
+      "include_toggle": false,
+      "fields": [
+        {
+          "field_key": "study_type",
+          "label": "Study Type",
+          "type": "single_choice",
+          "required": true,
+          "supports_not_applicable": false,
+          "options": [
+            {"label": "USG Abdomen", "value": "usg_abdomen"}
+          ]
+        },
+        {
+          "field_key": "study_technique_instrument_used",
+          "label": "Study Technique / Instrument Used",
+          "type": "multi_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Transabdominal", "value": "transabdominal"},
+            {"label": "Convex probe", "value": "convex_probe"},
+            {"label": "Linear probe", "value": "linear_probe"},
+            {"label": "Color Doppler", "value": "color_doppler"}
+          ]
+        },
+        {
+          "field_key": "clinical_indication",
+          "label": "Clinical Indication",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "comparison",
+          "label": "Comparison",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "None available", "value": "none"},
+            {"label": "Previous study dated", "value": "previous"}
+          ]
+        },
+        {
+          "field_key": "scan_quality",
+          "label": "Scan Quality",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Good", "value": "good"},
+            {"label": "Fair", "value": "fair"},
+            {"label": "Limited", "value": "limited"}
+          ]
+        },
+        {
+          "field_key": "scan_limitation_reason",
+          "label": "Scan Limitation Reason",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "liver",
+      "title": "Liver",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "liver_size",
+          "label": "Liver Size",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Enlarged", "value": "enlarged"},
+            {"label": "Reduced", "value": "reduced"}
+          ]
+        },
+        {
+          "field_key": "liver_span_cm",
+          "label": "Liver Span (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "liver_echotexture",
+          "label": "Liver Echotexture",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Coarse", "value": "coarse"},
+            {"label": "Heterogeneous", "value": "heterogeneous"}
+          ]
+        },
+        {
+          "field_key": "liver_focal_lesion",
+          "label": "Focal Lesion",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "None", "value": "none"},
+            {"label": "Present", "value": "present"}
+          ]
+        },
+        {
+          "field_key": "liver_focal_lesion_details",
+          "label": "Focal Lesion Details",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "gallbladder",
+      "title": "Gallbladder",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "gb_distension",
+          "label": "Distension",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Distended", "value": "distended"},
+            {"label": "Collapsed", "value": "collapsed"}
+          ]
+        },
+        {
+          "field_key": "gb_wall_thickness",
+          "label": "Wall Thickness",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Thickened", "value": "thickened"}
+          ]
+        },
+        {
+          "field_key": "gb_calculi",
+          "label": "Calculi",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "None", "value": "none"},
+            {"label": "Present", "value": "present"}
+          ]
+        },
+        {
+          "field_key": "gb_calculi_details",
+          "label": "Calculi Details",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "biliary_tree",
+      "title": "Biliary Tree",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "cbd_diameter_mm",
+          "label": "CBD Diameter (mm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "ihbd_status",
+          "label": "IHBD Status",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Not dilated", "value": "not_dilated"},
+            {"label": "Dilated", "value": "dilated"}
+          ]
+        }
+      ]
+    },
+    {
+      "section_key": "pancreas",
+      "title": "Pancreas",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "pancreas_visualization",
+          "label": "Visualization",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Adequately visualized", "value": "adequate"},
+            {"label": "Partially obscured by bowel gas", "value": "partial"},
+            {"label": "Not well visualized", "value": "not_visualized"}
+          ]
+        },
+        {
+          "field_key": "pancreas_size",
+          "label": "Pancreas Size",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Bulky", "value": "bulky"},
+            {"label": "Atrophic", "value": "atrophic"}
+          ]
+        },
+        {
+          "field_key": "pancreas_echotexture",
+          "label": "Echotexture",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Heterogeneous", "value": "heterogeneous"}
+          ]
+        },
+        {
+          "field_key": "pancreatic_duct_mm",
+          "label": "Pancreatic Duct (mm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "spleen",
+      "title": "Spleen",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "spleen_size",
+          "label": "Spleen Size",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Enlarged", "value": "enlarged"}
+          ]
+        },
+        {
+          "field_key": "spleen_span_cm",
+          "label": "Spleen Span (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "kidney_right",
+      "title": "Right Kidney",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "kidney_r_size",
+          "label": "Size",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Enlarged", "value": "enlarged"},
+            {"label": "Small", "value": "small"}
+          ]
+        },
+        {
+          "field_key": "kidney_r_length_cm",
+          "label": "Length (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "kidney_r_cortex",
+          "label": "Cortex",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Thinned", "value": "thinned"}
+          ]
+        },
+        {
+          "field_key": "kidney_r_pcs",
+          "label": "PCS",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Not dilated", "value": "not_dilated"},
+            {"label": "Dilated", "value": "dilated"}
+          ]
+        },
+        {
+          "field_key": "kidney_r_stone",
+          "label": "Stone",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "None", "value": "none"},
+            {"label": "Present", "value": "present"}
+          ]
+        },
+        {
+          "field_key": "kidney_r_stone_details",
+          "label": "Stone Details",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "kidney_left",
+      "title": "Left Kidney",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "kidney_l_size",
+          "label": "Size",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Enlarged", "value": "enlarged"},
+            {"label": "Small", "value": "small"}
+          ]
+        },
+        {
+          "field_key": "kidney_l_length_cm",
+          "label": "Length (cm)",
+          "type": "number",
+          "required": false,
+          "supports_not_applicable": true
+        },
+        {
+          "field_key": "kidney_l_cortex",
+          "label": "Cortex",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Thinned", "value": "thinned"}
+          ]
+        },
+        {
+          "field_key": "kidney_l_pcs",
+          "label": "PCS",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Not dilated", "value": "not_dilated"},
+            {"label": "Dilated", "value": "dilated"}
+          ]
+        },
+        {
+          "field_key": "kidney_l_stone",
+          "label": "Stone",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "None", "value": "none"},
+            {"label": "Present", "value": "present"}
+          ]
+        },
+        {
+          "field_key": "kidney_l_stone_details",
+          "label": "Stone Details",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "urinary_bladder",
+      "title": "Urinary Bladder",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "bladder_distension",
+          "label": "Distension",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Adequately distended", "value": "adequate"},
+            {"label": "Poorly distended", "value": "poor"}
+          ]
+        },
+        {
+          "field_key": "bladder_wall",
+          "label": "Wall",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Thickened", "value": "thickened"}
+          ]
+        },
+        {
+          "field_key": "bladder_calculi",
+          "label": "Calculi",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "None", "value": "none"},
+            {"label": "Present", "value": "present"}
+          ]
+        }
+      ]
+    },
+    {
+      "section_key": "vessels",
+      "title": "Vessels",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "aorta_status",
+          "label": "Aorta",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal caliber", "value": "normal"},
+            {"label": "Dilated", "value": "dilated"}
+          ]
+        },
+        {
+          "field_key": "ivc_status",
+          "label": "IVC",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Dilated", "value": "dilated"}
+          ]
+        },
+        {
+          "field_key": "portal_vein_status",
+          "label": "Portal Vein",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "Normal", "value": "normal"},
+            {"label": "Dilated", "value": "dilated"}
+          ]
+        }
+      ]
+    },
+    {
+      "section_key": "peritoneal",
+      "title": "Peritoneal Cavity",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "free_fluid",
+          "label": "Free Fluid",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "None", "value": "none"},
+            {"label": "Present", "value": "present"}
+          ]
+        },
+        {
+          "field_key": "free_fluid_details",
+          "label": "Free Fluid Details",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "lymph_nodes",
+      "title": "Lymph Nodes",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "lymph_nodes_status",
+          "label": "Lymph Nodes",
+          "type": "single_choice",
+          "required": false,
+          "supports_not_applicable": true,
+          "options": [
+            {"label": "No significant lymphadenopathy", "value": "normal"},
+            {"label": "Enlarged lymph nodes", "value": "enlarged"}
+          ]
+        },
+        {
+          "field_key": "lymph_nodes_details",
+          "label": "Lymph Nodes Details",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "other_findings",
+      "title": "Other Findings",
+      "include_toggle": true,
+      "fields": [
+        {
+          "field_key": "other_findings_text",
+          "label": "Other Findings",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "impression",
+      "title": "Impression",
+      "include_toggle": false,
+      "fields": [
+        {
+          "field_key": "impression_text",
+          "label": "Impression",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    },
+    {
+      "section_key": "notes",
+      "title": "Notes",
+      "include_toggle": false,
+      "fields": [
+        {
+          "field_key": "free_text_notes",
+          "label": "Free Text Notes",
+          "type": "text",
+          "required": false,
+          "supports_not_applicable": true
+        }
+      ]
+    }
+  ]
+}
