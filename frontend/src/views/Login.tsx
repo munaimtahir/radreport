@@ -60,6 +60,7 @@ export default function Login() {
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Username"
               required
+              autoComplete="username"
               style={{
                 width: "100%",
                 padding: 12,
@@ -78,6 +79,7 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
               required
+              autoComplete="current-password"
               style={{
                 width: "100%",
                 padding: 12,

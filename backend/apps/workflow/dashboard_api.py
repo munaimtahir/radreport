@@ -144,10 +144,10 @@ def dashboard_worklist(request):
     # Role-based filtering
     if scope == "my" and not is_admin(user):
         # Non-admin: only items assigned to me or created by me (via visit)
+        # Note: assigned_to is at ServiceVisit level, not Item level
         queryset = queryset.filter(
             Q(service_visit__assigned_to=user) |
-            Q(service_visit__created_by=user) |
-            Q(assigned_to=user)
+            Q(service_visit__created_by=user)
         )
     elif scope == "department" and is_admin(user):
         # Admin: filter by department if specified
