@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db import transaction
+from django.core.exceptions import ValidationError
 from .models import (
     Template, TemplateVersion,
     ReportTemplate, ReportTemplateField, ReportTemplateFieldOption,
@@ -10,6 +11,7 @@ from .serializers import (
     TemplateSerializer, TemplateVersionSerializer,
     ReportTemplateSerializer, ReportTemplateFieldSerializer,
 )
+from .engine import TemplatePackageEngine
 
 def build_schema(template: Template) -> dict:
     # Freeze a simple JSON schema snapshot from current editable template objects
@@ -155,3 +157,78 @@ class ReportTemplateViewSet(viewsets.ModelViewSet):
         template.refresh_from_db()
         serializer = self.get_serializer(template)
         return Response(serializer.data)
+
+class TemplatePackageViewSet(viewsets.ViewSet):
+    permission_classes = [permissions.IsAdminUser]
+
+    @action(detail=False, methods=['get'])
+    def schema(self, request):
+        try:
+            schema = TemplatePackageEngine.get_schema()
+            return Response(schema)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+    @action(detail=False, methods=['post'])
+    def validate(self, request):
+        data = request.data
+        if 'file' in request.FILES:
+            import json
+            try:
+                data = json.load(request.FILES['file'])
+            except Exception as e:
+                return Response({"error": "Invalid JSON file"}, status=400)
+        
+        is_valid, errors, preview = TemplatePackageEngine.validate(data)
+        return Response({
+            "is_valid": is_valid,
+            "errors": errors,
+            "preview": preview if is_valid else None
+        })
+
+    @action(detail=False, methods=['post'], url_path='import')
+    def import_pkg(self, request):
+        data = request.data
+        if 'file' in request.FILES:
+            import json
+            try:
+                data = json.load(request.FILES['file'])
+            except Exception as e:
+                return Response({"error": "Invalid JSON file"}, status=400)
+
+        mode = request.data.get("mode", "create") 
+        if "mode" in request.query_params:
+            mode = request.query_params.get("mode")
+
+        try:
+            template, version = TemplatePackageEngine.import_package(data, mode=mode)
+            return Response({
+                "success": True,
+                "template_id": template.id,
+                "code": template.code,
+                "version": version.version,
+                "message": f"Successfully imported {template.name} v{version.version}"
+            })
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=400)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
+
+    @action(detail=False, methods=['get'])
+    def export(self, request):
+        code = request.query_params.get("code")
+        version = request.query_params.get("version")
+        
+        if not code:
+            return Response({"error": "Code is required"}, status=400)
+            
+        try:
+            data = TemplatePackageEngine.export_package(code, version_num=version)
+            response = Response(data)
+            filename = f"{code}_v{version}.json" if version else f"{code}_latest.json"
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            return response
+        except ValidationError as e:
+            return Response({"error": str(e)}, status=404)
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)

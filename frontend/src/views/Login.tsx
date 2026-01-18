@@ -50,7 +50,7 @@ export default function Login() {
         }}
       >
         <div style={{ marginBottom: 32 }}>
-          <BrandHeader logoSize="lg" titleSize="md" layout="vertical" align="center" />
+          <BrandHeader logoSize="xl" titleSize="md" layout="vertical" align="center" />
         </div>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           <div>

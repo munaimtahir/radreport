@@ -48,12 +48,12 @@ function Shell() {
   if (!token) return <Navigate to="/login" replace />;
   if (isLoading) {
     return (
-      <div style={{ 
-        display: "flex", 
-        alignItems: "center", 
-        justifyContent: "center", 
-        minHeight: "100vh", 
-        fontFamily: theme.typography.fontFamily 
+      <div style={{
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minHeight: "100vh",
+        fontFamily: theme.typography.fontFamily
       }}>
         Loading user...
       </div>
@@ -61,11 +61,11 @@ function Shell() {
   }
 
   return (
-    <div style={{ 
-      display: "flex", 
-      minHeight: "100vh", 
-      fontFamily: theme.typography.fontFamily, 
-      flexDirection: "column" 
+    <div style={{
+      display: "flex",
+      minHeight: "100vh",
+      fontFamily: theme.typography.fontFamily,
+      flexDirection: "column"
     }}>
       <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
         <aside
@@ -78,15 +78,15 @@ function Shell() {
             flexDirection: "column",
           }}
         >
-          <div 
-            style={{ 
-              marginBottom: 24, 
-              cursor: "pointer" 
+          <div
+            style={{
+              marginBottom: 24,
+              cursor: "pointer"
             }}
             onClick={() => navigate("/")}
           >
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
-              <BrandLogo size="sm" variant="full" />
+              <BrandLogo size="md" variant="full" />
               <BrandTitle size="sm" />
             </div>
           </div>
@@ -107,13 +107,13 @@ function Shell() {
               Dashboard
             </Link>
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${theme.colors.border}` }}>
-              <div style={{ 
-                fontSize: 11, 
-                color: theme.colors.textTertiary, 
-                fontWeight: theme.typography.fontWeight.semibold, 
-                textTransform: "uppercase", 
-                letterSpacing: "0.5px", 
-                marginBottom: 8 
+              <div style={{
+                fontSize: 11,
+                color: theme.colors.textTertiary,
+                fontWeight: theme.typography.fontWeight.semibold,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px",
+                marginBottom: 8
               }}>
                 WORKFLOW
               </div>
@@ -220,13 +220,13 @@ function Shell() {
             </Link>
             {canAdmin && (
               <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${theme.colors.border}` }}>
-                <div style={{ 
-                  fontSize: 11, 
-                  color: theme.colors.textTertiary, 
-                  fontWeight: theme.typography.fontWeight.semibold, 
-                  textTransform: "uppercase", 
-                  letterSpacing: "0.5px", 
-                  marginBottom: 8 
+                <div style={{
+                  fontSize: 11,
+                  color: theme.colors.textTertiary,
+                  fontWeight: theme.typography.fontWeight.semibold,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  marginBottom: 8
                 }}>
                   ADMIN
                 </div>

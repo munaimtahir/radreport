@@ -6,6 +6,13 @@ async function apiRequest(path: string, token: string | null, options: RequestIn
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
+
+  // If body is FormData, let the browser set Content-Type (checking body in options is tricky for typed RequestInit)
+  // But we can check if the caller passed a special flag or if we just detect it?
+  // Easier: Allow caller to override Content-Type to undefined/null to suppress it.
+  if (headers["Content-Type"] === "multipart/form-data") {
+    delete headers["Content-Type"];
+  }
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
@@ -16,7 +23,7 @@ async function apiRequest(path: string, token: string | null, options: RequestIn
     try {
       const json = JSON.parse(text);
       errorMsg = json.detail || json.message || text;
-    } catch {}
+    } catch { }
     throw new Error(errorMsg);
   }
   if (r.status === 204) return null;
@@ -41,6 +48,14 @@ export async function apiPatch(path: string, token: string | null, body: any) {
 
 export async function apiDelete(path: string, token: string | null) {
   return apiRequest(path, token, { method: "DELETE" });
+}
+
+export async function apiUpload(path: string, token: string | null, formData: FormData) {
+  return apiRequest(path, token, {
+    method: "POST",
+    body: formData,
+    headers: { "Content-Type": "multipart/form-data" }
+  });
 }
 
 function buildQuery(params: Record<string, string | number | undefined | null>) {
@@ -80,8 +95,8 @@ export async function getPatientTimeline(
 export async function login(username: string, password: string) {
   // Use relative path for production
   const isProd = (import.meta as any).env.PROD;
-  const loginUrl = isProd 
-    ? "/api/auth/token/" 
+  const loginUrl = isProd
+    ? "/api/auth/token/"
     : `${API_BASE.replace("/api", "")}/api/auth/token/`;
   const r = await fetch(loginUrl, {
     method: "POST",

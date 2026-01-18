@@ -25,6 +25,8 @@ REPORT_TEMPLATE_FIELD_TYPES = (
 
 class Template(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=100, unique=True, null=True, blank=True, help_text="Unique identifier for template family")
+
     name = models.CharField(max_length=200)
     modality_code = models.CharField(max_length=20, blank=True, default="")  # USG/XRAY/CT etc
     is_active = models.BooleanField(default=True)

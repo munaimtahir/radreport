@@ -3,7 +3,7 @@ import { theme } from '../../../theme';
 
 export interface BrandLogoProps {
   variant?: 'icon' | 'full';
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   onClick?: () => void;
   style?: React.CSSProperties;
 }
@@ -19,16 +19,17 @@ export interface BrandLogoProps {
  * - Consultants_Place_Clinic_Logo_Transparent.png (preferred)
  * - Consultants_Place_Clinic_Logo.png (fallback)
  */
-export default function BrandLogo({ 
-  variant = 'full', 
+export default function BrandLogo({
+  variant = 'full',
   size = 'md',
   onClick,
-  style 
+  style
 }: BrandLogoProps) {
   const sizeMap = {
     sm: { width: 40, height: 40 },
     md: { width: 80, height: 80 },
     lg: { width: 120, height: 120 },
+    xl: { width: 200, height: 200 },
   };
 
   const dimensions = sizeMap[size];

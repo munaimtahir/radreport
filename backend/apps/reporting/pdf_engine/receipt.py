@@ -10,6 +10,7 @@ from io import BytesIO
 from typing import Iterable, List, Optional, Tuple
 from decimal import Decimal
 
+from django.conf import settings
 from django.core.files.base import ContentFile
 from reportlab.lib.colors import HexColor, black
 from reportlab.lib.pagesizes import A4
@@ -348,6 +349,11 @@ def _draw_receipt_copy(
 
     header_image_path = _safe_image_path(getattr(receipt_settings, "header_image", None))
     logo_path = _safe_image_path(getattr(receipt_settings, "logo_image", None))
+    if not logo_path:
+        # Fallback to static branding logo if available
+        static_logo = str(settings.BASE_DIR / "static" / "branding" / "logo.png")
+        if os.path.exists(static_logo):
+            logo_path = static_logo
     header_text = getattr(receipt_settings, "header_text", None) or "Consultant Place Clinic"
 
     header_height = HEADER_IMAGE_HEIGHT * mm
