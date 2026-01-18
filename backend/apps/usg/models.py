@@ -176,7 +176,7 @@ class UsgFieldValue(models.Model):
     def clean(self):
         """Enforce immutability for published studies"""
         if self.study.status == "published":
-            raise ValidationError("Cannot modify field values of a published study")
+            raise ValidationError("Published study is locked")
 
     def save(self, *args, **kwargs):
         self.clean()
@@ -198,8 +198,17 @@ class UsgPublishedSnapshot(models.Model):
     published_json_snapshot = models.JSONField(
         help_text="Frozen copy of all field_key → {value, is_na}"
     )
+    template_snapshot = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text="Frozen copy of template schema at publish time"
+    )
     published_text_snapshot = models.TextField(
         help_text="Final narrative text as issued"
+    )
+    pdf_file_path = models.CharField(
+        max_length=500, blank=True, null=True,
+        help_text="Local filesystem path to the PDF stored under MEDIA_ROOT"
     )
     pdf_drive_file_id = models.CharField(
         max_length=255, blank=True, null=True,

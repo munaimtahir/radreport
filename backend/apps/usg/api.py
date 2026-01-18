@@ -6,6 +6,9 @@ from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.http import HttpResponse
 from django.utils import timezone
+from django.conf import settings
+from django.core.files.storage import default_storage
+import os
 
 from .models import (
     UsgTemplate, UsgServiceProfile, UsgStudy,
@@ -88,8 +91,8 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         if instance.status == 'published':
             return Response(
-                {'detail': 'Cannot modify a published study'},
-                status=status.HTTP_403_FORBIDDEN
+                {'detail': 'Published study is locked'},
+                status=status.HTTP_409_CONFLICT
             )
         return super().update(request, *args, **kwargs)
 
@@ -98,8 +101,8 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         if instance.status == 'published':
             return Response(
-                {'detail': 'Cannot modify a published study'},
-                status=status.HTTP_403_FORBIDDEN
+                {'detail': 'Published study is locked'},
+                status=status.HTTP_409_CONFLICT
             )
         return super().partial_update(request, *args, **kwargs)
 
@@ -108,8 +111,8 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         if instance.status == 'published':
             return Response(
-                {'detail': 'Cannot delete a published study'},
-                status=status.HTTP_403_FORBIDDEN
+                {'detail': 'Published study is locked'},
+                status=status.HTTP_409_CONFLICT
             )
         return super().destroy(request, *args, **kwargs)
 
@@ -131,8 +134,8 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
         # Block if published
         if study.status == 'published':
             return Response(
-                {'detail': 'Cannot modify field values of a published study'},
-                status=status.HTTP_403_FORBIDDEN
+                {'detail': 'Published study is locked'},
+                status=status.HTTP_409_CONFLICT
             )
         
         values_data = request.data.get('values', [])
@@ -227,6 +230,8 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
                 }
                 for fv in field_values
             }
+
+            template_snapshot = template_schema
             
             # Generate narrative text
             published_text_snapshot = render_usg_report_with_metadata(
@@ -241,9 +246,17 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
                 study,
                 published_by=request.user
             )
-            
-            # Upload to Google Drive
+
+            # Persist PDF to MEDIA_ROOT
             filename = f"USG_{study.service_code}_{study.patient.mrn}_{study.visit.visit_number}_{study.id}.pdf"
+            relative_path = os.path.join("usg_reports", filename)
+            if not default_storage.exists(relative_path):
+                pdf_content.seek(0)
+                default_storage.save(relative_path, pdf_content)
+            pdf_file_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+
+            # Upload to Google Drive (optional)
+            pdf_content.seek(0)
             drive_result = upload_pdf_to_drive(pdf_content, filename, study)
             
             pdf_drive_file_id = None
@@ -262,7 +275,9 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
                 template_version=study.template.version,
                 renderer_version='usg_renderer_v1',
                 published_json_snapshot=published_json_snapshot,
+                template_snapshot=template_snapshot,
                 published_text_snapshot=published_text_snapshot,
+                pdf_file_path=pdf_file_path,
                 pdf_drive_file_id=pdf_drive_file_id,
                 pdf_drive_folder_id=pdf_drive_folder_id,
                 pdf_sha256=pdf_sha256,
@@ -306,13 +321,20 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_404_NOT_FOUND
             )
         
+        # Prefer local file under MEDIA_ROOT
+        if snapshot.pdf_file_path and os.path.exists(snapshot.pdf_file_path):
+            with open(snapshot.pdf_file_path, 'rb') as pdf_file:
+                response = HttpResponse(pdf_file.read(), content_type='application/pdf')
+                response['Content-Disposition'] = f'inline; filename=\"usg_report_{study.id}.pdf\"'
+                return response
+
         # Try to get from Drive
         if snapshot.pdf_drive_file_id:
             pdf_bytes = get_pdf_from_drive(snapshot.pdf_drive_file_id)
-            
+
             if pdf_bytes:
                 response = HttpResponse(pdf_bytes, content_type='application/pdf')
-                response['Content-Disposition'] = f'inline; filename="usg_report_{study.id}.pdf"'
+                response['Content-Disposition'] = f'inline; filename=\"usg_report_{study.id}.pdf\"'
                 return response
         
         # Drive file missing, regenerate from published_text_snapshot
@@ -324,8 +346,16 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
             published_by=snapshot.published_by
         )
         
-        # Re-upload to Drive
+        # Persist regenerated PDF to MEDIA_ROOT
         filename = f"USG_{study.service_code}_{study.patient.mrn}_{study.visit.visit_number}_{study.id}.pdf"
+        relative_path = os.path.join("usg_reports", filename)
+        if not default_storage.exists(relative_path):
+            pdf_content.seek(0)
+            default_storage.save(relative_path, pdf_content)
+        snapshot.pdf_file_path = os.path.join(settings.MEDIA_ROOT, relative_path)
+
+        # Re-upload to Drive
+        pdf_content.seek(0)
         drive_result = upload_pdf_to_drive(pdf_content, filename, study)
         
         if drive_result:
@@ -337,11 +367,13 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
                 f"{snapshot.audit_note or ''}\n"
                 f"PDF regenerated from published text snapshot on {timezone.now().isoformat()}"
             ).strip()
-            snapshot.save()
+
+        snapshot.save()
         
         # Return PDF
+        pdf_content.seek(0)
         response = HttpResponse(pdf_content.read(), content_type='application/pdf')
-        response['Content-Disposition'] = f'inline; filename="usg_report_{study.id}.pdf"'
+        response['Content-Disposition'] = f'inline; filename=\"usg_report_{study.id}.pdf\"'
         return response
 
 
