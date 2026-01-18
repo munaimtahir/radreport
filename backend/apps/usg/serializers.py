@@ -44,7 +44,7 @@ class UsgFieldValueSerializer(serializers.ModelSerializer):
         """Enforce immutability for published studies"""
         if self.instance and self.instance.study.status == 'published':
             raise serializers.ValidationError(
-                "Cannot modify field values of a published study"
+                "Published study is locked"
             )
         return attrs
 
@@ -89,7 +89,7 @@ class UsgStudySerializer(serializers.ModelSerializer):
             # Only allow reading published studies, no updates
             if self.instance.status != attrs.get('status', self.instance.status):
                 raise serializers.ValidationError(
-                    "Cannot modify a published study"
+                    "Published study is locked"
                 )
         return attrs
 
@@ -134,6 +134,7 @@ class UsgPublishedSnapshotSerializer(serializers.ModelSerializer):
             'id', 'study', 'study_detail', 'template_code',
             'template_version', 'renderer_version',
             'published_json_snapshot', 'published_text_snapshot',
+            'template_snapshot', 'pdf_file_path',
             'pdf_drive_file_id', 'pdf_drive_folder_id',
             'pdf_sha256', 'published_at', 'published_by', 'audit_note'
         ]

@@ -6,10 +6,9 @@ from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
-from reportlab.platypus import Paragraph, Frame
 from io import BytesIO
 from django.core.files.base import ContentFile
-import os
+from apps.catalog.models import Service
 
 
 def generate_usg_pdf(published_text_snapshot, patient, visit, study, published_by=None):
@@ -82,7 +81,11 @@ def generate_usg_pdf(published_text_snapshot, patient, visit, study, published_b
     c.drawString(40, y, f"Visit Number: {visit.visit_number}")
     y -= 14
     
-    c.drawString(40, y, f"Service Code: {study.service_code}")
+    service_label = study.service_code
+    service = Service.objects.filter(code=study.service_code).first()
+    if service:
+        service_label = f"{service.name} ({study.service_code})"
+    c.drawString(40, y, f"Service: {service_label}")
     y -= 14
     
     c.drawString(40, y, f"Study Date: {study.created_at.strftime('%Y-%m-%d %H:%M')}")

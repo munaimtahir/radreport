@@ -10,27 +10,19 @@ class Command(BaseCommand):
         profiles = [
             {
                 "service_code": "USG_ABDOMEN",
-                "template_code": "USG_ABDOMEN_BASE",
+                "template_code": "USG_ABDOMEN_BASIC",
                 "hidden_sections": [],
                 "forced_na_fields": [],
             },
             {
                 "service_code": "USG_KUB",
-                "template_code": "USG_ABDOMEN_BASE",
-                "hidden_sections": [
-                    "liver",
-                    "gallbladder",
-                    "biliary_tree",
-                    "pancreas",
-                    "spleen",
-                    "vessels",
-                    "lymph_nodes",
-                ],
+                "template_code": "USG_ABDOMEN_BASIC",
+                "hidden_sections": [],
                 "forced_na_fields": [],
             },
             {
                 "service_code": "USG_PELVIS",
-                "template_code": "USG_PELVIS_BASE",
+                "template_code": "USG_ABDOMEN_BASIC",
                 "hidden_sections": [],
                 "forced_na_fields": [],
             },

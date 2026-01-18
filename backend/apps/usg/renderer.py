@@ -9,6 +9,7 @@ Rules:
 - If a section has no printable fields, skip entire section
 - Output format: section headings with narrative sentences
 """
+from apps.catalog.models import Service
 
 
 def render_usg_report(template_schema, field_values_dict):
@@ -37,6 +38,10 @@ def render_usg_report(template_schema, field_values_dict):
             field_key = field.get('field_key')
             field_label = field.get('label', '')
             field_type = field.get('type')
+
+            # Conditional visibility
+            if not _is_field_visible(field, field_values_dict):
+                continue
             
             # Get field value data
             field_data = field_values_dict.get(field_key, {})
@@ -117,6 +122,46 @@ def _get_option_label(value, options):
     return value  # Fallback to value if label not found
 
 
+def _is_field_visible(field, field_values_dict):
+    """
+    Determine if a field should be rendered based on conditional rules.
+
+    Supported formats:
+    - "show_when": {"field_key": "liver_focal_lesion", "value": "yes"}
+    - "show_when": {"field_key": "study_type", "values": ["usg_abdomen", "usg_kub"]}
+    """
+    condition = field.get('show_when') or field.get('visible_when')
+    if not condition:
+        return True
+
+    dependent_key = condition.get('field_key')
+    if not dependent_key:
+        return True
+
+    dependent_data = field_values_dict.get(dependent_key, {})
+    if dependent_data.get('is_not_applicable'):
+        return False
+
+    dependent_value = dependent_data.get('value_json')
+    if dependent_value is None or dependent_value == '' or dependent_value == []:
+        return False
+
+    expected_values = condition.get('values')
+    expected_value = condition.get('value')
+
+    if expected_values is not None:
+        if isinstance(dependent_value, list):
+            return any(value in expected_values for value in dependent_value)
+        return dependent_value in expected_values
+
+    if expected_value is not None:
+        if isinstance(dependent_value, list):
+            return expected_value in dependent_value
+        return dependent_value == expected_value
+
+    return True
+
+
 def render_usg_report_with_metadata(template_schema, field_values_dict, study, patient):
     """
     Render full report with patient metadata and narrative.
@@ -142,7 +187,11 @@ def render_usg_report_with_metadata(template_schema, field_values_dict, study, p
     if patient.gender:
         lines.append(f"Gender: {patient.gender}")
     lines.append(f"Visit: {study.visit.visit_number}")
-    lines.append(f"Service: {study.service_code}")
+    service_label = study.service_code
+    service = Service.objects.filter(code=study.service_code).first()
+    if service:
+        service_label = f"{service.name} ({study.service_code})"
+    lines.append(f"Service: {service_label}")
     lines.append(f"Date: {study.created_at.strftime('%Y-%m-%d')}")
     lines.append("=" * 50)
     lines.append("")
