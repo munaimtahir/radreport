@@ -1,0 +1,29 @@
+# Example Manual Workflow Template
+#
+# This is a template showing how to create workflows that only run manually.
+# Copy this template when creating new workflows to ensure they follow the
+# manual-execution-only policy.
+
+name: Example Manual Workflow
+
+# IMPORTANT: Only use workflow_dispatch trigger
+# DO NOT add: push, pull_request, schedule, or any other automatic triggers
+on:
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: 'Reason for running this workflow'
+        required: false
+        default: 'Manual execution'
+
+jobs:
+  example-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+      
+      - name: Example step
+        run: |
+          echo "This workflow runs only when manually triggered"
+          echo "Reason: ${{ github.event.inputs.reason }}"
