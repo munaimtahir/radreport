@@ -9,6 +9,7 @@ import Templates from "../views/Templates";
 import ReceiptSettings from "../views/ReceiptSettings";
 import ReportTemplates from "../views/ReportTemplates";
 import ServiceTemplates from "../views/ServiceTemplates";
+import TemplateImportManager from "../views/TemplateImportManager";
 import ConsultantSettlementsPage from "../views/ConsultantSettlementsPage";
 import RegistrationPage from "../views/RegistrationPage";
 import PatientsWorkflow from "../views/PatientsWorkflow";
@@ -86,8 +87,8 @@ function Shell() {
             onClick={() => navigate("/")}
           >
             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 12 }}>
-              <BrandLogo size="md" variant="full" />
-              <BrandTitle size="sm" />
+              <BrandLogo size="lg" variant="full" />
+              <BrandTitle size="md" />
             </div>
           </div>
           <nav style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
@@ -444,6 +445,10 @@ function Shell() {
               <Route
                 path="/admin/consultant-settlements"
                 element={canAdmin ? <ConsultantSettlementsPage /> : <AccessDenied />}
+              />
+              <Route
+                path="/admin/templates/import"
+                element={canAdmin ? <TemplateImportManager /> : <AccessDenied />}
               />
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />

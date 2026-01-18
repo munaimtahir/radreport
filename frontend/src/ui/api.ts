@@ -1,5 +1,5 @@
 // Use relative path in production, or env variable if set
-const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
+export const API_BASE: string = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
 
 async function apiRequest(path: string, token: string | null, options: RequestInit = {}) {
   const headers: Record<string, string> = {

@@ -14,336 +14,68 @@ class Migration(migrations.Migration):
             sql="""
 DO $$
 BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgfie_study__b1d291_idx'
-    ) THEN
+    -- 1. usg_usgfie_study__b1d291_idx -> usg_usgfiel_study_i_acf6f5_idx
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usg_usgfie_study__b1d291_idx') THEN
         ALTER INDEX usg_usgfie_study__b1d291_idx RENAME TO usg_usgfiel_study_i_acf6f5_idx;
     END IF;
-END$$;
-""",
-            reverse_sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgfiel_study_i_acf6f5_idx'
-    ) THEN
-        ALTER INDEX usg_usgfiel_study_i_acf6f5_idx RENAME TO usg_usgfie_study__b1d291_idx;
-    END IF;
-END$$;
-""",
-        ),
-        migrations.RunSQL(
-            sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgfie_is_not_273fb5_idx'
-    ) THEN
+
+    -- 2. usg_usgfie_is_not_273fb5_idx -> usg_usgfiel_is_not__d228b4_idx
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usg_usgfie_is_not_273fb5_idx') THEN
         ALTER INDEX usg_usgfie_is_not_273fb5_idx RENAME TO usg_usgfiel_is_not__d228b4_idx;
     END IF;
-END$$;
-""",
-            reverse_sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgfiel_is_not__d228b4_idx'
-    ) THEN
-        ALTER INDEX usg_usgfiel_is_not__d228b4_idx RENAME TO usg_usgfie_is_not_273fb5_idx;
-    END IF;
-END$$;
-""",
-        ),
-        migrations.RunSQL(
-            sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgpub_study__e6cc32_idx'
-    ) THEN
+
+    -- 3. usg_usgpub_study__e6cc32_idx -> usg_usgpubl_study_i_b7756a_idx
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usg_usgpub_study__e6cc32_idx') THEN
         ALTER INDEX usg_usgpub_study__e6cc32_idx RENAME TO usg_usgpubl_study_i_b7756a_idx;
     END IF;
-END$$;
-""",
-            reverse_sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgpubl_study_i_b7756a_idx'
-    ) THEN
-        ALTER INDEX usg_usgpubl_study_i_b7756a_idx RENAME TO usg_usgpub_study__e6cc32_idx;
-    END IF;
-END$$;
-""",
-        ),
-        migrations.RunSQL(
-            sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgpub_template_6f9b1d_idx'
-    ) THEN
+
+    -- 4. usg_usgpub_template_6f9b1d_idx -> usg_usgpubl_templat_28535c_idx
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usg_usgpub_template_6f9b1d_idx') THEN
         ALTER INDEX usg_usgpub_template_6f9b1d_idx RENAME TO usg_usgpubl_templat_28535c_idx;
     END IF;
-END$$;
-""",
-            reverse_sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgpubl_templat_28535c_idx'
-    ) THEN
-        ALTER INDEX usg_usgpubl_templat_28535c_idx RENAME TO usg_usgpub_template_6f9b1d_idx;
-    END IF;
-END$$;
-""",
-        ),
-        migrations.RunSQL(
-            sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgpub_pdf_dri_4d4c6d_idx'
-    ) THEN
+
+    -- 5. usg_usgpub_pdf_dri_4d4c6d_idx -> usg_usgpubl_pdf_dri_bfa86d_idx
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usg_usgpub_pdf_dri_4d4c6d_idx') THEN
         ALTER INDEX usg_usgpub_pdf_dri_4d4c6d_idx RENAME TO usg_usgpubl_pdf_dri_bfa86d_idx;
     END IF;
-END$$;
-""",
-            reverse_sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgpubl_pdf_dri_bfa86d_idx'
-    ) THEN
-        ALTER INDEX usg_usgpubl_pdf_dri_bfa86d_idx RENAME TO usg_usgpub_pdf_dri_4d4c6d_idx;
-    END IF;
-END$$;
-""",
-        ),
-        migrations.RunSQL(
-            sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgser_servic_21a80c_idx'
-    ) THEN
+
+    -- 6. usg_usgser_servic_21a80c_idx -> usg_usgserv_service_46a7e9_idx
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usg_usgser_servic_21a80c_idx') THEN
         ALTER INDEX usg_usgser_servic_21a80c_idx RENAME TO usg_usgserv_service_46a7e9_idx;
     END IF;
-END$$;
-""",
-            reverse_sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgserv_service_46a7e9_idx'
-    ) THEN
-        ALTER INDEX usg_usgserv_service_46a7e9_idx RENAME TO usg_usgser_servic_21a80c_idx;
-    END IF;
-END$$;
-""",
-        ),
-        migrations.RunSQL(
-            sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgstu_patien_8f24e1_idx'
-    ) THEN
+
+    -- 7. usg_usgstu_patien_8f24e1_idx -> usg_usgstud_patient_e85b3c_idx
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usg_usgstu_patien_8f24e1_idx') THEN
         ALTER INDEX usg_usgstu_patien_8f24e1_idx RENAME TO usg_usgstud_patient_e85b3c_idx;
     END IF;
-END$$;
-""",
-            reverse_sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgstud_patient_e85b3c_idx'
-    ) THEN
-        ALTER INDEX usg_usgstud_patient_e85b3c_idx RENAME TO usg_usgstu_patien_8f24e1_idx;
-    END IF;
-END$$;
-""",
-        ),
-        migrations.RunSQL(
-            sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgstu_visit__0e51a1_idx'
-    ) THEN
+
+    -- 8. usg_usgstu_visit__0e51a1_idx -> usg_usgstud_visit_i_f94007_idx
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usg_usgstu_visit__0e51a1_idx') THEN
         ALTER INDEX usg_usgstu_visit__0e51a1_idx RENAME TO usg_usgstud_visit_i_f94007_idx;
     END IF;
-END$$;
-""",
-            reverse_sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgstud_visit_i_f94007_idx'
-    ) THEN
-        ALTER INDEX usg_usgstud_visit_i_f94007_idx RENAME TO usg_usgstu_visit__0e51a1_idx;
-    END IF;
-END$$;
-""",
-        ),
-        migrations.RunSQL(
-            sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgstu_status_1d911e_idx'
-    ) THEN
+
+    -- 9. usg_usgstu_status_1d911e_idx -> usg_usgstud_status_9d3aeb_idx
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usg_usgstu_status_1d911e_idx') THEN
         ALTER INDEX usg_usgstu_status_1d911e_idx RENAME TO usg_usgstud_status_9d3aeb_idx;
     END IF;
-END$$;
-""",
-            reverse_sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgstud_status_9d3aeb_idx'
-    ) THEN
-        ALTER INDEX usg_usgstud_status_9d3aeb_idx RENAME TO usg_usgstu_status_1d911e_idx;
-    END IF;
-END$$;
-""",
-        ),
-        migrations.RunSQL(
-            sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgstu_servic_6b2f8b_idx'
-    ) THEN
+
+    -- 10. usg_usgstu_servic_6b2f8b_idx -> usg_usgstud_service_ae1e13_idx
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usg_usgstu_servic_6b2f8b_idx') THEN
         ALTER INDEX usg_usgstu_servic_6b2f8b_idx RENAME TO usg_usgstud_service_ae1e13_idx;
     END IF;
-END$$;
-""",
-            reverse_sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgstud_service_ae1e13_idx'
-    ) THEN
-        ALTER INDEX usg_usgstud_service_ae1e13_idx RENAME TO usg_usgstu_servic_6b2f8b_idx;
-    END IF;
-END$$;
-""",
-        ),
-        migrations.RunSQL(
-            sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgtem_code_46b7e6_idx'
-    ) THEN
+
+    -- 11. usg_usgtem_code_46b7e6_idx -> usg_usgtemp_code_1c5f0d_idx
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usg_usgtem_code_46b7e6_idx') THEN
         ALTER INDEX usg_usgtem_code_46b7e6_idx RENAME TO usg_usgtemp_code_1c5f0d_idx;
     END IF;
-END$$;
-""",
-            reverse_sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgtemp_code_1c5f0d_idx'
-    ) THEN
-        ALTER INDEX usg_usgtemp_code_1c5f0d_idx RENAME TO usg_usgtem_code_46b7e6_idx;
-    END IF;
-END$$;
-""",
-        ),
-        migrations.RunSQL(
-            sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgtem_catego_eb7b3d_idx'
-    ) THEN
+
+    -- 12. usg_usgtem_catego_eb7b3d_idx -> usg_usgtemp_categor_7fe72d_idx
+    IF EXISTS (SELECT 1 FROM pg_class WHERE relname = 'usg_usgtem_catego_eb7b3d_idx') THEN
         ALTER INDEX usg_usgtem_catego_eb7b3d_idx RENAME TO usg_usgtemp_categor_7fe72d_idx;
     END IF;
-END$$;
+
+END $$;
 """,
-            reverse_sql="""
-DO $$
-BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM pg_class c
-        WHERE c.relkind = 'i'
-          AND c.relname = 'usg_usgtemp_categor_7fe72d_idx'
-    ) THEN
-        ALTER INDEX usg_usgtemp_categor_7fe72d_idx RENAME TO usg_usgtem_catego_eb7b3d_idx;
-    END IF;
-END$$;
-""",
+            reverse_sql=""
         ),
     ]

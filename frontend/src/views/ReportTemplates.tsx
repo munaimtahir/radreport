@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../ui/auth";
-import { apiGet, apiPost, apiPatch, apiPut } from "../ui/api";
+import { apiGet, apiPost, apiPatch, apiPut, API_BASE } from "../ui/api";
+import { Link } from "react-router-dom";
 import PageHeader from "../ui/components/PageHeader";
 import ErrorAlert from "../ui/components/ErrorAlert";
 import SuccessAlert from "../ui/components/SuccessAlert";
@@ -263,6 +264,39 @@ export default function ReportTemplates() {
     }
   };
 
+  const exportTemplate = async (template: ReportTemplate) => {
+    if (!token) return;
+    if (!template.code) {
+      setError("Template has no code, cannot export.");
+      return;
+    }
+    try {
+      const response = await fetch(`${API_BASE}/template-packages/export/?code=${template.code}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        throw new Error(text || "Export failed");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      const contentDisp = response.headers.get('Content-Disposition');
+      let filename = `${template.code}.json`;
+      if (contentDisp && contentDisp.indexOf('filename=') !== -1) {
+        filename = contentDisp.split('filename=')[1].replace(/"/g, '');
+      }
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e: any) {
+      setError(e.message || "Export failed");
+    }
+  };
+
   return (
     <div>
       <PageHeader title="Report Templates" />
@@ -286,6 +320,9 @@ export default function ReportTemplates() {
             <Button variant="primary" onClick={resetForm}>
               Create Template
             </Button>
+            <Link to="/admin/templates/import" style={{ textDecoration: 'none' }}>
+              <Button variant="secondary">Import JSON</Button>
+            </Link>
           </div>
           {loading && <div>Loading templates...</div>}
           {!loading && filteredTemplates.length === 0 && <div>No templates found.</div>}
@@ -313,6 +350,9 @@ export default function ReportTemplates() {
                   </Button>
                   <Button variant="secondary" onClick={() => toggleTemplateActive(template)}>
                     {template.is_active ? "Deactivate" : "Activate"}
+                  </Button>
+                  <Button variant="secondary" onClick={() => exportTemplate(template)}>
+                    Export
                   </Button>
                 </div>
               </div>

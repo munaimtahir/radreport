@@ -30,6 +30,7 @@ export default function BrandTitle({ size = 'md', style }: BrandTitleProps) {
     fontFamily: theme.typography.fontFamily,
     fontWeight: theme.typography.fontWeight.semibold,
     lineHeight: 1.2,
+    flexWrap: 'wrap',
     ...style,
   };
 
