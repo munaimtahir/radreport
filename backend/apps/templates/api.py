@@ -201,7 +201,7 @@ class TemplatePackageViewSet(viewsets.ViewSet):
             mode = request.query_params.get("mode")
 
         try:
-            template, version = TemplatePackageEngine.import_package(data, mode=mode)
+            template, version = TemplatePackageEngine.import_package(data, mode=mode, user=self.request.user)
             return Response({
                 "success": True,
                 "template_id": template.id,
