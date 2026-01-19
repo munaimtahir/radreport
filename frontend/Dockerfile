@@ -26,7 +26,7 @@ EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD wget --no-verbose --tries=1 --spider http://localhost/ || exit 1
+    CMD wget --no-verbose --tries=1 --spider http://127.0.0.1/healthz || exit 1
 
 # Note: In the official nginx image, the master process starts as root and drops
 # privileges for worker processes to the nginx user. For stricter least-privilege
