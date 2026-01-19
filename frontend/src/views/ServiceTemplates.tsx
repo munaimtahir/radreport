@@ -44,8 +44,8 @@ export default function ServiceTemplates() {
 
   const filteredServices = useMemo(() => {
     return services.filter((service) =>
-      service.name.toLowerCase().includes(search.toLowerCase()) ||
-      service.code.toLowerCase().includes(search.toLowerCase())
+      (service.name || "").toLowerCase().includes(search.toLowerCase()) ||
+      (service.code || "").toLowerCase().includes(search.toLowerCase())
     );
   }, [services, search]);
 
