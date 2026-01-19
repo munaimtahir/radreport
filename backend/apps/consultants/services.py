@@ -13,15 +13,36 @@ def quantize_money(value: Decimal) -> Decimal:
     return value.quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
 
 
-def get_consultant_percent(consultant, as_of_date):
-    rules = ConsultantBillingRule.objects.filter(consultant=consultant, is_active=True).order_by(
-        "-active_from",
-        "-created_at",
-    )
-    for rule in rules:
+def get_consultant_percent(consultant, as_of_date, service_id=None):
+    """
+    Get the applicable consultant percentage.
+    Prioritizes service-specific rules over global rules.
+    """
+    # 1. Try to find a specific rule for this service
+    if service_id:
+        specific_rules = ConsultantBillingRule.objects.filter(
+            consultant=consultant,
+            is_active=True,
+            service_id=service_id
+        ).order_by("-active_from", "-created_at")
+        
+        for rule in specific_rules:
+            if rule.active_from and as_of_date and rule.active_from > as_of_date:
+                continue
+            return rule.consultant_percent
+
+    # 2. Fallback to global rule (service IS NULL)
+    global_rules = ConsultantBillingRule.objects.filter(
+        consultant=consultant,
+        is_active=True,
+        service__isnull=True
+    ).order_by("-active_from", "-created_at")
+    
+    for rule in global_rules:
         if rule.active_from and as_of_date and rule.active_from > as_of_date:
             continue
         return rule.consultant_percent
+
     return Decimal("0")
 
 
@@ -41,7 +62,7 @@ def build_settlement_preview(consultant, date_from, date_to):
         items__consultant=consultant,
     ).distinct().prefetch_related("items", "payments", "patient")
 
-    consultant_percent = get_consultant_percent(consultant, date_to)
+    # consultant_percent = get_consultant_percent(consultant, date_to) # MOVED INSIDE LOOP
     lines = []
     gross_collected = Decimal("0")
     consultant_payable = Decimal("0")
@@ -67,6 +88,8 @@ def build_settlement_preview(consultant, date_from, date_to):
             if item.id in settled_item_ids:
                 continue
 
+            # Calculate percent for THIS specific item/service
+            consultant_percent = get_consultant_percent(consultant, date_to, service_id=item.service_id)
             consultant_share = quantize_money(item_paid * consultant_percent / Decimal("100"))
             clinic_share_item = quantize_money(item_paid - consultant_share)
 

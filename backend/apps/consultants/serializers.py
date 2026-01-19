@@ -11,12 +11,24 @@ from .models import (
 class ConsultantProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConsultantProfile
-        fields = ["id", "display_name", "user", "is_active", "created_at", "updated_at"]
+        fields = [
+            "id",
+            "display_name",
+            "mobile_number",
+            "email",
+            "degrees",
+            "designation",
+            "user",
+            "is_active",
+            "created_at",
+            "updated_at"
+        ]
         read_only_fields = ["created_at", "updated_at"]
 
 
 class ConsultantBillingRuleSerializer(serializers.ModelSerializer):
     consultant_name = serializers.CharField(source="consultant.display_name", read_only=True)
+    service_name = serializers.CharField(source="service.name", read_only=True, allow_null=True)
 
     class Meta:
         model = ConsultantBillingRule
@@ -24,6 +36,8 @@ class ConsultantBillingRuleSerializer(serializers.ModelSerializer):
             "id",
             "consultant",
             "consultant_name",
+            "service",
+            "service_name",
             "rule_type",
             "consultant_percent",
             "is_active",
@@ -35,6 +49,7 @@ class ConsultantBillingRuleSerializer(serializers.ModelSerializer):
 
 
 class ConsultantBillingRuleInputSerializer(serializers.Serializer):
+    service_id = serializers.UUIDField(required=False, allow_null=True)
     rule_type = serializers.ChoiceField(
         choices=ConsultantBillingRule.RULE_TYPE_CHOICES,
         default=ConsultantBillingRule.RULE_TYPE_PERCENT_SPLIT,

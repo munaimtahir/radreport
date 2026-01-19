@@ -11,6 +11,7 @@ import ReportTemplates from "../views/ReportTemplates";
 import ServiceTemplates from "../views/ServiceTemplates";
 import TemplateImportManager from "../views/TemplateImportManager";
 import ConsultantSettlementsPage from "../views/ConsultantSettlementsPage";
+import ConsultantsPage from "../views/ConsultantsPage";
 import RegistrationPage from "../views/RegistrationPage";
 import PatientsWorkflow from "../views/PatientsWorkflow";
 import USGWorklistPage from "../views/USGWorklistPage";
@@ -221,6 +222,21 @@ function Shell() {
                   SETTINGS
                 </div>
                 <Link
+                  to="/admin/consultants"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/admin/consultants") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/admin/consultants") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/admin/consultants") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
+                  }}
+                >
+                  Consultants
+                </Link>
+                <Link
                   to="/admin/report-templates"
                   style={{
                     padding: "10px 12px",
@@ -426,6 +442,10 @@ function Shell() {
               <Route
                 path="/admin/consultant-settlements"
                 element={canAdmin ? <ConsultantSettlementsPage /> : <AccessDenied />}
+              />
+              <Route
+                path="/admin/consultants"
+                element={canAdmin ? <ConsultantsPage /> : <AccessDenied />}
               />
               <Route
                 path="/admin/templates/import"

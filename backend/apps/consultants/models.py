@@ -10,6 +10,10 @@ from django.core.exceptions import ValidationError
 class ConsultantProfile(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     display_name = models.CharField(max_length=150)
+    mobile_number = models.CharField(max_length=20, blank=True, default="")
+    email = models.EmailField(blank=True, default="")
+    degrees = models.CharField(max_length=200, blank=True, default="", help_text="e.g. MBBS, FCPS")
+    designation = models.CharField(max_length=100, blank=True, default="", help_text="e.g. Consultant Radiologist")
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,
@@ -43,6 +47,15 @@ class ConsultantBillingRule(models.Model):
         ConsultantProfile,
         on_delete=models.CASCADE,
         related_name="billing_rules",
+    )
+    # If service is null, it's the global default for this consultant
+    service = models.ForeignKey(
+        "catalog.Service",
+        on_delete=models.CASCADE,
+        related_name="consultant_billing_rules",
+        null=True,
+        blank=True,
+        help_text="Specific service override. If blank, applies to all services not otherwise specified."
     )
     rule_type = models.CharField(
         max_length=50,

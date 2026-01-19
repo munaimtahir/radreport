@@ -17,6 +17,12 @@ from .serializers import (
 from .services import build_settlement_preview
 
 
+class ConsultantBillingRuleViewSet(viewsets.ModelViewSet):
+    queryset = ConsultantBillingRule.objects.all()
+    serializer_class = ConsultantBillingRuleSerializer
+    permission_classes = [permissions.IsAdminUser]
+
+
 class ConsultantProfileViewSet(viewsets.ModelViewSet):
     queryset = ConsultantProfile.objects.all()
     serializer_class = ConsultantProfileSerializer
@@ -34,36 +40,47 @@ class ConsultantProfileViewSet(viewsets.ModelViewSet):
             return [permissions.IsAdminUser()]
         return [permissions.IsAuthenticated()]
 
-    @action(detail=True, methods=["get", "put", "patch"], url_path="rule")
-    def rule(self, request, pk=None):
+    @action(detail=True, methods=["get", "post"], url_path="rules")
+    def rules(self, request, pk=None):
         consultant = self.get_object()
 
         if request.method == "GET":
-            rule = (
-                ConsultantBillingRule.objects.filter(consultant=consultant, is_active=True)
-                .order_by("-active_from", "-created_at")
-                .first()
-            )
-            if not rule:
-                return Response(
-                    {
-                        "consultant": str(consultant.id),
-                        "rule_type": ConsultantBillingRule.RULE_TYPE_PERCENT_SPLIT,
-                        "consultant_percent": "0.00",
-                        "is_active": False,
-                    }
-                )
-            return Response(ConsultantBillingRuleSerializer(rule).data)
+            rules = ConsultantBillingRule.objects.filter(
+                consultant=consultant, is_active=True
+            ).order_by("-active_from", "-created_at")
+            return Response(ConsultantBillingRuleSerializer(rules, many=True).data)
 
+        # POST
         serializer = ConsultantBillingRuleInputSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        
+        service_id = data.get("service_id")
         
         with transaction.atomic():
-            ConsultantBillingRule.objects.filter(consultant=consultant, is_active=True).update(is_active=False)
+            # Deactivate any EXISTING active rule for this scope (Same service OR Global)
+            # prevent duplicates
+            if service_id:
+                ConsultantBillingRule.objects.filter(
+                    consultant=consultant, 
+                    is_active=True, 
+                    service_id=service_id
+                ).update(is_active=False)
+            else:
+                # Global rule update - deactivate existing global
+                ConsultantBillingRule.objects.filter(
+                    consultant=consultant, 
+                    is_active=True, 
+                    service__isnull=True
+                ).update(is_active=False)
+
             rule = ConsultantBillingRule.objects.create(
                 consultant=consultant,
                 is_active=True,
-                **serializer.validated_data,
+                service_id=service_id, # Optional
+                rule_type=data["rule_type"],
+                consultant_percent=data["consultant_percent"],
+                active_from=data.get("active_from"),
             )
         return Response(ConsultantBillingRuleSerializer(rule).data, status=status.HTTP_201_CREATED)
 
