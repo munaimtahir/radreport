@@ -230,8 +230,17 @@ def transition_item_status(item, to_status, user, reason=None):
             changed_by=user,
         )
 
-        # Update derived visit status
-        item.service_visit.update_derived_status()
+        # Update derived visit status - force refresh to ensure freshness
+        if item.service_visit_id:
+            # Refresh visit instance to ensure no stale state
+            visit = item.service_visit
+            visit.refresh_from_db()
+            # Clear prefetch cache to ensure items.all() hits the DB
+            if hasattr(visit, '_prefetched_objects_cache'):
+                visit._prefetched_objects_cache = {}
+            
+            # Explicitly update status (item.save() does this too, but we want to be sure)
+            visit.update_derived_status()
 
     logger.info(
         "workflow_transition",

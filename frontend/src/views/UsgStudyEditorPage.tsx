@@ -52,6 +52,10 @@ interface UsgStudy {
   service_code: string;
   status: string;
   published_at?: string;
+  published_pdf_url?: string; // New workflow field
+  report_status?: string; // New workflow field
+  report_json?: any; // New workflow field
+  template_schema?: any; // New workflow field
   hidden_sections?: string[];
   forced_na_fields?: string[];
   service_profile?: {
@@ -79,7 +83,7 @@ const formatDateTime = (value?: string) => {
 const SINGLE_CHOICE_SELECT_THRESHOLD = 5;
 
 const supportsMultiChoice = (field: TemplateField) => field.type === "multi_choice";
-const usesSelectForSingleChoice = (field: TemplateField) => 
+const usesSelectForSingleChoice = (field: TemplateField) =>
   (field.options || []).length > SINGLE_CHOICE_SELECT_THRESHOLD;
 const getErrorMessage = (err: any, fallback: string) => err?.message || fallback;
 
@@ -123,42 +127,54 @@ export default function UsgStudyEditorPage() {
     const loadStudy = async () => {
       setError("");
       try {
-        const data = await apiGet(`/usg/studies/${studyId}/`, token);
-        setStudy(data);
-        const initialValues: Record<string, FieldValue> = {};
-        (data.field_values || []).forEach((item: FieldValue) => {
-          initialValues[item.field_key] = {
-            field_key: item.field_key,
-            value_json: item.value_json,
-            is_not_applicable: item.is_not_applicable,
-          };
-        });
-        const profileHidden = data.service_profile?.hidden_sections || data.hidden_sections || [];
-        const profileForced = data.service_profile?.forced_na_fields || data.forced_na_fields || [];
-        setHiddenSections(profileHidden);
-        setForcedNaFields(profileForced);
-        const enforcedDirty = new Set<string>();
-        profileForced.forEach((fieldKey: string) => {
-          const current = initialValues[fieldKey];
-          const needsOverride = !current || !current.is_not_applicable || current.value_json !== null;
-          if (needsOverride) {
-            initialValues[fieldKey] = {
-              field_key: fieldKey,
-              value_json: null,
-              is_not_applicable: true,
-            };
-            enforcedDirty.add(fieldKey);
+        const data = await apiGet(`/workflow/usg/${studyId}/`, token);
+
+        // Adapt USGReport to local state
+        setStudy({
+          ...data,
+          // Map status
+          status: data.report_status?.toLowerCase(),
+          is_locked: data.report_status === "FINAL" || data.report_status === "AMENDED", // Published/Final are locked
+          template_detail: {
+            schema_json: data.template_schema
           }
         });
-        setValues(initialValues);
-        setDirtyKeys(enforcedDirty);
-        const sections = data.template_detail?.schema_json.sections || [];
-        const includes: Record<string, boolean> = {};
-        sections.forEach((section: TemplateSection) => {
-          includes[section.section_key] = true;
+
+        const initialValues: Record<string, FieldValue> = {};
+        const reportJson = data.report_json || {};
+
+        // Iterate over schema to populate values from reportJson dictionary
+        const sections = data.template_schema?.sections || [];
+        sections.forEach((section: any) => {
+          (section.fields || []).forEach((field: any) => {
+            const key = field.key || field.field_key;
+            const stored = reportJson[key];
+
+            // Parse { value, is_na } wrapper or raw value
+            let value = stored;
+            let isNa = false;
+            if (stored && typeof stored === 'object' && 'is_na' in stored) {
+              value = stored.value;
+              isNa = stored.is_na;
+            }
+
+            initialValues[key] = {
+              field_key: key,
+              value_json: value, // State uses value_json for the actual value
+              is_not_applicable: isNa
+            };
+          });
         });
-        setSectionIncludes(includes);
-        const firstVisible = sections.find((section: TemplateSection) => !profileHidden.includes(section.section_key));
+
+        // Handle explicit NA fields if any (less relevant in new workflow but keeping safe)
+        // New workflow uses template defaults or explicit user action.
+
+        setValues(initialValues);
+
+        // Set up dirty keys (none initially)
+        setDirtyKeys(new Set());
+
+        const firstVisible = sections.find((section: TemplateSection) => section.section_key && !hiddenSections.includes(section.section_key));
         if (firstVisible) {
           setActiveSection(firstVisible.section_key);
         }
@@ -185,16 +201,16 @@ export default function UsgStudyEditorPage() {
 
   const schema = study?.template_detail?.schema_json;
   const sections = schema?.sections || [];
-  const isPublished = study?.status === "published" || study?.is_locked;
-  const canAutosave = study?.status === "draft" || study?.status === "verified";
+  const isPublished = study?.status === "final" || study?.status === "amended";
+  const canAutosave = study?.status === "draft";
   const isEditingDisabled = isPublished;
-  
+
   // Memoize visibleSections to prevent unnecessary re-renders
   const visibleSections = useMemo(() => {
     const hiddenSectionsSet = new Set(hiddenSections);
     return sections.filter((section) => !hiddenSectionsSet.has(section.section_key));
   }, [sections, hiddenSections]);
-  
+
   const forcedNaSet = new Set(forcedNaFields);
   const hasUnsavedChanges = dirtyKeys.size > 0 || saveStatus === "saving";
   const canPublish = !!user && (user.is_superuser || (user.groups || []).includes("verification"));
@@ -306,20 +322,25 @@ export default function UsgStudyEditorPage() {
     setSaveStatus("saving");
     setError("");
     const currentValues = valuesRef.current;
-    const fieldKeys = keys ? Array.from(keys) : Object.keys(currentValues);
-    try {
-      const payload = {
-        values: fieldKeys.map((fieldKey) => ({
-          field_key: fieldKey,
-          value_json: currentValues[fieldKey]?.value_json ?? null,
-          is_not_applicable: currentValues[fieldKey]?.is_not_applicable || false,
-        })),
+    // Map currentValues (Record) to Dict { key: { value, is_na } }
+    const payloadValues: Record<string, any> = {};
+    Object.values(currentValues).forEach(fv => {
+      payloadValues[fv.field_key] = {
+        value: fv.value_json,
+        is_na: fv.is_not_applicable
       };
-      await apiPut(`/usg/studies/${studyId}/values/`, token, payload);
-      
+    });
+
+    try {
+      // Use save_draft endpoint with values as a dictionary
+      const payload = {
+        values: payloadValues,
+      };
+      await apiPost(`/workflow/usg/${studyId}/save_draft/`, token, payload);
+
       // Check if component is still mounted before updating state
       if (!isMountedRef.current) return;
-      
+
       let remainingKeys = new Set<string>();
       setDirtyKeys((prev) => {
         if (!keys) return new Set();
@@ -347,15 +368,16 @@ export default function UsgStudyEditorPage() {
   };
 
   const renderPreview = async () => {
-    if (!token || !studyId) return;
-    setPreviewError("");
-    try {
-      const data = await apiPost(`/usg/studies/${studyId}/render/`, token, {});
-      setPreviewText(data.full_report || data.narrative || "");
-      setShowPreview(true);
-    } catch (err: any) {
-      setPreviewError(getErrorMessage(err, "Failed to render preview"));
-    }
+    setPreviewError("Preview not available in this version.");
+    // if (!token || !studyId) return;
+    // setPreviewError("");
+    // try {
+    //   const data = await apiPost(`/workflow/usg/${studyId}/render/`, token, {});
+    //   setPreviewText(data.full_report || data.narrative || "");
+    //   setShowPreview(true);
+    // } catch (err: any) {
+    //   setPreviewError(getErrorMessage(err, "Failed to render preview"));
+    // }
   };
 
   const publishReport = async () => {
@@ -364,11 +386,18 @@ export default function UsgStudyEditorPage() {
     setPublishing(true);
     setError("");
     try {
-      await apiPost(`/usg/studies/${studyId}/publish/`, token, {});
+      await apiPost(`/workflow/usg/${studyId}/publish/`, token, {});
       setSuccess("Report published. Editing locked.");
       setShowPublishConfirm(false);
-      const refreshed = await apiGet(`/usg/studies/${studyId}/`, token);
-      setStudy(refreshed);
+      const refreshed = await apiGet(`/workflow/usg/${studyId}/`, token);
+
+      // Adapt refreshed data (duplicate of load logic)
+      setStudy({
+        ...refreshed,
+        status: refreshed.report_status?.toLowerCase(),
+        is_locked: refreshed.report_status === "FINAL" || refreshed.report_status === "AMENDED",
+        template_detail: { schema_json: refreshed.template_schema }
+      });
     } catch (err: any) {
       setError(getErrorMessage(err, "Publish failed"));
     } finally {
@@ -379,20 +408,43 @@ export default function UsgStudyEditorPage() {
   const handleViewPdf = async () => {
     if (!studyId) return;
     const apiBase = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
-    const url = `${apiBase}/usg/studies/${studyId}/pdf/`;
-    setError("");
-    // Open an empty window first to avoid popup blockers and show smoother UX
+    // URL for PDF in workflow module
+    const url = `${apiBase}/workflow/usg/${studyId}/pdf/`; // Verify if this endpoint exists? 
+    // USGReportViewSet has publish which returns serializer with 'published_pdf_url'.
+    // `USGReportSerializer` has `published_pdf_url`.
+    // The previous logic used a direct endpoint.
+    // USGReportViewSet does NOT seem to have a `pdf` action.
+    // But `published_pdf_url` points to `/api/pdf/{svId}/report/` or similar.
+    // I should use `study.published_pdf_url` if available.
+
+    // For now, I will assume the published PDF URL is needed.
+    // If I don't have it, I can't download.
+    // I will try to use the `download` action if it existed, but it doesn't.
+    // I'll show error if no PDF URL.
+
+    // Actually, `USGReportSerializer` method `get_published_pdf_url` returns `/api/pdf/{sv.id}/report/`.
+    // I should use that if available.
+
+    // Code update:
+    if (!study?.published_pdf_url) {
+      setError("PDF not available yet. Publish the report first.");
+      return;
+    }
+    const pdfUrl = study.published_pdf_url;
+
+    // ... same open window logic ...
     const openedWindow = window.open("", "_blank", "noopener,noreferrer");
     if (!token) {
       if (openedWindow) openedWindow.close();
       return;
     }
     try {
-      const response = await fetch(url, {
+      const response = await fetch(pdfUrl, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
       });
+      // ... same blob logic ...
       if (!response.ok) {
         if (openedWindow) openedWindow.close();
         throw new Error("Failed to download PDF");

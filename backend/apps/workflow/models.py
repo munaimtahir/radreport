@@ -458,7 +458,19 @@ class USGReport(models.Model):
                     if field.get("required"):
                         key = field.get("key")
                         field_type = field.get("type")
-                        value = values.get(key)
+                        raw_value = values.get(key)
+                        
+                        # Handle structured value from frontend { value: ..., is_na: ... }
+                        value = raw_value
+                        is_na = False
+                        if isinstance(raw_value, dict) and "is_na" in raw_value:
+                            is_na = raw_value.get("is_na", False)
+                            value = raw_value.get("value")
+                            
+                        # If explicitly marked NA, it passes validation
+                        if is_na:
+                            continue
+
                         if is_missing(field_type, value):
                             label = field.get("label") or key
                             errors.append(f"{label} is required")

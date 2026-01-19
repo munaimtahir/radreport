@@ -44,28 +44,33 @@ class ServiceViewSet(viewsets.ModelViewSet):
         instance._current_user = self.request.user
         instance.save()
 
-    @action(detail=True, methods=["get"], url_path="templates")
-    def list_templates(self, request, pk=None):
+    @action(detail=True, methods=["get", "post"], url_path="templates")
+    def templates(self, request, pk=None):
+        if request.method == "POST":
+            # Attach template
+            if not request.user.is_staff:  # Or IsAdminUser check
+                from rest_framework.exceptions import PermissionDenied
+                raise PermissionDenied()
+            
+            serializer = ServiceReportTemplateSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            template_id = serializer.validated_data["template_id"]
+            link, _ = ServiceReportTemplate.objects.update_or_create(
+                service_id=pk,
+                template_id=template_id,
+                defaults={
+                    "is_default": serializer.validated_data.get("is_default", False),
+                    "is_active": serializer.validated_data.get("is_active", True),
+                },
+            )
+            if link.is_default:
+                ServiceReportTemplate.objects.filter(service_id=pk).exclude(id=link.id).update(is_default=False)
+            return Response(ServiceReportTemplateSerializer(link).data, status=status.HTTP_201_CREATED)
+        
+        # List templates
         links = ServiceReportTemplate.objects.filter(service_id=pk).select_related("template", "service")
         serializer = ServiceReportTemplateSerializer(links, many=True)
         return Response(serializer.data)
-
-    @action(detail=True, methods=["post"], url_path="templates", permission_classes=[permissions.IsAdminUser])
-    def attach_template(self, request, pk=None):
-        serializer = ServiceReportTemplateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        template_id = serializer.validated_data["template_id"]
-        link, _ = ServiceReportTemplate.objects.update_or_create(
-            service_id=pk,
-            template_id=template_id,
-            defaults={
-                "is_default": serializer.validated_data.get("is_default", False),
-                "is_active": serializer.validated_data.get("is_active", True),
-            },
-        )
-        if link.is_default:
-            ServiceReportTemplate.objects.filter(service_id=pk).exclude(id=link.id).update(is_default=False)
-        return Response(ServiceReportTemplateSerializer(link).data, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["patch"], url_path="templates/(?P<link_id>[^/.]+)", permission_classes=[permissions.IsAdminUser])
     def update_template_link(self, request, pk=None, link_id=None):

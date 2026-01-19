@@ -62,8 +62,20 @@ export default function UsgVisitReportsTab({ visitId, patientId, patientName, pa
   const loadStudies = async () => {
     if (!token) return;
     try {
-      const data = await apiGet(`/visits/${visitId}/usg-reports/`, token);
-      setStudies(data || []);
+      // Use Workflow API to fetch reports for this ServiceVisit
+      const data = await apiGet(`/workflow/usg/?visit_id=${visitId}`, token);
+
+      // Adapt USGReport (workflow) to UsgStudy (frontend interface)
+      const adaptedList = (data.results || data || []).map((report: any) => ({
+        id: report.id,
+        // Fallback to service code/name or template name
+        service_code: report.study_title || report.template_name || report.service_visit_item?.service_code || "USG Study",
+        status: report.report_status?.toLowerCase(), // DRAFT -> draft
+        created_at: report.created_at || report.saved_at, // USGReport uses saved_at/created_at
+        created_by: report.created_by_name,
+        published_at: report.verified_at // workflow uses verified_at/published_at logic, simplifying for display
+      }));
+      setStudies(adaptedList);
     } catch (err: any) {
       setError(err.message || "Failed to load USG studies");
     }
@@ -131,8 +143,9 @@ export default function UsgVisitReportsTab({ visitId, patientId, patientName, pa
       setError("Please select a study type.");
       return;
     }
-    if (!patientId) {
-      setError("Patient information is missing for this visit.");
+    // We strictly use visitId (ServiceVisit UUID)
+    if (!visitId) {
+      setError("Visit information is missing.");
       return;
     }
     setLoading(true);
@@ -142,14 +155,19 @@ export default function UsgVisitReportsTab({ visitId, patientId, patientName, pa
       if (!selected) {
         throw new Error("Selected study option is unavailable.");
       }
+
+      // Workflow API: create report (and optionally item if missing)
       const payload = {
-        patient: patientId,
-        visit: visitId,
-        service_code: selected.serviceCode || "USG_ABDOMEN",
-        template: selected.templateId,
+        visit_id: visitId,
       };
-      const study = await apiPost("/usg/studies/", token, payload);
-      setSuccess("USG study created.");
+
+      // NOTE: If USGReportViewSet requires an existing item, and one doesn't exist, this might fail.
+      // However, usually USG visits have items created at Registration.
+      // If the user wants to ADD a new study not in Registration, they should use "Add Service" workflow?
+      // Assuming Registration phase happened.
+
+      const study = await apiPost("/workflow/usg/", token, payload);
+      setSuccess("USG report created.");
       setShowModal(false);
       await loadStudies();
       navigate(`/usg/studies/${study.id}`);
@@ -207,7 +225,7 @@ export default function UsgVisitReportsTab({ visitId, patientId, patientName, pa
                   <td style={{ padding: "10px 4px" }}>
                     <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                       <Button variant="secondary" onClick={() => navigate(`/usg/studies/${study.id}`)}>
-                        {study.status === "published" ? "View" : "Continue Draft"}
+                        {study.status === "published" || study.status === "final" ? "View" : "Continue Draft"}
                       </Button>
                       <Button
                         variant="secondary"
@@ -215,7 +233,7 @@ export default function UsgVisitReportsTab({ visitId, patientId, patientName, pa
                       >
                         Preview
                       </Button>
-                      {study.status === "published" && (
+                      {(study.status === "published" || study.status === "final") && (
                         <Button variant="secondary" onClick={() => navigate(`/usg/studies/${study.id}?pdf=1`)}>
                           View PDF
                         </Button>

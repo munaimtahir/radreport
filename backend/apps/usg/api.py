@@ -70,6 +70,13 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
         visit_id = self.request.query_params.get('visit_id')
         if visit_id:
             queryset = queryset.filter(visit_id=visit_id)
+        else:
+            # Prevent naked GET from trying to load all studies (or whatever causes 400)
+            # User request: Allow GET without filters and return an empty list
+            # We can return all, or none. Returning none is safer for performance.
+            # But maybe they want to see all? User said "Patient pages must never break just because filters are missing."
+            # If I return all, it might be huge. I'll return none.
+            return queryset.none()
         
         return queryset
 

@@ -119,11 +119,20 @@ export default function UsgPatientProfilePage() {
     const loadReports = async () => {
       try {
         const results = await Promise.all(
-          visits.map((visit) => apiGet(`/visits/${visit.id}/usg-reports/`, token))
+          visits.map((visit) => apiGet(`/workflow/usg/?visit_id=${visit.id}`, token))
         );
         const reportMap: Record<string, UsgStudy[]> = {};
         visits.forEach((visit, index) => {
-          reportMap[visit.id] = results[index] || [];
+          const data = results[index];
+          // Adapt Workflow USGReport to UI UsgStudy
+          const reportList = (data.results || data || []).map((report: any) => ({
+            id: report.id,
+            service_code: report.study_title || report.template_name || report.service_visit_item?.service_code || "USG Study",
+            status: report.report_status?.toLowerCase(),
+            created_at: report.created_at || report.saved_at,
+            published_at: report.verified_at
+          }));
+          reportMap[visit.id] = reportList;
         });
         setVisitReports(reportMap);
       } catch (err: any) {
