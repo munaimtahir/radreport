@@ -259,7 +259,7 @@ export default function ConsultantsPage() {
                                         style={{ width: "100%", padding: 6, fontSize: 13 }}
                                     />
                                 </div>
-                                <Button size="sm" onClick={handleAddRule}>Add Rule</Button>
+                                <Button onClick={handleAddRule}>Add Rule</Button>
                             </div>
 
                             {/* Rules List */}
@@ -331,7 +331,7 @@ export default function ConsultantsPage() {
                                     </div>
                                 </div>
                                 <div>
-                                    <Button variant="secondary" size="sm" onClick={() => handleEdit(c)}>Edit & Settings</Button>
+                                    <Button variant="secondary" onClick={() => handleEdit(c)}>Edit & Settings</Button>
                                 </div>
                             </div>
                         ))}

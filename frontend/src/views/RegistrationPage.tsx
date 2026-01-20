@@ -773,6 +773,21 @@ export default function RegistrationPage() {
             />
           </div>
           <div>
+            <label style={{ display: "block", marginBottom: 6 }}>Referral / Consultant</label>
+            <select
+              value={bookedConsultantId}
+              onChange={(e) => setBookedConsultantId(e.target.value)}
+              style={{ width: "100%", padding: 8 }}
+            >
+              <option value="">No Consultant Selected</option>
+              {consultants.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.display_name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
             <label style={{ display: "block", marginBottom: 6 }}>Comments</label>
             <textarea
               value={patientForm.comments}
