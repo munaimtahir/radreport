@@ -16,9 +16,10 @@ interface TemplateFieldOption {
 interface TemplateField {
   field_key: string;
   label: string;
-  type: "single_choice" | "multi_choice" | "number" | "text";
+  type: "single_choice" | "multi_choice" | "number" | "text" | "checklist" | "dropdown" | "boolean" | "short_text" | "long_text";
   required?: boolean;
   supports_not_applicable?: boolean;
+  na_allowed?: boolean;
   options?: TemplateFieldOption[];
 }
 
@@ -82,9 +83,9 @@ const formatDateTime = (value?: string) => {
 // Use a select when the number of options exceeds this threshold; otherwise use radio buttons.
 const SINGLE_CHOICE_SELECT_THRESHOLD = 5;
 
-const supportsMultiChoice = (field: TemplateField) => field.type === "multi_choice";
+const supportsMultiChoice = (field: TemplateField) => field.type === "multi_choice" || field.type === "checklist";
 const usesSelectForSingleChoice = (field: TemplateField) =>
-  (field.options || []).length > SINGLE_CHOICE_SELECT_THRESHOLD;
+  field.type === "dropdown" || ((field.options || []).length > SINGLE_CHOICE_SELECT_THRESHOLD && field.type === "single_choice");
 const getErrorMessage = (err: any, fallback: string) => err?.message || fallback;
 
 export default function UsgStudyEditorPage() {
@@ -153,9 +154,24 @@ export default function UsgStudyEditorPage() {
             // Parse { value, is_na } wrapper or raw value
             let value = stored;
             let isNa = false;
-            if (stored && typeof stored === 'object' && 'is_na' in stored) {
+
+            // Check if stored is an object wrapper with is_na
+            if (stored && typeof stored === 'object' && ('is_na' in stored || 'value' in stored)) {
               value = stored.value;
-              isNa = stored.is_na;
+              isNa = stored.is_na || false;
+            } else if (stored === null) {
+              // stored is explicitly null? Treat as value null.
+              value = null;
+              // If key exists in JSON, we respect it.
+            }
+
+            // Default NA logic: if field supports NA and NO value is stored (key missing or undefined), default to true.
+            // Note: We check if key is in reportJson to determine if it's "new" or "touched".
+            // If key is missing from reportJson, it's a new report or new field -> apply default.
+            const isNewField = !(key in reportJson);
+
+            if (isNewField && (field.na_allowed || field.supports_not_applicable)) {
+              isNa = true;
             }
 
             initialValues[key] = {
@@ -325,9 +341,10 @@ export default function UsgStudyEditorPage() {
     // Map currentValues (Record) to Dict { key: { value, is_na } }
     const payloadValues: Record<string, any> = {};
     Object.values(currentValues).forEach(fv => {
+      if (fv.is_not_applicable) return;
       payloadValues[fv.field_key] = {
         value: fv.value_json,
-        is_na: fv.is_not_applicable
+        is_na: false
       };
     });
 
@@ -629,30 +646,48 @@ export default function UsgStudyEditorPage() {
                     const isDisabled = isEditingDisabled || isNA || isForcedNA;
                     return (
                       <div key={field.field_key} style={{ display: "grid", gap: 6 }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                          <label style={{ fontWeight: theme.typography.fontWeight.medium }}>{field.label}</label>
-                          {field.supports_not_applicable && (
-                            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", marginBottom: 4 }}>
+                          {(field.supports_not_applicable || field.na_allowed) && (
+                            <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 13, marginRight: 12, fontWeight: 500, color: theme.colors.textSecondary }}>
                               <input
                                 type="checkbox"
                                 checked={isNA}
                                 onChange={(event) => handleNotApplicable(field, event.target.checked)}
                                 disabled={isEditingDisabled || isForcedNA}
                               />
-                              Not applicable
+                              N/A
                             </label>
                           )}
+                          <label style={{ fontWeight: theme.typography.fontWeight.medium, flex: 1 }}>{field.label}</label>
                         </div>
-                        {field.type === "single_choice" && usesSelectForSingleChoice(field) && (
+
+                        {(field.type === "single_choice" || field.type === "dropdown" || field.type === "short_text" || field.type === "long_text") && usesSelectForSingleChoice(field) && (
                           <select
                             value={value ?? ""}
                             onChange={(event) => handleFieldChange(field, event.target.value || null)}
-                            disabled={isDisabled}
+                            disabled={isDisabled} // Keep disabled if strictly requested, but user wants auto-uncheck capability? 
+                            // User: "When NA is checked... disable the actual input control". 
+                            // User: "Auto-uncheck NA on any onChange".
+                            // If disabled, onChange won't fire. So we must NOT disable if we want auto-uncheck.
+                            // However, we can style it to look disabled.
+                            // But usually disabled inputs don't allow interaction.
+                            // I'll keep it enabled but styled?
+                            // Or, if I click it, I handle it?
+                            // Actually, standard HTML select interaction requires it to be enabled.
+                            // I will ENABLE it always, but maybe show visual cue?
+                            // Logic: If isNA && user interacts -> setNA(false).
+                            // So I remove `disabled={isDisabled}` here?
+                            // But line 629 calculates isDisabled based on isNA.
+                            // I will allow interaction if it's just ISNA (not isEditingDisabled or isForcedNA).
+                            // So: disabled={isEditingDisabled || isForcedNA}
+                            // And in onChange, we uncheck NA.
+                            // Code continues...
                             style={{
                               padding: 8,
                               borderRadius: theme.radius.base,
                               border: `1px solid ${theme.colors.border}`,
-                              backgroundColor: isDisabled ? theme.colors.backgroundGray : theme.colors.background,
+                              backgroundColor: (isEditingDisabled || isForcedNA) ? theme.colors.backgroundGray : (isNA ? "#f9f9f9" : theme.colors.background),
+                              color: isNA ? "#999" : "inherit",
                             }}
                           >
                             <option value="">Select</option>
@@ -663,7 +698,7 @@ export default function UsgStudyEditorPage() {
                             ))}
                           </select>
                         )}
-                        {field.type === "single_choice" && !usesSelectForSingleChoice(field) && (
+                        {(field.type === "single_choice" || field.type === "boolean") && !usesSelectForSingleChoice(field) && (
                           <fieldset
                             style={{
                               border: "none",
@@ -693,26 +728,43 @@ export default function UsgStudyEditorPage() {
                                     type="radio"
                                     name={"radio-" + field.field_key}
                                     checked={value === option.value}
-                                    disabled={isDisabled}
+                                    disabled={isEditingDisabled || isForcedNA}
                                     onChange={() => handleFieldChange(field, option.value)}
                                   />
                                   {option.label}
                                 </label>
                               ))}
+                              {/* Handle Boolean with no options? */}
+                              {field.type === "boolean" && (!field.options || field.options.length === 0) && (
+                                <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                  <input
+                                    type="checkbox"
+                                    checked={!!value}
+                                    onChange={(e) => handleFieldChange(field, e.target.checked)}
+                                    disabled={isEditingDisabled || isForcedNA}
+                                  />
+                                  Yes
+                                </label>
+                              )}
                             </div>
                           </fieldset>
                         )}
                         {supportsMultiChoice(field) && (
-                          <div style={{ display: "grid", gap: 8 }}>
+                          <div style={{
+                            display: "flex",
+                            gap: 12,
+                            flexWrap: "wrap",
+                            alignItems: "center"
+                          }}>
                             {(field.options || []).map((option) => {
                               const current = Array.isArray(value) ? value : [];
                               const checked = current.includes(option.value);
                               return (
-                                <label key={option.value} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                <label key={option.value} style={{ display: "flex", alignItems: "center", gap: 6, minWidth: "fit-content" }}>
                                   <input
                                     type="checkbox"
                                     checked={checked}
-                                    disabled={isDisabled}
+                                    disabled={isEditingDisabled || isForcedNA}
                                     onChange={(event) => {
                                       const next = event.target.checked
                                         ? [...current, option.value]
@@ -737,28 +789,43 @@ export default function UsgStudyEditorPage() {
                               }
                             }}
                             inputMode="decimal"
-                            disabled={isDisabled}
+                            disabled={isDisabled && !isNA} // Allow interaction if only NA
                             style={{
                               padding: 8,
                               borderRadius: theme.radius.base,
                               border: `1px solid ${theme.colors.border}`,
-                              backgroundColor: isDisabled ? theme.colors.backgroundGray : theme.colors.background,
+                              backgroundColor: (isEditingDisabled || isForcedNA) ? theme.colors.backgroundGray : (isNA ? "#f9f9f9" : theme.colors.background),
                             }}
                           />
                         )}
-                        {field.type === "text" && (
-                          <input
-                            type="text"
-                            value={value ?? ""}
-                            onChange={(event) => handleFieldChange(field, event.target.value)}
-                            disabled={isDisabled}
-                            style={{
-                              padding: 8,
-                              borderRadius: theme.radius.base,
-                              border: `1px solid ${theme.colors.border}`,
-                              backgroundColor: isDisabled ? theme.colors.backgroundGray : theme.colors.background,
-                            }}
-                          />
+                        {(field.type === "text" || field.type === "short_text" || field.type === "long_text") && !usesSelectForSingleChoice(field) && (
+                          field.type === "long_text" ? (
+                            <textarea
+                              value={value ?? ""}
+                              onChange={(event) => handleFieldChange(field, event.target.value)}
+                              disabled={isEditingDisabled || isForcedNA}
+                              style={{
+                                padding: 8,
+                                borderRadius: theme.radius.base,
+                                border: `1px solid ${theme.colors.border}`,
+                                backgroundColor: (isEditingDisabled || isForcedNA) ? theme.colors.backgroundGray : (isNA ? "#f9f9f9" : theme.colors.background),
+                                minHeight: 60
+                              }}
+                            />
+                          ) : (
+                            <input
+                              type="text"
+                              value={value ?? ""}
+                              onChange={(event) => handleFieldChange(field, event.target.value)}
+                              disabled={isEditingDisabled || isForcedNA}
+                              style={{
+                                padding: 8,
+                                borderRadius: theme.radius.base,
+                                border: `1px solid ${theme.colors.border}`,
+                                backgroundColor: (isEditingDisabled || isForcedNA) ? theme.colors.backgroundGray : (isNA ? "#f9f9f9" : theme.colors.background),
+                              }}
+                            />
+                          )
                         )}
                       </div>
                     );
