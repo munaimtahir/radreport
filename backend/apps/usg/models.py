@@ -84,6 +84,10 @@ class UsgStudy(models.Model):
     template = models.ForeignKey(
         UsgTemplate, on_delete=models.PROTECT, related_name="studies"
     )
+    template_snapshot = models.JSONField(
+        default=dict, blank=True, null=True,
+        help_text="Snapshot of the template schema at the time of report creation"
+    )
     status = models.CharField(
         max_length=20, choices=USG_STUDY_STATUS, default="draft", db_index=True
     )

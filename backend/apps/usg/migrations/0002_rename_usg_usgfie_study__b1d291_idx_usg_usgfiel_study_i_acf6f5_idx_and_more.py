@@ -3,15 +3,9 @@
 from django.db import migrations
 
 
-class Migration(migrations.Migration):
-
-    dependencies = [
-        ('usg', '0001_initial'),
-    ]
-
-    operations = [
-        migrations.RunSQL(
-            sql="""
+def rename_indexes_if_postgres(apps, schema_editor):
+    if schema_editor.connection.vendor == 'postgresql':
+        schema_editor.execute("""
 DO $$
 BEGIN
     -- 1. usg_usgfie_study__b1d291_idx -> usg_usgfiel_study_i_acf6f5_idx
@@ -75,7 +69,15 @@ BEGIN
     END IF;
 
 END $$;
-""",
-            reverse_sql=""
-        ),
+        """)
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('usg', '0001_initial'),
+    ]
+
+    operations = [
+        migrations.RunPython(rename_indexes_if_postgres, migrations.RunPython.noop),
     ]

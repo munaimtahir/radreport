@@ -132,19 +132,28 @@ class ServiceVisit(models.Model):
         ]
 
     def generate_visit_id(self):
-        """Generate unique ServiceVisitID"""
+        """Generate unique ServiceVisitID
+        Format: yymm-nnn (e.g., 2601-023)
+        Where:
+        - yy = Year (e.g., 26 for 2026)
+        - mm = Month (e.g., 01 for January)
+        - nnn = Sequential number (3 digits, resets monthly)
+        """
         now = timezone.now()
-        prefix = now.strftime("%Y%m%d")
-        today_count = ServiceVisit.objects.filter(visit_id__startswith=f"SV{prefix}").count()
-        sequence = str(today_count + 1).zfill(4)
-        visit_id = f"SV{prefix}{sequence}"
+        year_month = now.strftime("%y%m")  # e.g., "2601" for January 2026
+        prefix = f"{year_month}-"
+        
+        # Count visits for this month
+        month_count = ServiceVisit.objects.filter(visit_id__startswith=prefix).count()
+        sequence = str(month_count + 1).zfill(3)
+        visit_id = f"{prefix}{sequence}"
         
         max_attempts = 100
         attempt = 0
         while ServiceVisit.objects.filter(visit_id=visit_id).exists() and attempt < max_attempts:
-            today_count += 1
-            sequence = str(today_count + 1).zfill(4)
-            visit_id = f"SV{prefix}{sequence}"
+            month_count += 1
+            sequence = str(month_count + 1).zfill(3)
+            visit_id = f"{prefix}{sequence}"
             attempt += 1
         
         return visit_id

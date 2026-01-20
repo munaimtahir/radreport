@@ -47,29 +47,40 @@ class Patient(models.Model):
         return mrn
 
     def generate_patient_reg_no(self):
-        """Generate a permanent unique patient registration number"""
+        """Generate a permanent unique patient registration number
+        Format: CCJ-yy-nnnn (e.g., CCJ-26-0001)
+        Where:
+        - CCJ = Consultant Clinic Jaranwala
+        - yy = Year (e.g., 26 for 2026)
+        - nnnn = Sequential number (4 digits, resets yearly)
+        """
         now = timezone.now()
-        # Use a simple sequential format: PRN followed by sequential number
-        # Get the highest existing patient_reg_no
-        last_patient = Patient.objects.exclude(patient_reg_no__isnull=True).order_by('-patient_reg_no').first()
+        year_suffix = now.strftime("%y")  # 2-digit year (e.g., "26" for 2026)
+        prefix = f"CCJ-{year_suffix}-"
+        
+        # Get the highest existing patient_reg_no for this year
+        last_patient = Patient.objects.filter(
+            patient_reg_no__startswith=prefix
+        ).order_by('-patient_reg_no').first()
+        
         if last_patient and last_patient.patient_reg_no:
             try:
-                # Extract number from format like PRN000001
-                last_num = int(last_patient.patient_reg_no.replace('PRN', ''))
+                # Extract number from format like CCJ-26-0001
+                last_num = int(last_patient.patient_reg_no.split('-')[-1])
                 next_num = last_num + 1
-            except (ValueError, AttributeError):
+            except (ValueError, AttributeError, IndexError):
                 next_num = 1
         else:
             next_num = 1
         
-        patient_reg_no = f"PRN{str(next_num).zfill(6)}"
+        patient_reg_no = f"{prefix}{str(next_num).zfill(4)}"
         
         # Handle race condition
         max_attempts = 100
         attempt = 0
         while Patient.objects.filter(patient_reg_no=patient_reg_no).exists() and attempt < max_attempts:
             next_num += 1
-            patient_reg_no = f"PRN{str(next_num).zfill(6)}"
+            patient_reg_no = f"{prefix}{str(next_num).zfill(4)}"
             attempt += 1
         
         return patient_reg_no

@@ -22,6 +22,7 @@ from .serializers import (
 from .renderer import render_usg_report, render_usg_report_with_metadata
 from .pdf_generator import generate_usg_pdf
 from .google_drive import upload_pdf_to_drive, get_pdf_from_drive
+from .services import resolve_template_for_report
 
 
 class UsgTemplateViewSet(viewsets.ReadOnlyModelViewSet):
@@ -81,17 +82,29 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        """Set created_by on creation"""
+        """Set created_by on creation and resolve template"""
         service_code = serializer.validated_data.get('service_code')
+        
+        # Try to resolve template from profile
         profile = None
         if service_code:
             profile = UsgServiceProfile.objects.select_related('template').filter(
                 service_code=service_code
             ).first()
+            
+        save_kwargs = {'created_by': self.request.user}
+        
         if profile:
-            serializer.save(created_by=self.request.user, template=profile.template)
-        else:
-            serializer.save(created_by=self.request.user)
+            save_kwargs['template'] = profile.template
+            save_kwargs['template_snapshot'] = profile.template.schema_json
+            
+        serializer.save(**save_kwargs)
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        instance = serializer.instance
+        if instance.status in ['verified', 'published']:
+             resolve_template_for_report(instance)
 
     def update(self, request, *args, **kwargs):
         """Block updates to published studies"""
@@ -174,8 +187,8 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
         """
         study = self.get_object()
         
-        # Get template schema
-        template_schema = study.template.schema_json
+        # Get template schema (auto-resolve if missing)
+        template_schema = resolve_template_for_report(study)
         
         # Get field values
         field_values = study.field_values.all()
@@ -225,8 +238,8 @@ class UsgStudyViewSet(viewsets.ModelViewSet):
             )
         
         with transaction.atomic():
-            # Get template schema
-            template_schema = study.template.schema_json
+            # Get template schema (auto-resolve if missing)
+            template_schema = resolve_template_for_report(study)
             
             # Freeze field values
             field_values = study.field_values.all()
