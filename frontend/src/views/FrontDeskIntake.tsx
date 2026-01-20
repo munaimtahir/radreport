@@ -40,7 +40,7 @@ export default function FrontDeskIntake() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
-  
+
   // Patient state
   const [patientSearch, setPatientSearch] = useState("");
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
@@ -54,44 +54,44 @@ export default function FrontDeskIntake() {
     phone: "",
     address: "",
   });
-  
+
   // Services state
   const [services, setServices] = useState<Service[]>([]);
   const [serviceSearch, setServiceSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
-  
+
   // Billing state
   const [discountType, setDiscountType] = useState<"amount" | "percentage">("amount");
   const [discountValue, setDiscountValue] = useState("");
   const [paidAmount, setPaidAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("");
-  
+
   // Load services on mount
   useEffect(() => {
     if (token) {
       loadServices();
     }
   }, [token]);
-  
+
   // Calculate billing totals
   const subtotal = cart.reduce((sum, item) => {
     const charge = typeof item.charge === 'number' ? item.charge : parseFloat(item.charge) || 0;
     return sum + charge;
   }, 0);
-  const discountAmount = discountType === "amount" 
-    ? parseFloat(discountValue) || 0 
+  const discountAmount = discountType === "amount"
+    ? parseFloat(discountValue) || 0
     : subtotal * ((parseFloat(discountValue) || 0) / 100);
   const netTotal = subtotal - discountAmount;
   const paid = parseFloat(paidAmount) || netTotal;
   const due = netTotal - paid;
-  
+
   // Update paid amount when net total changes
   useEffect(() => {
     if (!paidAmount || paidAmount === "0") {
       setPaidAmount(netTotal.toFixed(2));
     }
   }, [netTotal]);
-  
+
   const loadServices = async () => {
     if (!token) return;
     try {
@@ -104,7 +104,7 @@ export default function FrontDeskIntake() {
       setServices([]);
     }
   };
-  
+
   const searchPatients = async (query: string) => {
     if (!token || query.length < 2) {
       setPatientResults([]);
@@ -117,7 +117,7 @@ export default function FrontDeskIntake() {
       setError(e.message);
     }
   };
-  
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       if (patientSearch) {
@@ -128,32 +128,32 @@ export default function FrontDeskIntake() {
     }, 300);
     return () => clearTimeout(timeoutId);
   }, [patientSearch]);
-  
+
   const handleSelectPatient = (patient: Patient) => {
     setSelectedPatient(patient);
     setPatientSearch(`${patient.mrn} - ${patient.name}`);
     setPatientResults([]);
     setShowPatientForm(false);
   };
-  
+
   const handleAddNewPatient = () => {
     setSelectedPatient(null);
     setPatientSearch("");
     setShowPatientForm(true);
   };
-  
+
   const handleSavePatient = async () => {
     if (!token) return;
-    
+
     if (!patientForm.name.trim()) {
       setError("Patient name is required");
       return;
     }
-    
+
     setLoading(true);
     setError("");
     setSuccess("");
-    
+
     try {
       const payload: any = {
         name: patientForm.name.trim(),
@@ -161,16 +161,16 @@ export default function FrontDeskIntake() {
         phone: patientForm.phone.trim() || undefined,
         address: patientForm.address.trim() || undefined,
       };
-      
+
       if (patientForm.age) {
         payload.age = parseInt(patientForm.age);
       }
       if (patientForm.date_of_birth) {
         payload.date_of_birth = patientForm.date_of_birth;
       }
-      
+
       const newPatient = await apiPost("/patients/", token, payload);
-      
+
       // Select the newly created patient
       setSelectedPatient(newPatient);
       setPatientSearch(`${newPatient.mrn} - ${newPatient.name}`);
@@ -184,7 +184,7 @@ export default function FrontDeskIntake() {
       setLoading(false);
     }
   };
-  
+
   const handleAddToCart = (service: Service, e?: React.MouseEvent) => {
     if (e) {
       e.preventDefault();
@@ -194,10 +194,10 @@ export default function FrontDeskIntake() {
       if (!service || !service.id) {
         throw new Error("Invalid service selected");
       }
-      
+
       const chargeValue = service.charges || service.price || 0;
       const chargeNumber = typeof chargeValue === 'number' ? chargeValue : parseFloat(chargeValue) || 0;
-      
+
       const cartItem: CartItem = {
         service_id: service.id,
         service_name: service.name || "Unknown Service",
@@ -217,34 +217,34 @@ export default function FrontDeskIntake() {
       setTimeout(() => setError(""), 5000);
     }
   };
-  
+
   const handleRemoveFromCart = (index: number) => {
     setCart(cart.filter((_, i) => i !== index));
   };
-  
+
   const handleUpdateCartItem = (index: number, field: keyof CartItem, value: any) => {
     const updated = [...cart];
     updated[index] = { ...updated[index], [field]: value };
     setCart(updated);
   };
-  
+
   const handleSubmit = async (printReceipt: boolean = false) => {
     if (!token) return;
-    
+
     if (!selectedPatient && !showPatientForm) {
       setError("Please select or create a patient");
       return;
     }
-    
+
     if (cart.length === 0) {
       setError("Please add at least one service");
       return;
     }
-    
+
     setLoading(true);
     setError("");
     setSuccess("");
-    
+
     try {
       const payload: any = {
         service_ids: cart.map((item) => item.service_id),
@@ -257,7 +257,7 @@ export default function FrontDeskIntake() {
         amount_paid: paid,
         payment_method: paymentMethod || "cash",
       };
-      
+
       if (selectedPatient) {
         payload.patient_id = selectedPatient.id;
       } else {
@@ -269,11 +269,11 @@ export default function FrontDeskIntake() {
         payload.phone = patientForm.phone;
         payload.address = patientForm.address;
       }
-      
+
       const visit = await apiPost("/workflow/visits/create_visit/", token, payload);
-      
+
       setSuccess(`Visit ${visit.visit_id} created successfully!`);
-      
+
       // Reset form
       setSelectedPatient(null);
       setPatientSearch("");
@@ -283,13 +283,13 @@ export default function FrontDeskIntake() {
       setDiscountValue("");
       setPaidAmount("");
       setPaymentMethod("");
-      
+
       // Generate and print receipt if requested
       if (printReceipt && visit.id && token) {
         // Use centralized API helper
         const API_BASE = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
         const receiptUrl = `${API_BASE}/pdf/${visit.id}/receipt/`;
-        
+
         fetch(receiptUrl, {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -312,9 +312,12 @@ export default function FrontDeskIntake() {
           .then((blob) => {
             const url = window.URL.createObjectURL(blob);
             const win = window.open(url, "_blank");
+            const fileName = `${visit.visit_id || visit.id}`;
             if (win) {
+              win.document.title = fileName;
               // Wait for window to load before attempting print
               win.onload = () => {
+                win.document.title = fileName;
                 // Trigger print dialog
                 win.print();
               };
@@ -325,7 +328,7 @@ export default function FrontDeskIntake() {
               const link = document.createElement("a");
               link.href = url;
               link.target = "_blank";
-              link.download = `receipt_${visit.visit_id || visit.id}.pdf`;
+              link.download = `${fileName}.pdf`;
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
@@ -337,7 +340,7 @@ export default function FrontDeskIntake() {
             setError(`Failed to load receipt: ${err.message}`);
           });
       }
-      
+
       setTimeout(() => setSuccess(""), 5000);
     } catch (e: any) {
       setError(e.message || "Failed to create visit");
@@ -345,35 +348,35 @@ export default function FrontDeskIntake() {
       setLoading(false);
     }
   };
-  
+
   const filteredServices = services.filter(
     (s) =>
       s.is_active &&
       (s.name.toLowerCase().includes(serviceSearch.toLowerCase()) ||
-       s.code?.toLowerCase().includes(serviceSearch.toLowerCase()) ||
-       s.modality.code.toLowerCase().includes(serviceSearch.toLowerCase()))
+        s.code?.toLowerCase().includes(serviceSearch.toLowerCase()) ||
+        s.modality.code.toLowerCase().includes(serviceSearch.toLowerCase()))
   );
-  
+
   return (
     <div style={{ maxWidth: 1200, margin: "0 auto", padding: 20 }}>
       <h1>Front Desk Intake</h1>
-      
+
       {error && (
         <div style={{ background: "#fee", color: "#c00", padding: 12, borderRadius: 4, marginBottom: 20 }}>
           {error}
         </div>
       )}
-      
+
       {success && (
         <div style={{ background: "#efe", color: "#060", padding: 12, borderRadius: 4, marginBottom: 20 }}>
           {success}
         </div>
       )}
-      
+
       {/* Patient Section */}
       <div style={{ background: "#f9f9f9", padding: 20, borderRadius: 8, marginBottom: 20 }}>
         <h2 style={{ marginTop: 0 }}>Patient Registration</h2>
-        
+
         {!showPatientForm && (
           <div>
             <label style={{ display: "block", marginBottom: 8 }}>Search Patient (MRN, Name, Phone)</label>
@@ -389,7 +392,7 @@ export default function FrontDeskIntake() {
                 New Patient
               </button>
             </div>
-            
+
             {patientResults.length > 0 && (
               <div style={{ border: "1px solid #ddd", borderRadius: 4, maxHeight: 200, overflowY: "auto" }}>
                 {patientResults.map((p) => (
@@ -409,7 +412,7 @@ export default function FrontDeskIntake() {
                 ))}
               </div>
             )}
-            
+
             {selectedPatient && (
               <div style={{ marginTop: 15, padding: 10, background: "#e8f5e9", borderRadius: 4 }}>
                 <strong>Selected:</strong> {selectedPatient.mrn} - {selectedPatient.name}
@@ -418,7 +421,7 @@ export default function FrontDeskIntake() {
             )}
           </div>
         )}
-        
+
         {showPatientForm && (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
             <div>
@@ -516,11 +519,11 @@ export default function FrontDeskIntake() {
           </div>
         )}
       </div>
-      
+
       {/* Services & Billing Section */}
       <div style={{ background: "#f9f9f9", padding: 20, borderRadius: 8 }}>
         <h2 style={{ marginTop: 0 }}>Services & Billing</h2>
-        
+
         {/* Service Selection */}
         <div style={{ marginBottom: 20 }}>
           <label style={{ display: "block", marginBottom: 8 }}>Add Service</label>
@@ -539,7 +542,7 @@ export default function FrontDeskIntake() {
             autoComplete="off"
           />
           {serviceSearch && filteredServices.length > 0 && (
-            <div 
+            <div
               style={{ border: "1px solid #ddd", borderRadius: 4, marginTop: 5, maxHeight: 200, overflowY: "auto" }}
               onClick={(e) => e.stopPropagation()}
             >
@@ -561,7 +564,7 @@ export default function FrontDeskIntake() {
             </div>
           )}
         </div>
-        
+
         {/* Cart */}
         {cart.length > 0 && (
           <div style={{ marginBottom: 20 }}>
@@ -604,7 +607,7 @@ export default function FrontDeskIntake() {
             </table>
           </div>
         )}
-        
+
         {/* Billing */}
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
           <div>
@@ -651,7 +654,7 @@ export default function FrontDeskIntake() {
               </select>
             </div>
           </div>
-          
+
           <div>
             <h3>Billing Summary</h3>
             <div style={{ background: "white", padding: 15, borderRadius: 4 }}>
@@ -695,7 +698,7 @@ export default function FrontDeskIntake() {
             </div>
           </div>
         </div>
-        
+
         {/* Action Buttons */}
         <div style={{ marginTop: 20, display: "flex", gap: 10 }}>
           <button

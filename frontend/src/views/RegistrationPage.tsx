@@ -583,8 +583,13 @@ export default function RegistrationPage() {
           .then((blob) => {
             const url = window.URL.createObjectURL(blob);
             const win = window.open(url, "_blank");
+            const fileName = `${visit.visit_id || visit.id}`;
             if (win) {
+              // Attempt to set the window title so 'Save as PDF' or the tab shows the ID
+              win.document.title = fileName;
+
               win.onload = () => {
+                win.document.title = fileName;
                 win.print();
               };
               setTimeout(() => window.URL.revokeObjectURL(url), 60000);
@@ -592,7 +597,7 @@ export default function RegistrationPage() {
               const link = document.createElement("a");
               link.href = url;
               link.target = "_blank";
-              link.download = `receipt_${visit.visit_id || visit.id}.pdf`;
+              link.download = `${fileName}.pdf`;
               document.body.appendChild(link);
               link.click();
               document.body.removeChild(link);
