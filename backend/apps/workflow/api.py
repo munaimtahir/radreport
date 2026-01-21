@@ -210,7 +210,7 @@ except ImportError:
             now = timezone.now()
             yymm = now.strftime("%y%m")
             # Simple fallback - in production use proper sequence
-            return f"{yymm}-001"
+            return f"{yymm}-0001"
 
 
 class ServiceCatalogViewSet(viewsets.ReadOnlyModelViewSet):

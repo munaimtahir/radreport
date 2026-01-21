@@ -8,6 +8,7 @@ import Button from "../ui/components/Button";
 interface Patient {
   id: string;
   mrn: string;
+  patient_reg_no: string;
   name: string;
   age?: number;
   gender: string;
@@ -169,13 +170,13 @@ export default function Patients() {
           }}
         >
           <div>
-            <label>MRN *</label>
+            <label>Medical Record No (Generated Automatically)</label>
             <input
               type="text"
               value={formData.mrn}
-              onChange={(e) => setFormData({ ...formData, mrn: e.target.value })}
-              required
-              style={{ width: "100%", padding: 8 }}
+              disabled
+              placeholder="Auto-generated"
+              style={{ width: "100%", padding: 8, background: "#eee" }}
             />
           </div>
           <div>
@@ -264,7 +265,7 @@ export default function Patients() {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ background: "#f5f5f5" }}>
-                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>MRN</th>
+                <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Medical Record No</th>
                 <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Name</th>
                 <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Age</th>
                 <th style={{ padding: 12, textAlign: "left", borderBottom: "2px solid #ddd", fontWeight: 600 }}>Gender</th>
@@ -275,7 +276,7 @@ export default function Patients() {
             <tbody>
               {patients.map((p) => (
                 <tr key={p.id} style={{ borderBottom: "1px solid #eee" }}>
-                  <td style={{ padding: 12 }}>{p.mrn}</td>
+                  <td style={{ padding: 12 }}>{p.patient_reg_no || p.mrn}</td>
                   <td style={{ padding: 12 }}>{p.name}</td>
                   <td style={{ padding: 12 }}>{p.age || "-"}</td>
                   <td style={{ padding: 12 }}>{p.gender || "-"}</td>

@@ -5,6 +5,7 @@ import { apiGet, apiPost } from "../ui/api";
 interface Patient {
   id: string;
   mrn: string;
+  patient_reg_no?: string;
   name: string;
   age?: number;
   date_of_birth?: string;
@@ -131,7 +132,7 @@ export default function FrontDeskIntake() {
 
   const handleSelectPatient = (patient: Patient) => {
     setSelectedPatient(patient);
-    setPatientSearch(`${patient.mrn} - ${patient.name}`);
+    setPatientSearch(`${patient.patient_reg_no || patient.mrn} - ${patient.name}`);
     setPatientResults([]);
     setShowPatientForm(false);
   };
@@ -173,10 +174,10 @@ export default function FrontDeskIntake() {
 
       // Select the newly created patient
       setSelectedPatient(newPatient);
-      setPatientSearch(`${newPatient.mrn} - ${newPatient.name}`);
+      setPatientSearch(`${newPatient.patient_reg_no || newPatient.mrn} - ${newPatient.name}`);
       setShowPatientForm(false);
       setPatientForm({ name: "", age: "", date_of_birth: "", gender: "", phone: "", address: "" });
-      setSuccess(`Patient ${newPatient.mrn} created successfully!`);
+      setSuccess(`Patient ${newPatient.patient_reg_no || newPatient.mrn} created successfully!`);
       setTimeout(() => setSuccess(""), 3000);
     } catch (e: any) {
       setError(e.message || "Failed to create patient");
@@ -379,7 +380,7 @@ export default function FrontDeskIntake() {
 
         {!showPatientForm && (
           <div>
-            <label style={{ display: "block", marginBottom: 8 }}>Search Patient (MRN, Name, Phone)</label>
+            <label style={{ display: "block", marginBottom: 8 }}>Search Patient (Medical Record No, Name, Phone)</label>
             <div style={{ display: "flex", gap: 10, marginBottom: 10 }}>
               <input
                 type="text"
@@ -407,7 +408,7 @@ export default function FrontDeskIntake() {
                     onMouseEnter={(e) => (e.currentTarget.style.background = "#f0f0f0")}
                     onMouseLeave={(e) => (e.currentTarget.style.background = "white")}
                   >
-                    <strong>{p.mrn}</strong> - {p.name} {p.phone && `(${p.phone})`}
+                    <strong>{p.patient_reg_no || p.mrn}</strong> - {p.name} {p.phone && `(${p.phone})`}
                   </div>
                 ))}
               </div>
@@ -415,7 +416,7 @@ export default function FrontDeskIntake() {
 
             {selectedPatient && (
               <div style={{ marginTop: 15, padding: 10, background: "#e8f5e9", borderRadius: 4 }}>
-                <strong>Selected:</strong> {selectedPatient.mrn} - {selectedPatient.name}
+                <strong>Selected:</strong> {selectedPatient.patient_reg_no || selectedPatient.mrn} - {selectedPatient.name}
                 {selectedPatient.phone && ` | Phone: ${selectedPatient.phone}`}
               </div>
             )}

@@ -143,7 +143,7 @@ class ReceiptSequence(models.Model):
     @classmethod
     @transaction.atomic
     def get_next_receipt_number(cls):
-        """Generate next receipt number in format YYMM-###"""
+        """Generate next receipt number in format YYMM-0001"""
         from django.db import connection
         
         now = timezone.now()
@@ -158,7 +158,7 @@ class ReceiptSequence(models.Model):
         sequence.last_number += 1
         sequence.save()
         
-        receipt_number = f"{yymm}-{str(sequence.last_number).zfill(3)}"
+        receipt_number = f"{yymm}-{str(sequence.last_number).zfill(4)}"
         return receipt_number
     
     def __str__(self):

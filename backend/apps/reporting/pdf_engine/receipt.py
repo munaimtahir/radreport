@@ -410,8 +410,7 @@ def _draw_receipt_copy(
     canvas.drawString(left_column_x, section_top_y, "Patient Information")
     left_column_y = section_top_y - 4.5 * mm
     patient_rows = [
-        ("Patient Reg No:", data["patient_reg_no"] or "-"),
-        ("MRN:", data["mrn"] or "-"),
+        ("Medical Record No:", data["patient_reg_no"] or "-"),
         ("Name:", data["patient_name"] or "-"),
         ("Age:", data["age"] or "-"),
         ("Gender:", data["gender"] or "-"),

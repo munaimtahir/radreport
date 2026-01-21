@@ -148,6 +148,10 @@ class USGReportSerializer(serializers.ModelSerializer):
     template_name = serializers.CharField(source="template_version.template.name", read_only=True)
     can_finalize = serializers.SerializerMethodField()
     finalize_errors = serializers.SerializerMethodField()
+    patient_name = serializers.SerializerMethodField()
+    patient_mrn = serializers.SerializerMethodField()
+    patient_reg_no = serializers.SerializerMethodField()
+    service_code = serializers.SerializerMethodField()
     
     class Meta:
         model = USGReport
@@ -165,6 +169,27 @@ class USGReportSerializer(serializers.ModelSerializer):
     def get_visit_id(self, obj):
         sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
         return sv.visit_id if sv else None
+
+    def _get_patient(self, obj):
+        sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
+        return sv.patient if sv else None
+
+    def get_patient_name(self, obj):
+        patient = self._get_patient(obj)
+        return patient.name if patient else ""
+
+    def get_patient_mrn(self, obj):
+        patient = self._get_patient(obj)
+        return patient.mrn if patient else ""
+
+    def get_patient_reg_no(self, obj):
+        patient = self._get_patient(obj)
+        return patient.patient_reg_no if patient else ""
+    
+    def get_service_code(self, obj):
+        if obj.service_visit_item and obj.service_visit_item.service:
+            return obj.service_visit_item.service.code
+        return ""
     
     def get_published_pdf_url(self, obj):
         if obj.published_pdf_path:

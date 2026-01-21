@@ -48,6 +48,7 @@ interface UsgStudy {
   patient: string;
   patient_name: string;
   patient_mrn: string;
+  patient_reg_no: string;
   visit: string;
   visit_number: string;
   service_code: string;
@@ -495,7 +496,7 @@ export default function UsgStudyEditorPage() {
     <div style={{ maxWidth: 1400, margin: "0 auto" }}>
       <PageHeader
         title="USG Study Editor"
-        subtitle={`${study?.patient_name || ""} • MRN ${study?.patient_mrn || ""} • Visit ${study?.visit_number || ""}`}
+        subtitle={`${study?.patient_name || ""} • Medical Record No: ${study?.patient_reg_no || study?.patient_mrn || ""} • Visit ID: ${study?.visit_number || ""}`}
       />
 
       {error && <ErrorBanner message={error} onDismiss={() => setError("")} />}
