@@ -7,6 +7,7 @@ import ErrorBanner from "../ui/components/ErrorBanner";
 import SuccessAlert from "../ui/components/SuccessAlert";
 import Button from "../ui/components/Button";
 import { theme } from "../theme";
+import { normalizeTemplateSchema, normalizeOptions } from "../utils/normalizeTemplateSchema";
 
 interface TemplateFieldOption {
   label: string;
@@ -14,6 +15,7 @@ interface TemplateFieldOption {
 }
 
 interface TemplateField {
+  key?: string; // Backend may emit this instead of field_key
   field_key: string;
   label: string;
   type: "single_choice" | "multi_choice" | "number" | "text" | "checklist" | "dropdown" | "boolean" | "short_text" | "long_text";
@@ -21,6 +23,7 @@ interface TemplateField {
   supports_not_applicable?: boolean;
   na_allowed?: boolean;
   options?: TemplateFieldOption[];
+  rules?: any; // For conditional logic (e.g., show_if)
 }
 
 interface TemplateSection {
@@ -81,20 +84,6 @@ const formatDateTime = (value?: string) => {
   return parsed.toLocaleString();
 };
 
-// Normalize options to ensure consistent {label, value} format
-function normalizeOptions(options?: any[]): { label: string; value: any }[] {
-  if (!Array.isArray(options)) return [];
-  return options
-    .map((opt) => {
-      if (!opt) return null;
-      if (typeof opt === "string") return { label: opt, value: opt };
-      if (typeof opt === "object" && opt.label != null && opt.value != null) return opt;
-      if (typeof opt === "object" && opt.value != null) return { label: String(opt.value), value: opt.value };
-      return null;
-    })
-    .filter(Boolean) as { label: string; value: any }[];
-}
-
 // Use a select when the number of options exceeds this threshold; otherwise use radio buttons.
 const SINGLE_CHOICE_SELECT_THRESHOLD = 5;
 
@@ -145,18 +134,8 @@ export default function UsgStudyEditorPage() {
       try {
         const data = await apiGet(`/workflow/usg/${studyId}/`, token);
 
-        // Normalize template_schema: convert 'key' to 'field_key' for consistency
-        const normalizedSchema = data.template_schema ? {
-          ...data.template_schema,
-          sections: (data.template_schema.sections || []).map((section: any) => ({
-            ...section,
-            fields: (section.fields || []).map((field: any) => ({
-              ...field,
-              field_key: field.field_key || field.key, // Normalize: prefer field_key, fallback to key
-              type: field.type || field.field_type // Also normalize type vs field_type
-            }))
-          }))
-        } : null;
+        // Normalize template_schema using the reusable helper
+        const normalizedSchema = normalizeTemplateSchema(data.template_schema);
 
         // Adapt USGReport to local state
         setStudy({
