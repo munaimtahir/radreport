@@ -206,6 +206,16 @@ python manage.py shell
 >>> Group.objects.get_or_create(name="Verification")
 ```
 
+## MVP Adjustments (January 2026)
+
+### Optional USG Metadata for Verification
+To streamline the verification process for MVP, the following metadata fields in `USGReport` are now optional during the "Finalize" and "Publish" stages:
+- `scan_quality`: If not provided, defaults to "Not recorded".
+- `limitations_text`: If not provided, defaults to "None".
+- `impression_text`: If not provided, defaults to an empty string.
+
+This allows verification and publishing to proceed even if these fields were not explicitly filled by the operator, while still maintaining valid report structures. This behavior can be re-enabled for strict validation in later phases.
+
 ## Testing Checklist
 
 - [ ] Create new patient → patient_reg_no generated → searchable
