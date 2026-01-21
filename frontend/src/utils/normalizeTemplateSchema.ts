@@ -57,7 +57,7 @@ function normalizeField(field: AnyRecord): AnyRecord {
       ...field.rules,
       show_if: {
         ...field.rules.show_if,
-        // Ensure field exists, fallback to field_key if needed
+        // Ensure field exists, fallback to field_key if field is missing
         field: field.rules.show_if.field ?? field.rules.show_if.field_key,
       },
     };
