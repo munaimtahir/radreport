@@ -515,6 +515,44 @@ export default function UsgStudyEditorPage() {
 
       {error && <ErrorBanner message={error} onDismiss={() => setError("")} />}
       {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
+      
+      {/* PHASE 4: Backend API Response Debug Panel */}
+      {study && (
+        <div style={{
+          background: "#e0f2fe",
+          border: "2px solid #0284c7",
+          borderRadius: theme.radius.md,
+          padding: 12,
+          marginBottom: 16
+        }}>
+          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>
+            🔧 BACKEND API DEBUG (PHASE 4)
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: 12 }}>
+            <div>
+              <div><b>template_schema exists:</b> {study.template_schema ? "✅ YES" : "❌ NULL"}</div>
+              <div><b>template_schema.sections:</b> {study.template_schema?.sections?.length || 0}</div>
+              <div><b>template_detail exists:</b> {study.template_detail ? "✅ YES" : "❌ NULL"}</div>
+            </div>
+            <div>
+              <div><b>report_status:</b> {study.report_status || "N/A"}</div>
+              <div><b>service_code:</b> {study.service_code || "N/A"}</div>
+              <div><b>API endpoint:</b> /workflow/usg/{studyId}/</div>
+            </div>
+          </div>
+          {!study.template_schema && (
+            <div style={{ 
+              marginTop: 8, 
+              padding: 8, 
+              background: "#fee", 
+              borderLeft: "3px solid #c00",
+              fontSize: 12
+            }}>
+              ⚠️ <b>template_schema is NULL</b> - This will cause renderer fallback or errors!
+            </div>
+          )}
+        </div>
+      )}
 
       <div style={{
         border: `1px solid ${theme.colors.border}`,
@@ -658,6 +696,9 @@ export default function UsgStudyEditorPage() {
               ) : (
                 <div style={{ display: "grid", gap: 16 }}>
                   {activeSectionData.fields.map((field) => {
+                    // PHASE 1.1: Debug panel for field inspection
+                    const showDebugPanel = field.field_key === "liver_echotexture" || field.field_key === "liver_size";
+                    
                     if (field.field_key === "liver_echotexture") {
                       console.log("DEBUG_FIELD", field);
                     }
@@ -667,6 +708,19 @@ export default function UsgStudyEditorPage() {
                     // Fix: Do not disable if just N/A (to allow interaction -> auto-uncheck).
                     // Only disable if report is locked (isEditingDisabled) or N/A is forced by system (isForcedNA).
                     const isDisabled = isEditingDisabled || isForcedNA;
+                    
+                    // PHASE 2: Determine which renderer branch is being used
+                    const rendererBranch = supportsMultiChoice(field) 
+                      ? "CHECKLIST_BRANCH" 
+                      : usesSelectForSingleChoice(field)
+                      ? "DROPDOWN_BRANCH"
+                      : field.type === "boolean"
+                      ? "BOOLEAN_BRANCH"
+                      : field.type === "number"
+                      ? "NUMBER_BRANCH"
+                      : field.type === "text" || field.type === "short_text" || field.type === "long_text"
+                      ? "TEXT_BRANCH"
+                      : "RADIO_BRANCH";
 
                     return (
                       <div key={field.field_key} style={{ display: "grid", gap: 6 }}>
@@ -682,8 +736,78 @@ export default function UsgStudyEditorPage() {
                               N/A
                             </label>
                           )}
-                          <label style={{ fontWeight: theme.typography.fontWeight.medium, flex: 1 }}>{field.label}</label>
+                          <label style={{ fontWeight: theme.typography.fontWeight.medium, flex: 1 }}>
+                            {field.label}
+                            <span style={{ fontSize: 12, color: "#666", marginLeft: 8, fontWeight: "normal" }}>
+                              (type={field.type})
+                            </span>
+                            {showDebugPanel && (
+                              <span style={{ 
+                                fontSize: 11, 
+                                marginLeft: 8, 
+                                padding: "2px 6px",
+                                borderRadius: 3,
+                                backgroundColor: rendererBranch.includes("CHECKLIST") ? "#4ade80" : "#fbbf24",
+                                color: "#000",
+                                fontWeight: 600
+                              }}>
+                                {rendererBranch}
+                              </span>
+                            )}
+                          </label>
                         </div>
+                        
+                        {/* PHASE 1.1 & 1.2: Debug panel showing full field object */}
+                        {showDebugPanel && (
+                          <div style={{ 
+                            background: "#f7f7f7", 
+                            border: "1px solid #ddd", 
+                            padding: 8, 
+                            marginBottom: 8,
+                            borderRadius: 4
+                          }}>
+                            <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 6, color: "#333" }}>
+                              🔍 FIELD DEBUG PANEL
+                            </div>
+                            <pre style={{ 
+                              whiteSpace: "pre-wrap", 
+                              fontSize: 10, 
+                              margin: 0,
+                              fontFamily: "monospace",
+                              maxHeight: 200,
+                              overflow: "auto"
+                            }}>
+                              {JSON.stringify({
+                                identifier_key: field.field_key || null,
+                                identifier_key_alt: (field as any).key || null,
+                                type: field.type,
+                                na_allowed: field.na_allowed,
+                                supports_not_applicable: field.supports_not_applicable,
+                                options_exists: !!field.options,
+                                options_length: field.options?.length || 0,
+                                options_sample: field.options?.slice(0, 3),
+                                normalized_options: normalizeOptions(field.options).slice(0, 3)
+                              }, null, 2)}
+                            </pre>
+                          </div>
+                        )}
+                        
+                        {/* PHASE 3: Debug state value storage shape */}
+                        {showDebugPanel && (
+                          <div style={{
+                            background: "#fff3cd",
+                            border: "1px solid #ffc107",
+                            padding: 8,
+                            marginBottom: 8,
+                            borderRadius: 4,
+                            fontSize: 11
+                          }}>
+                            <div style={{ fontWeight: 600, marginBottom: 4 }}>📦 STATE VALUE DEBUG</div>
+                            <div><b>value typeof:</b> {Array.isArray(value) ? "array" : typeof value}</div>
+                            <div><b>value:</b> {JSON.stringify(value)}</div>
+                            <div><b>is_not_applicable:</b> {String(isNA)}</div>
+                          </div>
+                        )}
 
                         {(field.type === "single_choice" || field.type === "dropdown" || field.type === "short_text" || field.type === "long_text") && usesSelectForSingleChoice(field) && (
                           <select
