@@ -145,25 +145,39 @@ export default function UsgStudyEditorPage() {
       try {
         const data = await apiGet(`/workflow/usg/${studyId}/`, token);
 
+        // Normalize template_schema: convert 'key' to 'field_key' for consistency
+        const normalizedSchema = data.template_schema ? {
+          ...data.template_schema,
+          sections: (data.template_schema.sections || []).map((section: any) => ({
+            ...section,
+            fields: (section.fields || []).map((field: any) => ({
+              ...field,
+              field_key: field.field_key || field.key, // Normalize: prefer field_key, fallback to key
+              type: field.type || field.field_type // Also normalize type vs field_type
+            }))
+          }))
+        } : null;
+
         // Adapt USGReport to local state
         setStudy({
           ...data,
           // Map status
           status: data.report_status?.toLowerCase(),
           is_locked: data.report_status === "FINAL" || data.report_status === "AMENDED", // Published/Final are locked
+          template_schema: normalizedSchema, // Use normalized schema
           template_detail: {
-            schema_json: data.template_schema
+            schema_json: normalizedSchema
           }
         });
 
         const initialValues: Record<string, FieldValue> = {};
         const reportJson = data.report_json || {};
 
-        // Iterate over schema to populate values from reportJson dictionary
-        const sections = data.template_schema?.sections || [];
+        // Iterate over normalized schema to populate values from reportJson dictionary
+        const sections = normalizedSchema?.sections || [];
         sections.forEach((section: any) => {
           (section.fields || []).forEach((field: any) => {
-            const key = field.key || field.field_key;
+            const key = field.field_key; // Now normalized, always has field_key
             const stored = reportJson[key];
 
             // Parse { value, is_na } wrapper or raw value
@@ -516,43 +530,7 @@ export default function UsgStudyEditorPage() {
       {error && <ErrorBanner message={error} onDismiss={() => setError("")} />}
       {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
       
-      {/* PHASE 4: Backend API Response Debug Panel */}
-      {study && (
-        <div style={{
-          background: "#e0f2fe",
-          border: "2px solid #0284c7",
-          borderRadius: theme.radius.md,
-          padding: 12,
-          marginBottom: 16
-        }}>
-          <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 8 }}>
-            🔧 BACKEND API DEBUG (PHASE 4)
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, fontSize: 12 }}>
-            <div>
-              <div><b>template_schema exists:</b> {study.template_schema ? "✅ YES" : "❌ NULL"}</div>
-              <div><b>template_schema.sections:</b> {study.template_schema?.sections?.length || 0}</div>
-              <div><b>template_detail exists:</b> {study.template_detail ? "✅ YES" : "❌ NULL"}</div>
-            </div>
-            <div>
-              <div><b>report_status:</b> {study.report_status || "N/A"}</div>
-              <div><b>service_code:</b> {study.service_code || "N/A"}</div>
-              <div><b>API endpoint:</b> /workflow/usg/{studyId}/</div>
-            </div>
-          </div>
-          {!study.template_schema && (
-            <div style={{ 
-              marginTop: 8, 
-              padding: 8, 
-              background: "#fee", 
-              borderLeft: "3px solid #c00",
-              fontSize: 12
-            }}>
-              ⚠️ <b>template_schema is NULL</b> - This will cause renderer fallback or errors!
-            </div>
-          )}
-        </div>
-      )}
+      {/* Backend API Debug Panel removed after investigation completed */}
 
       <div style={{
         border: `1px solid ${theme.colors.border}`,
@@ -672,9 +650,7 @@ export default function UsgStudyEditorPage() {
         }}>
           {activeSectionData ? (
             <div>
-              <div style={{position:"sticky", top:0, zIndex:9999, background:"#fff", border:"2px solid red", padding:6, marginBottom: 12}}>
-                ACTIVE_RENDERER: USG_FIELD_RENDERER_V2
-              </div>
+              {/* Active renderer banner removed after investigation completed */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3 style={{ marginTop: 0 }}>{activeSectionData.title}</h3>
                 {activeSectionData.include_toggle && (
@@ -696,12 +672,13 @@ export default function UsgStudyEditorPage() {
               ) : (
                 <div style={{ display: "grid", gap: 16 }}>
                   {activeSectionData.fields.map((field) => {
-                    // PHASE 1.1: Debug panel for field inspection
-                    const showDebugPanel = field.field_key === "liver_echotexture" || field.field_key === "liver_size";
+                    // Debug panels removed after investigation completed
+                    const showDebugPanel = false; // Was: field.field_key === "liver_echotexture" || field.field_key === "liver_size";
                     
-                    if (field.field_key === "liver_echotexture") {
-                      console.log("DEBUG_FIELD", field);
-                    }
+                    // Console logging removed
+                    // if (field.field_key === "liver_echotexture") {
+                    //   console.log("DEBUG_FIELD", field);
+                    // }
                     const value = values[field.field_key]?.value_json;
                     const isForcedNA = forcedNaSet.has(field.field_key);
                     const isNA = isForcedNA || values[field.field_key]?.is_not_applicable || false;
