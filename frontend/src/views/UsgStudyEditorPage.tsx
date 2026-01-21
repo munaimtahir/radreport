@@ -81,6 +81,20 @@ const formatDateTime = (value?: string) => {
   return parsed.toLocaleString();
 };
 
+// Normalize options to ensure consistent {label, value} format
+function normalizeOptions(options?: any[]): { label: string; value: any }[] {
+  if (!Array.isArray(options)) return [];
+  return options
+    .map((opt) => {
+      if (!opt) return null;
+      if (typeof opt === "string") return { label: opt, value: opt };
+      if (typeof opt === "object" && opt.label != null && opt.value != null) return opt;
+      if (typeof opt === "object" && opt.value != null) return { label: String(opt.value), value: opt.value };
+      return null;
+    })
+    .filter(Boolean) as { label: string; value: any }[];
+}
+
 // Use a select when the number of options exceeds this threshold; otherwise use radio buttons.
 const SINGLE_CHOICE_SELECT_THRESHOLD = 5;
 
@@ -620,9 +634,11 @@ export default function UsgStudyEditorPage() {
         }}>
           {activeSectionData ? (
             <div>
+              <div style={{position:"sticky", top:0, zIndex:9999, background:"#fff", border:"2px solid red", padding:6, marginBottom: 12}}>
+                ACTIVE_RENDERER: USG_FIELD_RENDERER_V2
+              </div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3 style={{ marginTop: 0 }}>{activeSectionData.title}</h3>
-                <div data-testid="USG_RENDERER_ACTIVE" style={{ color: 'red' }}>renderer-active</div>
                 {activeSectionData.include_toggle && (
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
                     <input
@@ -642,7 +658,9 @@ export default function UsgStudyEditorPage() {
               ) : (
                 <div style={{ display: "grid", gap: 16 }}>
                   {activeSectionData.fields.map((field) => {
-                    console.log("FIELD_RENDER", field);
+                    if (field.field_key === "liver_echotexture") {
+                      console.log("DEBUG_FIELD", field);
+                    }
                     const value = values[field.field_key]?.value_json;
                     const isForcedNA = forcedNaSet.has(field.field_key);
                     const isNA = isForcedNA || values[field.field_key]?.is_not_applicable || false;
@@ -683,7 +701,7 @@ export default function UsgStudyEditorPage() {
                             }}
                           >
                             <option value="">Select</option>
-                            {(field.options || []).map((option) => (
+                            {normalizeOptions(field.options).map((option) => (
                               <option key={option.value} value={option.value}>
                                 {option.label}
                               </option>
@@ -716,7 +734,7 @@ export default function UsgStudyEditorPage() {
                               {field.label}
                             </legend>
                             <div style={{ display: "grid", gap: 8 }}>
-                              {(field.options || []).map((option) => (
+                              {normalizeOptions(field.options).map((option) => (
                                 <label key={option.value} style={{ display: "flex", alignItems: "center", gap: 8 }}>
                                   <input
                                     type="radio"
@@ -750,7 +768,7 @@ export default function UsgStudyEditorPage() {
                             alignItems: "center",
                             opacity: isNA && !isDisabled ? 0.6 : 1,
                           }}>
-                            {(field.options || []).map((option) => {
+                            {normalizeOptions(field.options).map((option) => {
                               const current = Array.isArray(value) ? value : [];
                               const checked = current.includes(option.value);
                               return (

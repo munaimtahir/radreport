@@ -806,6 +806,16 @@ class USGReportViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Ensure template is resolved before validation
+        from .template_resolution import ensure_template_for_report
+        try:
+            ensure_template_for_report(report)
+        except ValidationError as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
         # PHASE D: Hard validation gates - check required fields
         can_finalize, errors = report.can_finalize()
         if not can_finalize:
@@ -898,6 +908,16 @@ class USGReportViewSet(viewsets.ModelViewSet):
         if item.status != "PENDING_VERIFICATION":
             return Response(
                 {"detail": f"Item must be in PENDING_VERIFICATION status, current: {item.status}"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Ensure template is resolved before validation
+        from .template_resolution import ensure_template_for_report
+        try:
+            ensure_template_for_report(report)
+        except ValidationError as e:
+            return Response(
+                {"detail": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
         

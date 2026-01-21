@@ -201,9 +201,22 @@ class USGReportSerializer(serializers.ModelSerializer):
         return None
 
     def get_template_schema(self, obj):
+        """Get template schema, auto-resolving if missing."""
         if obj.template_version:
             return obj.template_version.schema
-        return None
+        
+        # Try to auto-resolve for reports without template_version
+        try:
+            from .template_resolution import resolve_template_schema_for_report
+            schema = resolve_template_schema_for_report(obj)
+            return schema
+        except Exception as e:
+            # Return None instead of failing - frontend should handle gracefully
+            # Log the error for debugging
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Failed to resolve template schema for report {obj.id}: {str(e)}")
+            return None
     
     def get_can_finalize(self, obj):
         """Check if report can be finalized"""
