@@ -1,4 +1,4 @@
-import uuid
+    import uuid
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -351,6 +351,7 @@ class USGReport(models.Model):
         ("Good", "Good"),
         ("Fair", "Fair"),
         ("Limited", "Limited"),
+        ("Not recorded", "Not recorded"),
     )
     
     # Study Type Choices
@@ -484,12 +485,14 @@ class USGReport(models.Model):
                             label = field.get("label") or key
                             errors.append(f"{label} is required")
         else:
-            if not self.scan_quality:
-                errors.append("scan_quality is required")
-            if not self.limitations_text or not self.limitations_text.strip():
-                errors.append("limitations_text is required (can be 'None' but must be explicit)")
-            if not self.impression_text or not self.impression_text.strip():
-                errors.append("impression_text is required")
+            # MVP: Metadata fields are now optional for verification
+            # if not self.scan_quality:
+            #     errors.append("scan_quality is required")
+            # if not self.limitations_text or not self.limitations_text.strip():
+            #     errors.append("limitations_text is required (can be 'None' but must be explicit)")
+            # if not self.impression_text or not self.impression_text.strip():
+            #     errors.append("impression_text is required")
+            
             if self.critical_flag:
                 comm = self.critical_communication_json or {}
                 if not comm.get("recipient") or not comm.get("method") or not comm.get("communicated_at"):

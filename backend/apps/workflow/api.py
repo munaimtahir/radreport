@@ -813,6 +813,17 @@ class USGReportViewSet(viewsets.ModelViewSet):
                 {"detail": "Cannot finalize report", "errors": errors},
                 status=status.HTTP_400_BAD_REQUEST
             )
+
+        # Set defaults for optional metadata fields if missing
+        if not report.scan_quality:
+            report.scan_quality = "Not recorded"
+        if not report.limitations_text or not report.limitations_text.strip():
+            report.limitations_text = "None"
+        if report.impression_text is None:
+            report.impression_text = ""
+        elif not report.impression_text.strip():
+             # If it's a blank string, we might want to keep it or set to ""
+             report.impression_text = ""
         
         # Update report status to FINAL
         now = timezone.now()
@@ -898,6 +909,16 @@ class USGReportViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
         
+        # Set defaults for optional metadata fields if missing
+        if not report.scan_quality:
+            report.scan_quality = "Not recorded"
+        if not report.limitations_text or not report.limitations_text.strip():
+            report.limitations_text = "None"
+        if report.impression_text is None:
+            report.impression_text = ""
+        elif not report.impression_text.strip():
+             report.impression_text = ""
+
         # Update report status to FINAL
         now = timezone.now()
         report.report_status = "FINAL"
