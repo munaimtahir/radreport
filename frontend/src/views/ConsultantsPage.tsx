@@ -21,7 +21,8 @@ interface BillingRule {
     id: string;
     consultant: string;
     rule_type: string;
-    consultant_percent: string;
+    consultant_percent: string | null;
+    consultant_fixed_amount: string | null;
     active_from: string | null;
     service: string | null; // Service ID
     service_name: string | null;
@@ -49,13 +50,32 @@ export default function ConsultantsPage() {
     const [rules, setRules] = useState<BillingRule[]>([]);
     const [newRuleData, setNewRuleData] = useState({
         consultant_percent: "",
+        consultant_fixed_amount: "",
+        rule_type: "PERCENT_SPLIT",
         active_from: "",
         service_id: "", // Optional service ID
     });
 
+    // Services for search
+    const [services, setServices] = useState<any[]>([]);
+    const [serviceSearch, setServiceSearch] = useState("");
+    const [showServiceDropdown, setShowServiceDropdown] = useState(false);
+
     useEffect(() => {
-        if (token) loadConsultants();
+        if (token) {
+            loadConsultants();
+            loadServices();
+        }
     }, [token]);
+
+    const loadServices = async () => {
+        try {
+            const data = await apiGet("/services/", token);
+            setServices(data.results || data || []);
+        } catch (err) {
+            console.error("Failed to load services", err);
+        }
+    };
 
     const loadConsultants = async () => {
         try {
@@ -120,40 +140,64 @@ export default function ConsultantsPage() {
         }
     };
 
+    const handleDeleteRule = async (ruleId: string) => {
+        if (!confirm("Are you sure you want to delete this rule?")) return;
+        try {
+            await apiDelete(`/consultants/${editingId}/rules/${ruleId}/`, token);
+            loadRules(editingId!);
+        } catch (err: any) {
+            alert(err.message || "Failed to delete rule");
+        }
+    };
+
     const handleAddRule = async () => {
         if (!editingId || editingId === "new") return;
-        if (!newRuleData.consultant_percent) {
+
+        if (newRuleData.rule_type === "PERCENT_SPLIT" && !newRuleData.consultant_percent) {
             alert("Percentage is required");
             return;
         }
+        if (newRuleData.rule_type === "FIXED_AMOUNT" && !newRuleData.consultant_fixed_amount) {
+            alert("Fixed Amount is required");
+            return;
+        }
+
         try {
             const payload: any = {
-                consultant_percent: newRuleData.consultant_percent,
                 active_from: newRuleData.active_from || null,
-                rule_type: "PERCENT_SPLIT"
+                rule_type: newRuleData.rule_type
             };
+
+            if (newRuleData.rule_type === "PERCENT_SPLIT") {
+                payload.consultant_percent = newRuleData.consultant_percent;
+            } else {
+                payload.consultant_fixed_amount = newRuleData.consultant_fixed_amount;
+            }
+
             if (newRuleData.service_id) {
                 payload.service_id = newRuleData.service_id;
             }
 
             await apiPost(`/consultants/${editingId}/rules/`, token, payload);
-            setNewRuleData({ consultant_percent: "", active_from: "", service_id: "" });
+            setNewRuleData({
+                consultant_percent: "",
+                consultant_fixed_amount: "",
+                active_from: "",
+                service_id: "",
+                rule_type: "PERCENT_SPLIT"
+            });
+            setServiceSearch("");
             loadRules(editingId);
         } catch (err: any) {
             alert(err.message || "Failed to add rule");
         }
     };
 
-    const handleDeleteRule = async (ruleId: string) => {
-        if (!editingId) return;
-        if (!confirm("Are you sure?")) return;
-        try {
-            await apiDelete(`/consultant-billing-rules/${ruleId}/`, token);
-            loadRules(editingId);
-        } catch (err: any) {
-            alert("Failed to delete rule: " + err.message);
-        }
-    };
+    const filteredServices = services.filter(s => {
+        if (!serviceSearch) return false;
+        const q = serviceSearch.toLowerCase();
+        return s.name.toLowerCase().includes(q) || (s.code && s.code.toLowerCase().includes(q));
+    }).slice(0, 10);
 
     return (
         <div style={{ maxWidth: 800 }}>
@@ -225,41 +269,101 @@ export default function ConsultantsPage() {
                         <>
                             <hr style={{ border: "none", borderTop: `1px solid ${theme.colors.border}`, margin: "20px 0" }} />
 
-                            <h4>Percentage Share Rules</h4>
+                            <h4>Billing Rules</h4>
                             <p style={{ fontSize: 13, color: theme.colors.textSecondary }}>
-                                Set the global percentage share, or specific shares for services.
+                                Set the global rules or specific service overrides.
                             </p>
 
                             {/* Add Rule Form */}
-                            <div style={{ display: "flex", gap: 8, alignItems: "flex-end", marginBottom: 12, background: theme.colors.backgroundGray, padding: 10, borderRadius: 6 }}>
-                                <div style={{ flex: 1 }}>
-                                    <label style={{ fontSize: 11 }}>Service Override (Optional)</label>
-                                    <input
-                                        placeholder="Enter Service ID (UUID) or leave blank for Global"
-                                        value={newRuleData.service_id}
-                                        onChange={(e) => setNewRuleData({ ...newRuleData, service_id: e.target.value })}
-                                        style={{ width: "100%", padding: 6, fontSize: 13 }}
-                                    />
+                            <div style={{ background: theme.colors.backgroundGray, padding: 10, borderRadius: 6, marginBottom: 12 }}>
+                                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                                    <div style={{ flex: 1, position: "relative" }}>
+                                        <label style={{ fontSize: 11 }}>Service Override (Leave blank for Global)</label>
+                                        <input
+                                            placeholder="Search Service..."
+                                            value={serviceSearch}
+                                            onFocus={() => setShowServiceDropdown(true)}
+                                            onBlur={() => setTimeout(() => setShowServiceDropdown(false), 200)}
+                                            onChange={(e) => {
+                                                setServiceSearch(e.target.value);
+                                                if (newRuleData.service_id) {
+                                                    setNewRuleData({ ...newRuleData, service_id: "" });
+                                                }
+                                            }}
+                                            style={{ width: "100%", padding: 6, fontSize: 13 }}
+                                        />
+                                        {newRuleData.service_id && (
+                                            <span style={{ fontSize: 10, color: "green", fontWeight: "bold" }}>Selected: {services.find(s => s.id === newRuleData.service_id)?.name || newRuleData.service_id}</span>
+                                        )}
+                                        {showServiceDropdown && serviceSearch && (
+                                            <div style={{
+                                                position: "absolute", top: "100%", left: 0, right: 0,
+                                                background: "white", border: "1px solid #ccc", zIndex: 10,
+                                                maxHeight: 200, overflowY: "auto"
+                                            }}>
+                                                {filteredServices.map(s => (
+                                                    <div
+                                                        key={s.id}
+                                                        style={{ padding: 8, cursor: "pointer", borderBottom: "1px solid #eee" }}
+                                                        onClick={() => {
+                                                            setNewRuleData({ ...newRuleData, service_id: s.id });
+                                                            setServiceSearch(s.name);
+                                                            setShowServiceDropdown(false);
+                                                        }}
+                                                    >
+                                                        {s.name} <small>({s.code})</small>
+                                                    </div>
+                                                ))}
+                                                {filteredServices.length === 0 && <div style={{ padding: 8 }}>No results</div>}
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ width: 140 }}>
+                                        <label style={{ fontSize: 11 }}>Rule Type</label>
+                                        <select
+                                            value={newRuleData.rule_type}
+                                            onChange={(e) => setNewRuleData({ ...newRuleData, rule_type: e.target.value })}
+                                            style={{ width: "100%", padding: 6, fontSize: 13 }}
+                                        >
+                                            <option value="PERCENT_SPLIT">Percentage</option>
+                                            <option value="FIXED_AMOUNT">Fixed Amount</option>
+                                        </select>
+                                    </div>
                                 </div>
-                                <div style={{ width: 100 }}>
-                                    <label style={{ fontSize: 11 }}>Percent %</label>
-                                    <input
-                                        type="number"
-                                        value={newRuleData.consultant_percent}
-                                        onChange={(e) => setNewRuleData({ ...newRuleData, consultant_percent: e.target.value })}
-                                        style={{ width: "100%", padding: 6, fontSize: 13 }}
-                                    />
+                                <div style={{ display: "flex", gap: 8, alignItems: "flex-end" }}>
+                                    {newRuleData.rule_type === "PERCENT_SPLIT" ? (
+                                        <div style={{ width: 120 }}>
+                                            <label style={{ fontSize: 11 }}>Percent %</label>
+                                            <input
+                                                type="number"
+                                                value={newRuleData.consultant_percent}
+                                                onChange={(e) => setNewRuleData({ ...newRuleData, consultant_percent: e.target.value })}
+                                                style={{ width: "100%", padding: 6, fontSize: 13 }}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <div style={{ width: 120 }}>
+                                            <label style={{ fontSize: 11 }}>Fixed Amount</label>
+                                            <input
+                                                type="number"
+                                                value={newRuleData.consultant_fixed_amount}
+                                                onChange={(e) => setNewRuleData({ ...newRuleData, consultant_fixed_amount: e.target.value })}
+                                                style={{ width: "100%", padding: 6, fontSize: 13 }}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div style={{ width: 140 }}>
+                                        <label style={{ fontSize: 11 }}>Active From</label>
+                                        <input
+                                            type="date"
+                                            value={newRuleData.active_from}
+                                            onChange={(e) => setNewRuleData({ ...newRuleData, active_from: e.target.value })}
+                                            style={{ width: "100%", padding: 6, fontSize: 13 }}
+                                        />
+                                    </div>
+                                    <Button onClick={handleAddRule}>Add Rule</Button>
                                 </div>
-                                <div style={{ width: 140 }}>
-                                    <label style={{ fontSize: 11 }}>Active From</label>
-                                    <input
-                                        type="date"
-                                        value={newRuleData.active_from}
-                                        onChange={(e) => setNewRuleData({ ...newRuleData, active_from: e.target.value })}
-                                        style={{ width: "100%", padding: 6, fontSize: 13 }}
-                                    />
-                                </div>
-                                <Button onClick={handleAddRule}>Add Rule</Button>
                             </div>
 
                             {/* Rules List */}
@@ -267,7 +371,7 @@ export default function ConsultantsPage() {
                                 <thead>
                                     <tr style={{ textAlign: "left", color: theme.colors.textSecondary }}>
                                         <th>Service</th>
-                                        <th>Percent</th>
+                                        <th>Rule (Percent / Fixed)</th>
                                         <th>Active From</th>
                                         <th>Action</th>
                                     </tr>
@@ -278,7 +382,12 @@ export default function ConsultantsPage() {
                                             <td style={{ padding: 6 }}>
                                                 {rule.service_name || <span style={{ fontWeight: "bold" }}>Global Default</span>}
                                             </td>
-                                            <td style={{ padding: 6 }}>{rule.consultant_percent}%</td>
+                                            <td style={{ padding: 6 }}>
+                                                {rule.rule_type === "FIXED_AMOUNT"
+                                                    ? `${rule.consultant_fixed_amount} PKR`
+                                                    : `${rule.consultant_percent}%`
+                                                }
+                                            </td>
                                             <td style={{ padding: 6 }}>{rule.active_from || "Always"}</td>
                                             <td style={{ padding: 6 }}>
                                                 <button

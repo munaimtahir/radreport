@@ -416,6 +416,7 @@ def _draw_receipt_copy(
         ("Age:", data["age"] or "-"),
         ("Gender:", data["gender"] or "-"),
         ("Phone:", data["phone"] or "-"),
+        ("Ref. By:", data.get("consultant", "-")),
     ]
     left_column_y = _draw_label_value_rows(
         canvas,
@@ -538,7 +539,7 @@ def _draw_receipt_copy(
     canvas.setFillColor(LIGHT_GREY)
     footer_y = y + 8 * mm
     for idx, line in enumerate(footer_lines):
-        canvas.drawCentredString(x + width / 2, footer_y + (len(footer_lines) - idx - 1) * 3.2, line)
+        canvas.drawCentredString(x + width / 2, footer_y + (len(footer_lines) - idx - 1) * 8, line)
 
 
 def _build_receipt_canvas(data: dict, receipt_settings, filename: str) -> ContentFile:
@@ -788,7 +789,10 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
     services = []
     items = service_visit.items.all()
     for item in items:
-        services.append((item.service_name_snapshot, f"Rs. {item.price_snapshot:.2f}"))
+        service_name = item.service_name_snapshot
+        if not service_name and item.service:
+            service_name = item.service.name
+        services.append((service_name, f"Rs. {item.price_snapshot:.2f}"))
 
     if not services and service_visit.service:
         services.append((service_visit.service.name, ""))
@@ -807,6 +811,7 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
         "age": str(service_visit.patient.age) if service_visit.patient.age else "",
         "gender": service_visit.patient.gender or "",
         "phone": service_visit.patient.phone or "",
+        "consultant": service_visit.booked_consultant.display_name if service_visit.booked_consultant else "-",
         "services": services,
         "total_amount": f"Rs. {invoice.total_amount:.2f}",
         "net_amount": f"Rs. {invoice.net_amount:.2f}",
@@ -850,6 +855,7 @@ def build_receipt_snapshot_pdf(snapshot) -> ContentFile:
         "age": snapshot.patient_age or "",
         "gender": snapshot.patient_gender or "",
         "phone": snapshot.patient_phone or "",
+        "consultant": snapshot.service_visit.booked_consultant.display_name if snapshot.service_visit.booked_consultant else "-",
         "services": services,
         "total_amount": f"Rs. {total_amount:.2f}",
         "net_amount": f"Rs. {total_amount:.2f}",

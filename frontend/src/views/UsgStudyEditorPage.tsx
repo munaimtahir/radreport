@@ -621,6 +621,7 @@ export default function UsgStudyEditorPage() {
             <div>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <h3 style={{ marginTop: 0 }}>{activeSectionData.title}</h3>
+                <div data-testid="USG_RENDERER_ACTIVE" style={{ color: 'red' }}>renderer-active</div>
                 {activeSectionData.include_toggle && (
                   <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
                     <input
@@ -640,6 +641,7 @@ export default function UsgStudyEditorPage() {
               ) : (
                 <div style={{ display: "grid", gap: 16 }}>
                   {activeSectionData.fields.map((field) => {
+                    console.log("FIELD_RENDER", field);
                     const value = values[field.field_key]?.value_json;
                     const isForcedNA = forcedNaSet.has(field.field_key);
                     const isNA = isForcedNA || values[field.field_key]?.is_not_applicable || false;

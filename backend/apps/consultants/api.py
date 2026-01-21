@@ -78,8 +78,9 @@ class ConsultantProfileViewSet(viewsets.ModelViewSet):
                 consultant=consultant,
                 is_active=True,
                 service_id=service_id, # Optional
-                rule_type=data["rule_type"],
-                consultant_percent=data["consultant_percent"],
+                rule_type=data.get("rule_type", ConsultantBillingRule.RULE_TYPE_PERCENT_SPLIT),
+                consultant_percent=data.get("consultant_percent"),
+                consultant_fixed_amount=data.get("consultant_fixed_amount"),
                 active_from=data.get("active_from"),
             )
         return Response(ConsultantBillingRuleSerializer(rule).data, status=status.HTTP_201_CREATED)

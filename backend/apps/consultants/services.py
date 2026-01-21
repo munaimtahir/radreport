@@ -13,10 +13,11 @@ def quantize_money(value: Decimal) -> Decimal:
     return value.quantize(MONEY_QUANT, rounding=ROUND_HALF_UP)
 
 
-def get_consultant_percent(consultant, as_of_date, service_id=None):
+def get_applicable_rule(consultant, as_of_date, service_id=None):
     """
-    Get the applicable consultant percentage.
+    Get the applicable consultant billing rule.
     Prioritizes service-specific rules over global rules.
+    Returns the ConsultantBillingRule object or None.
     """
     # 1. Try to find a specific rule for this service
     if service_id:
@@ -29,7 +30,7 @@ def get_consultant_percent(consultant, as_of_date, service_id=None):
         for rule in specific_rules:
             if rule.active_from and as_of_date and rule.active_from > as_of_date:
                 continue
-            return rule.consultant_percent
+            return rule
 
     # 2. Fallback to global rule (service IS NULL)
     global_rules = ConsultantBillingRule.objects.filter(
@@ -41,9 +42,9 @@ def get_consultant_percent(consultant, as_of_date, service_id=None):
     for rule in global_rules:
         if rule.active_from and as_of_date and rule.active_from > as_of_date:
             continue
-        return rule.consultant_percent
+        return rule
 
-    return Decimal("0")
+    return None
 
 
 def build_settlement_preview(consultant, date_from, date_to):
@@ -88,9 +89,19 @@ def build_settlement_preview(consultant, date_from, date_to):
             if item.id in settled_item_ids:
                 continue
 
-            # Calculate percent for THIS specific item/service
-            consultant_percent = get_consultant_percent(consultant, date_to, service_id=item.service_id)
-            consultant_share = quantize_money(item_paid * consultant_percent / Decimal("100"))
+            # Calculate share for THIS specific item/service
+            rule = get_applicable_rule(consultant, date_to, service_id=item.service_id)
+            
+            if not rule:
+                consultant_share = Decimal("0")
+            elif rule.rule_type == ConsultantBillingRule.RULE_TYPE_FIXED_AMOUNT and rule.consultant_fixed_amount:
+                consultant_share = min(item_paid, rule.consultant_fixed_amount)
+            else:
+                # Percent split (default)
+                pct = rule.consultant_percent or Decimal("0")
+                consultant_share = quantize_money(item_paid * pct / Decimal("100"))
+
+            consultant_share = quantize_money(consultant_share)
             clinic_share_item = quantize_money(item_paid - consultant_share)
 
             lines.append(
@@ -112,7 +123,7 @@ def build_settlement_preview(consultant, date_from, date_to):
             clinic_share += clinic_share_item
 
     return {
-        "consultant_percent": consultant_percent,
+        "consultant_percent": "N/A", # Deprecated/Mixed
         "gross_collected": quantize_money(gross_collected),
         "consultant_payable": quantize_money(consultant_payable),
         "clinic_share": quantize_money(clinic_share),

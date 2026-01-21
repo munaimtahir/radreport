@@ -38,8 +38,10 @@ class ConsultantProfile(models.Model):
 
 class ConsultantBillingRule(models.Model):
     RULE_TYPE_PERCENT_SPLIT = "PERCENT_SPLIT"
+    RULE_TYPE_FIXED_AMOUNT = "FIXED_AMOUNT"
     RULE_TYPE_CHOICES = (
         (RULE_TYPE_PERCENT_SPLIT, "Percent Split"),
+        (RULE_TYPE_FIXED_AMOUNT, "Fixed Amount"),
     )
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -69,6 +71,15 @@ class ConsultantBillingRule(models.Model):
             MinValueValidator(Decimal("0")),
             MaxValueValidator(Decimal("100")),
         ],
+        null=True,
+        blank=True,
+    )
+    consultant_fixed_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0"))],
+        null=True,
+        blank=True,
     )
     is_active = models.BooleanField(default=True)
     active_from = models.DateField(null=True, blank=True)

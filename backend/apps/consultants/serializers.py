@@ -40,6 +40,7 @@ class ConsultantBillingRuleSerializer(serializers.ModelSerializer):
             "service_name",
             "rule_type",
             "consultant_percent",
+            "consultant_fixed_amount",
             "is_active",
             "active_from",
             "created_at",
@@ -55,7 +56,8 @@ class ConsultantBillingRuleInputSerializer(serializers.Serializer):
         default=ConsultantBillingRule.RULE_TYPE_PERCENT_SPLIT,
         required=False,
     )
-    consultant_percent = serializers.DecimalField(max_digits=5, decimal_places=2)
+    consultant_percent = serializers.DecimalField(max_digits=5, decimal_places=2, required=False, allow_null=True)
+    consultant_fixed_amount = serializers.DecimalField(max_digits=10, decimal_places=2, required=False, allow_null=True)
     active_from = serializers.DateField(required=False, allow_null=True)
 
 
