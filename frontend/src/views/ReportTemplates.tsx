@@ -299,7 +299,21 @@ export default function ReportTemplates() {
 
   return (
     <div>
-      <PageHeader title="Report Templates" />
+      <PageHeader title="Report Templates" subtitle="For non-sectioned templates only" />
+      
+      {/* WARNING: This page is for flat templates only */}
+      <div style={{ 
+        padding: 16, 
+        marginBottom: 20, 
+        backgroundColor: '#fff3cd', 
+        border: '1px solid #ffc107', 
+        borderRadius: 8 
+      }}>
+        <strong>⚠️ Important:</strong> This page manages flat templates without sections.
+        <br />
+        <strong>For USG templates (with sections):</strong> Use <Link to="/admin/templates/import" style={{ color: '#0B5ED7', fontWeight: 'bold' }}>Template Import Manager</Link> instead!
+      </div>
+      
       {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
       {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20 }}>

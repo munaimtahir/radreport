@@ -9,6 +9,7 @@ import Button from "../ui/components/Button";
 interface ServiceVisitItem {
   id: string;
   service_visit_id: string;
+  service_name_snapshot?: string;
   department_snapshot: string;
   status: string;
   template_details?: {
@@ -105,6 +106,7 @@ export default function USGWorklistPage() {
   const [success, setSuccess] = useState<string>("");
   const [visits, setVisits] = useState<ServiceVisit[]>([]);
   const [selectedVisit, setSelectedVisit] = useState<ServiceVisit | null>(null);
+  const [availableUsgItems, setAvailableUsgItems] = useState<ServiceVisitItem[]>([]);  // All USG items in visit
   const [selectedItemId, setSelectedItemId] = useState<string | null>(null);  // service_visit_item_id (canonical)
   const [report, setReport] = useState<USGReport | null>(null);
   const [templateSchema, setTemplateSchema] = useState<TemplateSchema | null>(null);
@@ -214,18 +216,14 @@ export default function USGWorklistPage() {
   const handleSelectVisit = async (visit: ServiceVisit) => {
     setSelectedVisit(visit);
 
-    // Find USG item (canonical identifier) - prefer department_snapshot="USG"
-    const usgItem = visit.items?.find(item => item.department_snapshot === "USG");
-    if (usgItem) {
-      setSelectedItemId(usgItem.id);
-      const dynamicTemplate = await loadTemplateReport(usgItem.id);
-      if (dynamicTemplate) {
-        setTemplateSchema(null);
-      } else {
-        setTemplateSchema(usgItem.template_details?.schema || null);
-      }
-      // Load report by service_visit_item_id (canonical)
-      await loadReport(visit.id, usgItem.id);
+    // Find ALL USG items (support multiple USG services per visit)
+    const usgItems = visit.items?.filter(item => item.department_snapshot === "USG") || [];
+    setAvailableUsgItems(usgItems);
+    
+    if (usgItems.length > 0) {
+      // Auto-select first USG item by default
+      const firstItem = usgItems[0];
+      await handleSelectUsgItem(firstItem, visit.id);
     } else {
       // Fallback: use visit_id (legacy compatibility)
       setSelectedItemId(null);
@@ -236,6 +234,20 @@ export default function USGWorklistPage() {
       setTemplateNarrative("");
       await loadReport(visit.id);
     }
+  };
+
+  const handleSelectUsgItem = async (item: ServiceVisitItem, visitId: string) => {
+    setSelectedItemId(item.id);
+    
+    const dynamicTemplate = await loadTemplateReport(item.id);
+    if (dynamicTemplate) {
+      setTemplateSchema(null);
+    } else {
+      setTemplateSchema(item.template_details?.schema || null);
+    }
+    
+    // Load report by service_visit_item_id (canonical)
+    await loadReport(visitId, item.id);
   };
 
   const handleFieldChange = (key: string, value: any) => {
@@ -487,6 +499,29 @@ export default function USGWorklistPage() {
               <div><strong>Patient:</strong> {selectedVisit.patient_name} ({selectedVisit.patient_reg_no})</div>
               <div><strong>Service:</strong> {selectedVisit.service_name}</div>
             </div>
+
+            {/* Multiple USG Service Selector */}
+            {availableUsgItems.length > 1 && (
+              <div style={{ marginBottom: 16, padding: 12, backgroundColor: "#e7f3ff", border: "1px solid #0B5ED7", borderRadius: 4 }}>
+                <div style={{ marginBottom: 8, fontWeight: 600 }}>
+                  📋 Multiple USG Services ({availableUsgItems.length}) - Select which service to report:
+                </div>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  {availableUsgItems.map((item, idx) => (
+                    <Button
+                      key={item.id}
+                      variant={selectedItemId === item.id ? "primary" : "secondary"}
+                      onClick={() => handleSelectUsgItem(item, selectedVisit.id)}
+                    >
+                      {idx + 1}. {item.service_name_snapshot || "USG Service"} ({item.status})
+                    </Button>
+                  ))}
+                </div>
+                <div style={{ fontSize: 12, color: "#666", marginTop: 8 }}>
+                  💡 Currently editing: {availableUsgItems.find(i => i.id === selectedItemId)?.service_name_snapshot || "Select a service"}
+                </div>
+              </div>
+            )}
 
             {report?.return_reason && (
               <div style={{ marginBottom: 16, padding: 12, backgroundColor: "#fff3cd", borderRadius: 4, border: "1px solid #ffc107" }}>

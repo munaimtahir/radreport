@@ -78,7 +78,26 @@ export default function TemplateImportManager() {
 
     return (
         <div>
-            <PageHeader title="Template Import Manager" />
+            <PageHeader title="Template Import Manager" subtitle="Import sectioned templates (USG, etc.)" />
+            
+            {/* SUCCESS: This page uses the CORRECT system for USG templates! */}
+            <div style={{ 
+                padding: 16, 
+                marginBottom: 20, 
+                backgroundColor: '#d4edda', 
+                border: '1px solid #28a745', 
+                borderRadius: 8,
+                maxWidth: 900
+            }}>
+                <strong>✅ This is the correct interface for USG templates!</strong>
+                <br />
+                Upload JSON templates with sections, NA support, and checklists.
+                <br />
+                <small>After import, link services using: <code style={{ background: '#f5f5f5', padding: '2px 6px', borderRadius: 3 }}>
+                    python manage.py link_usg_services
+                </code></small>
+            </div>
+            
             <div style={{ maxWidth: 900, background: "white", padding: 24, borderRadius: 8, boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
                 {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
                 {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}

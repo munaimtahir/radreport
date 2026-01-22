@@ -127,7 +127,23 @@ export default function ServiceTemplates() {
 
   return (
     <div>
-      <PageHeader title="Service Template Linking" />
+      <PageHeader title="Service Template Linking" subtitle="For flat templates only" />
+      
+      {/* WARNING: This page links to flat ReportTemplate, not sectioned Template */}
+      <div style={{ 
+        padding: 16, 
+        marginBottom: 20, 
+        backgroundColor: '#fff3cd', 
+        border: '1px solid #ffc107', 
+        borderRadius: 8 
+      }}>
+        <strong>⚠️ For USG Services:</strong> Use backend command to link services to sectioned templates.
+        <br />
+        Command: <code style={{ background: '#f5f5f5', padding: '2px 6px', borderRadius: 3 }}>
+          python manage.py import_usg_template /path/to/template.json --link-service=USG_XXX
+        </code>
+      </div>
+      
       {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
       {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
 
