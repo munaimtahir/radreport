@@ -105,6 +105,11 @@ class ReportTemplate(models.Model):
     description = models.TextField(blank=True, default="")
     category = models.CharField(max_length=120, blank=True, default="")
     is_active = models.BooleanField(default=True)
+    
+    # SYSTEM CLEANUP NOTE:
+    # This model is DEPRECATED for USG (Ultrasound) reports.
+    # USG must use the strict sectioned 'Template' model.
+    # This remains valid for simple/flat reports (OPD, Lab, etc).
     version = models.PositiveIntegerField(default=1)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="created_report_templates")
     updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="updated_report_templates")
@@ -138,7 +143,7 @@ class ReportTemplateField(models.Model):
         ordering = ["order"]
 
     def __str__(self):
-        return f"{self.template.name} :: {self.label}"
+        return f"{self.template.name} :: {self.label} (Deprecated for USG)"
 
 
 class ReportTemplateFieldOption(models.Model):
@@ -157,6 +162,8 @@ class ReportTemplateFieldOption(models.Model):
 
 
 class ServiceReportTemplate(models.Model):
+    # DEPRECATED FOR USG: Do not link USG services to ReportTemplates.
+    # USG services must use 'default_template' linking to the 'Template' model.
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     service = models.ForeignKey("catalog.Service", on_delete=models.CASCADE, related_name="report_templates")
     template = models.ForeignKey(ReportTemplate, on_delete=models.CASCADE, related_name="service_links")
@@ -167,6 +174,18 @@ class ServiceReportTemplate(models.Model):
     class Meta:
         unique_together = ("service", "template")
         ordering = ["-is_default", "created_at"]
+
+    def clean(self):
+        from django.core.exceptions import ValidationError
+        # STRICT GUARD: USG services cannot use ReportTemplate
+        if self.service_id and self.service.modality.code == 'USG':
+             raise ValidationError({
+                 'service': "USG Services must use the 'Template' system (with sections), not 'ReportTemplate'. Link via Service.default_template instead."
+             })
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.service.name}: {self.template.name}"
