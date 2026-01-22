@@ -114,7 +114,7 @@ class ReportTemplateFieldSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReportTemplateField
         fields = [
-            "id", "label", "key", "field_type", "is_required", "help_text",
+            "id", "label", "key", "field_type", "is_required", "na_allowed", "help_text",
             "default_value", "placeholder", "order", "validation", "is_active", "options",
         ]
 

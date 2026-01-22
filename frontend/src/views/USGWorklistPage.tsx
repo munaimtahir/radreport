@@ -78,6 +78,7 @@ interface ReportTemplateField {
   key: string;
   field_type: string;
   is_required: boolean;
+  na_allowed?: boolean;
   help_text: string;
   placeholder: string;
   default_value?: any;

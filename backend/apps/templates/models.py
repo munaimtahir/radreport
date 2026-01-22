@@ -125,6 +125,7 @@ class ReportTemplateField(models.Model):
     key = models.SlugField(max_length=80)
     field_type = models.CharField(max_length=30, choices=REPORT_TEMPLATE_FIELD_TYPES)
     is_required = models.BooleanField(default=False)
+    na_allowed = models.BooleanField(default=False, help_text="Allow 'Not Applicable' option for this field")
     help_text = models.CharField(max_length=300, blank=True, default="")
     default_value = models.JSONField(null=True, blank=True)
     placeholder = models.CharField(max_length=200, blank=True, default="")
