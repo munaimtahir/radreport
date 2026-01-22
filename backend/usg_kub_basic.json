@@ -1,0 +1,371 @@
+{
+  "code": "USG_KUB_BASIC",
+  "name": "Ultrasound KUB (Basic)",
+  "category": "USG",
+  "sections": [
+    {
+      "title": "Right Kidney",
+      "order": 1,
+      "fields": [
+        {
+          "key": "right_kidney_section",
+          "label": "Right kidney",
+          "type": "heading",
+          "order": 1,
+          "required": false,
+          "na_allowed": true
+        },
+        {
+          "key": "rk_size",
+          "label": "Size",
+          "type": "checklist",
+          "order": 2,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Normal", "value": "Normal"},
+            {"label": "Enlarged", "value": "Enlarged"},
+            {"label": "Small", "value": "Small"}
+          ]
+        },
+        {
+          "key": "rk_cortical_echogenicity",
+          "label": "Cortical echogenicity",
+          "type": "checklist",
+          "order": 3,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Normal", "value": "Normal"},
+            {"label": "Increased", "value": "Increased"},
+            {"label": "Decreased", "value": "Decreased"}
+          ]
+        },
+        {
+          "key": "rk_corticomedullary_diff",
+          "label": "Corticomedullary differentiation",
+          "type": "checklist",
+          "order": 4,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Preserved", "value": "Preserved"},
+            {"label": "Reduced", "value": "Reduced"}
+          ]
+        },
+        {
+          "key": "rk_hydronephrosis",
+          "label": "Hydronephrosis",
+          "type": "checklist",
+          "order": 5,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Absent", "value": "Absent"},
+            {"label": "Mild", "value": "Mild"},
+            {"label": "Moderate", "value": "Moderate"},
+            {"label": "Severe", "value": "Severe"}
+          ]
+        },
+        {
+          "key": "rk_calculi",
+          "label": "Calculi",
+          "type": "checklist",
+          "order": 6,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Absent", "value": "Absent"},
+            {"label": "Present", "value": "Present"}
+          ]
+        },
+        {
+          "key": "rk_cyst",
+          "label": "Cyst",
+          "type": "checklist",
+          "order": 7,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Absent", "value": "Absent"},
+            {"label": "Present", "value": "Present"}
+          ]
+        },
+        {
+          "key": "rk_mass",
+          "label": "Mass",
+          "type": "checklist",
+          "order": 8,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Absent", "value": "Absent"},
+            {"label": "Present", "value": "Present"}
+          ]
+        },
+        {
+          "key": "rk_additional_findings",
+          "label": "Additional findings",
+          "type": "short_text",
+          "order": 9,
+          "required": false,
+          "na_allowed": true
+        }
+      ]
+    },
+    {
+      "title": "Left Kidney",
+      "order": 2,
+      "fields": [
+        {
+          "key": "left_kidney_section",
+          "label": "Left kidney",
+          "type": "heading",
+          "order": 1,
+          "required": false,
+          "na_allowed": true
+        },
+        {
+          "key": "lk_size",
+          "label": "Size",
+          "type": "checklist",
+          "order": 2,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Normal", "value": "Normal"},
+            {"label": "Enlarged", "value": "Enlarged"},
+            {"label": "Small", "value": "Small"}
+          ]
+        },
+        {
+          "key": "lk_cortical_echogenicity",
+          "label": "Cortical echogenicity",
+          "type": "checklist",
+          "order": 3,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Normal", "value": "Normal"},
+            {"label": "Increased", "value": "Increased"},
+            {"label": "Decreased", "value": "Decreased"}
+          ]
+        },
+        {
+          "key": "lk_corticomedullary_diff",
+          "label": "Corticomedullary differentiation",
+          "type": "checklist",
+          "order": 4,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Preserved", "value": "Preserved"},
+            {"label": "Reduced", "value": "Reduced"}
+          ]
+        },
+        {
+          "key": "lk_hydronephrosis",
+          "label": "Hydronephrosis",
+          "type": "checklist",
+          "order": 5,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Absent", "value": "Absent"},
+            {"label": "Mild", "value": "Mild"},
+            {"label": "Moderate", "value": "Moderate"},
+            {"label": "Severe", "value": "Severe"}
+          ]
+        },
+        {
+          "key": "lk_calculi",
+          "label": "Calculi",
+          "type": "checklist",
+          "order": 6,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Absent", "value": "Absent"},
+            {"label": "Present", "value": "Present"}
+          ]
+        },
+        {
+          "key": "lk_cyst",
+          "label": "Cyst",
+          "type": "checklist",
+          "order": 7,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Absent", "value": "Absent"},
+            {"label": "Present", "value": "Present"}
+          ]
+        },
+        {
+          "key": "lk_mass",
+          "label": "Mass",
+          "type": "checklist",
+          "order": 8,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Absent", "value": "Absent"},
+            {"label": "Present", "value": "Present"}
+          ]
+        },
+        {
+          "key": "lk_additional_findings",
+          "label": "Additional findings",
+          "type": "short_text",
+          "order": 9,
+          "required": false,
+          "na_allowed": true
+        }
+      ]
+    },
+    {
+      "title": "Ureters",
+      "order": 3,
+      "fields": [
+        {
+          "key": "ureters_section",
+          "label": "Ureters",
+          "type": "heading",
+          "order": 1,
+          "required": false,
+          "na_allowed": true
+        },
+        {
+          "key": "right_ureter",
+          "label": "Right ureter",
+          "type": "checklist",
+          "order": 2,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Not dilated", "value": "Not dilated"},
+            {"label": "Dilated", "value": "Dilated"},
+            {"label": "Not visualized", "value": "Not visualized"}
+          ]
+        },
+        {
+          "key": "left_ureter",
+          "label": "Left ureter",
+          "type": "checklist",
+          "order": 3,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Not dilated", "value": "Not dilated"},
+            {"label": "Dilated", "value": "Dilated"},
+            {"label": "Not visualized", "value": "Not visualized"}
+          ]
+        },
+        {
+          "key": "ureteric_stone",
+          "label": "Ureteric calculus",
+          "type": "checklist",
+          "order": 4,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Absent", "value": "Absent"},
+            {"label": "Present", "value": "Present"}
+          ]
+        },
+        {
+          "key": "ureters_notes",
+          "label": "Additional findings",
+          "type": "short_text",
+          "order": 5,
+          "required": false,
+          "na_allowed": true
+        }
+      ]
+    },
+    {
+      "title": "Urinary Bladder",
+      "order": 4,
+      "fields": [
+        {
+          "key": "urinary_bladder_section",
+          "label": "Urinary bladder",
+          "type": "heading",
+          "order": 1,
+          "required": false,
+          "na_allowed": true
+        },
+        {
+          "key": "bladder_distension",
+          "label": "Distension",
+          "type": "checklist",
+          "order": 2,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Adequate", "value": "Adequate"},
+            {"label": "Underfilled", "value": "Underfilled"},
+            {"label": "Overdistended", "value": "Overdistended"}
+          ]
+        },
+        {
+          "key": "bladder_wall",
+          "label": "Wall",
+          "type": "checklist",
+          "order": 3,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Normal", "value": "Normal"},
+            {"label": "Thickened", "value": "Thickened"},
+            {"label": "Irregular", "value": "Irregular"}
+          ]
+        },
+        {
+          "key": "bladder_calculus",
+          "label": "Calculus",
+          "type": "checklist",
+          "order": 4,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Absent", "value": "Absent"},
+            {"label": "Present", "value": "Present"}
+          ]
+        },
+        {
+          "key": "bladder_mass",
+          "label": "Mass",
+          "type": "checklist",
+          "order": 5,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Absent", "value": "Absent"},
+            {"label": "Present", "value": "Present"}
+          ]
+        },
+        {
+          "key": "bladder_debris",
+          "label": "Debris / clot",
+          "type": "checklist",
+          "order": 6,
+          "required": false,
+          "na_allowed": true,
+          "options": [
+            {"label": "Absent", "value": "Absent"},
+            {"label": "Present", "value": "Present"}
+          ]
+        },
+        {
+          "key": "bladder_notes",
+          "label": "Additional findings",
+          "type": "short_text",
+          "order": 7,
+          "required": false,
+          "na_allowed": true
+        }
+      ]
+    }
+  ]
+}

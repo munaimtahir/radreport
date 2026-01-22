@@ -117,22 +117,28 @@ class Command(BaseCommand):
         for service in usg_services:
             if service.code in auto_mappings:
                 template_code = auto_mappings[service.code]
-                template = templates.get(code=template_code)
-                
-                if service.default_template == template:
-                    self.stdout.write(
-                        f'  ⊙ {service.code:20} → {template_code:25} (already linked)'
-                    )
-                    stats['skipped'] += 1
-                else:
-                    self.stdout.write(
-                        f'  ✓ {service.code:20} → {template_code:25}'
-                    )
-                    stats['success'] += 1
+                try:
+                    template = templates.get(code=template_code)
                     
-                    if not dry_run:
-                        service.default_template = template
-                        service.save()
+                    if service.default_template == template:
+                        self.stdout.write(
+                            f'  ⊙ {service.code:20} → {template_code:25} (already linked)'
+                        )
+                        stats['skipped'] += 1
+                    else:
+                        self.stdout.write(
+                            f'  ✓ {service.code:20} → {template_code:25}'
+                        )
+                        stats['success'] += 1
+                        
+                        if not dry_run:
+                            service.default_template = template
+                            service.save()
+                except Exception as e:
+                    self.stdout.write(
+                        self.style.WARNING(f'  ✗ {service.code:20} → {template_code or "(none)":25} (error: {str(e)[:30]})')
+                    )
+                    stats['error'] += 1
             else:
                 self.stdout.write(
                     self.style.WARNING(f'  ✗ {service.code:20} → (no template match)')
