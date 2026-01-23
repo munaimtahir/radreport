@@ -5,21 +5,14 @@ import { apiGet } from "./api";
 import Login from "../views/Login";
 import Dashboard from "../views/Dashboard";
 import Patients from "../views/Patients";
-import Templates from "../views/Templates";
 import ReceiptSettings from "../views/ReceiptSettings";
-import ReportTemplates from "../views/ReportTemplates";
-import ServiceTemplates from "../views/ServiceTemplates";
-import TemplateImportManager from "../views/TemplateImportManager";
 import ConsultantSettlementsPage from "../views/ConsultantSettlementsPage";
 import ConsultantsPage from "../views/ConsultantsPage";
 import RegistrationPage from "../views/RegistrationPage";
 import PatientsWorkflow from "../views/PatientsWorkflow";
-import USGWorklistPage from "../views/USGWorklistPage";
-import VerificationWorklistPage from "../views/VerificationWorklistPage";
 import FinalReportsPage from "../views/FinalReportsPage";
-import UsgVisitDetailPage from "../views/UsgVisitDetailPage";
-import UsgStudyEditorPage from "../views/UsgStudyEditorPage";
 import AccessDenied from "../views/AccessDenied";
+
 import ModuleDisabled from "../views/ModuleDisabled";
 import Footer from "./components/Footer";
 import { BrandLogo, BrandTitle } from "./components/brand";
@@ -152,41 +145,7 @@ function Shell() {
                 Patient workflow
               </Link>
             )}
-            {canPerform && (
-              <Link
-                to="/worklists/usg"
-                style={{
-                  padding: "10px 12px",
-                  textDecoration: "none",
-                  color: isActiveRoute("/worklists/usg") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                  backgroundColor: isActiveRoute("/worklists/usg") ? theme.colors.brandBlueSoft : "transparent",
-                  borderRadius: theme.radius.base,
-                  fontSize: 14,
-                  fontWeight: isActiveRoute("/worklists/usg") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                  transition: theme.transitions.fast,
-                }}
-              >
-                Report Entry
-              </Link>
-            )}
 
-            {canVerify && (
-              <Link
-                to="/worklists/verification"
-                style={{
-                  padding: "10px 12px",
-                  textDecoration: "none",
-                  color: isActiveRoute("/worklists/verification") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                  backgroundColor: isActiveRoute("/worklists/verification") ? theme.colors.brandBlueSoft : "transparent",
-                  borderRadius: theme.radius.base,
-                  fontSize: 14,
-                  fontWeight: isActiveRoute("/worklists/verification") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                  transition: theme.transitions.fast,
-                }}
-              >
-                Verification
-              </Link>
-            )}
             <Link
               to="/reports"
               style={{
@@ -236,36 +195,7 @@ function Shell() {
                 >
                   Consultants
                 </Link>
-                <Link
-                  to="/admin/report-templates"
-                  style={{
-                    padding: "10px 12px",
-                    textDecoration: "none",
-                    color: isActiveRoute("/admin/report-templates") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/admin/report-templates") ? theme.colors.brandBlueSoft : "transparent",
-                    borderRadius: theme.radius.base,
-                    fontSize: 14,
-                    fontWeight: isActiveRoute("/admin/report-templates") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                    transition: theme.transitions.fast,
-                  }}
-                >
-                  Report Templates
-                </Link>
-                <Link
-                  to="/admin/service-templates"
-                  style={{
-                    padding: "10px 12px",
-                    textDecoration: "none",
-                    color: isActiveRoute("/admin/service-templates") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/admin/service-templates") ? theme.colors.brandBlueSoft : "transparent",
-                    borderRadius: theme.radius.base,
-                    fontSize: 14,
-                    fontWeight: isActiveRoute("/admin/service-templates") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                    transition: theme.transitions.fast,
-                  }}
-                >
-                  Service Templates
-                </Link>
+
                 <Link
                   to="/admin/consultant-settlements"
                   style={{
@@ -407,22 +337,6 @@ function Shell() {
                 element={canWorkflow ? <PatientsWorkflow /> : <AccessDenied />}
               />
               <Route
-                path="/worklists/usg"
-                element={canPerform ? <USGWorklistPage /> : <AccessDenied />}
-              />
-              <Route
-                path="/usg/visits/:visitId"
-                element={canPerform ? <UsgVisitDetailPage /> : <AccessDenied />}
-              />
-              <Route
-                path="/usg/studies/:studyId"
-                element={canPerform ? <UsgStudyEditorPage /> : <AccessDenied />}
-              />
-              <Route
-                path="/worklists/verification"
-                element={canVerify ? <VerificationWorklistPage /> : <AccessDenied />}
-              />
-              <Route
                 path="/worklists/opd/*"
                 element={<ModuleDisabled title="OPD module disabled" message="OPD module is disabled in this build." />}
               />
@@ -430,15 +344,8 @@ function Shell() {
                 path="/opd/*"
                 element={<ModuleDisabled title="OPD module disabled" message="OPD module is disabled in this build." />}
               />
+
               <Route path="/reports" element={<FinalReportsPage />} />
-              <Route
-                path="/admin/report-templates"
-                element={canAdmin ? <ReportTemplates /> : <AccessDenied />}
-              />
-              <Route
-                path="/admin/service-templates"
-                element={canAdmin ? <ServiceTemplates /> : <AccessDenied />}
-              />
               <Route
                 path="/admin/consultant-settlements"
                 element={canAdmin ? <ConsultantSettlementsPage /> : <AccessDenied />}
@@ -447,14 +354,10 @@ function Shell() {
                 path="/admin/consultants"
                 element={canAdmin ? <ConsultantsPage /> : <AccessDenied />}
               />
-              <Route
-                path="/admin/templates/import"
-                element={canAdmin ? <TemplateImportManager /> : <AccessDenied />}
-              />
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />
-              <Route path="/templates" element={<Templates />} />
               <Route path="/receipt-settings" element={<ReceiptSettings />} />
+
               {/* Legacy endpoints disabled in Phase 2 */}
               <Route path="/studies" element={<Navigate to="/" replace />} />
               <Route path="/reports/:reportId/edit" element={<Navigate to="/reports" replace />} />

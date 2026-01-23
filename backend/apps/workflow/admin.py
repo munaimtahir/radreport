@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     ServiceCatalog, ServiceVisit, ServiceVisitItem, Invoice, Payment,
-    USGReport, OPDVitals, OPDConsult, StatusAuditLog, ReceiptSnapshot
+    OPDVitals, OPDConsult, StatusAuditLog, ReceiptSnapshot
+
 )
 
 
@@ -56,10 +57,7 @@ class ReceiptSnapshotAdmin(admin.ModelAdmin):
     readonly_fields = ["created_at"]
 
 
-@admin.register(USGReport)
-class USGReportAdmin(admin.ModelAdmin):
-    list_display = ["service_visit", "created_by", "verifier", "verified_at", "published_pdf_path"]
-    search_fields = ["service_visit__visit_id"]
+
 
 
 @admin.register(OPDVitals)

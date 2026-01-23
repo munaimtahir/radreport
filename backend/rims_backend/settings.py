@@ -25,12 +25,10 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.patients",
     "apps.catalog",
-    "apps.templates",
     "apps.studies",
-    "apps.reporting",
     "apps.workflow",
-    "apps.usg",
     "apps.consultants",
+
 ]
 
 MIDDLEWARE = [

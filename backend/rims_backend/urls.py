@@ -9,18 +9,13 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
 from apps.patients.api import PatientViewSet
 from apps.catalog.api import ModalityViewSet, ServiceViewSet
-from apps.templates.api import TemplateViewSet, TemplateVersionViewSet, ReportTemplateViewSet, TemplatePackageViewSet
 from apps.studies.api import StudyViewSet, VisitViewSet, ReceiptSettingsViewSet
-from apps.reporting.api import ReportViewSet, ReportingViewSet
+
 from apps.audit.api import AuditLogViewSet
 from apps.workflow.api import (
     ServiceCatalogViewSet, ServiceVisitViewSet, ServiceVisitItemViewSet,
-    USGReportViewSet, OPDVitalsViewSet, OPDConsultViewSet, PDFViewSet,
+    OPDVitalsViewSet, OPDConsultViewSet, PDFViewSet,
     PatientWorkflowViewSet,
-)
-from apps.usg.api import (
-    UsgTemplateViewSet, UsgServiceProfileViewSet,
-    UsgStudyViewSet, UsgPublishedSnapshotViewSet
 )
 from apps.consultants.api import ConsultantProfileViewSet, ConsultantSettlementViewSet, ConsultantBillingRuleViewSet
 from apps.workflow.dashboard_api import (
@@ -38,33 +33,23 @@ router = DefaultRouter()
 router.register(r"patients", PatientViewSet, basename="patients")
 router.register(r"modalities", ModalityViewSet, basename="modalities")
 router.register(r"services", ServiceViewSet, basename="services")
-router.register(r"templates", TemplateViewSet, basename="templates")
-router.register(r"template-versions", TemplateVersionViewSet, basename="template-versions")
-router.register(r"report-templates", ReportTemplateViewSet, basename="report-templates")
-router.register(r"template-packages", TemplatePackageViewSet, basename="template-packages")
 router.register(r"studies", StudyViewSet, basename="studies")
 router.register(r"visits", VisitViewSet, basename="visits")
-router.register(r"reports", ReportViewSet, basename="reports")
-router.register(r"reporting", ReportingViewSet, basename="reporting")
 router.register(r"audit", AuditLogViewSet, basename="audit")
 router.register(r"receipt-settings", ReceiptSettingsViewSet, basename="receipt-settings")
 # Workflow endpoints
 router.register(r"workflow/service-catalog", ServiceCatalogViewSet, basename="service-catalog")
 router.register(r"workflow/visits", ServiceVisitViewSet, basename="service-visits")
 router.register(r"workflow/items", ServiceVisitItemViewSet, basename="service-visit-items")  # PHASE C: Item-centric API
-router.register(r"workflow/usg", USGReportViewSet, basename="usg-reports")
 router.register(r"workflow/opd/vitals", OPDVitalsViewSet, basename="opd-vitals")
 router.register(r"workflow/opd/consult", OPDConsultViewSet, basename="opd-consult")
 router.register(r"workflow/patients", PatientWorkflowViewSet, basename="workflow-patients")
 router.register(r"pdf", PDFViewSet, basename="pdf")
-# USG endpoints
-router.register(r"usg/templates", UsgTemplateViewSet, basename="usg-templates")
-router.register(r"usg/service-profiles", UsgServiceProfileViewSet, basename="usg-service-profiles")
-router.register(r"usg/studies", UsgStudyViewSet, basename="usg-studies")
-router.register(r"usg/snapshots", UsgPublishedSnapshotViewSet, basename="usg-snapshots")
+# Consultants endpoints
 router.register(r"consultants", ConsultantProfileViewSet, basename="consultants")
 router.register(r"consultant-billing-rules", ConsultantBillingRuleViewSet, basename="consultant-billing-rules")
 router.register(r"consultant-settlements", ConsultantSettlementViewSet, basename="consultant-settlements")
+
 
 workflow_visit_receipt = ServiceVisitViewSet.as_view({"get": "receipt_reprint"})
 workflow_visit_receipt_pdf = ServiceVisitViewSet.as_view({"get": "receipt_reprint_pdf"})

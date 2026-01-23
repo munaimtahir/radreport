@@ -556,10 +556,8 @@ export default function Dashboard() {
           {[
             { label: "New Registration", path: "/registration", icon: "➕" },
             { label: "Search Patient", path: "/registration", icon: "🔍" },
-            { label: "USG Worklist", path: "/worklists/usg", icon: "📋" },
-            { label: "Verification", path: "/worklists/verification", icon: "✓" },
-            ...(isAdmin ? [{ label: "Templates", path: "/templates", icon: "📄" }] : []),
-          ].slice(0, 5).map((action) => (
+          ].slice(0, 2).map((action) => (
+
             <Link
               key={action.path}
               to={action.path}
