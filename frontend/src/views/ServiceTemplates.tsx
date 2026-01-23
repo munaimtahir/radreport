@@ -12,6 +12,7 @@ interface Service {
   code: string;
   category: string;
   is_active: boolean;
+  modality_display?: string;
 }
 
 interface ReportTemplateSummary {
@@ -125,17 +126,19 @@ export default function ServiceTemplates() {
     loadLinks(selectedService.id);
   };
 
+  const isUsg = selectedService?.modality_display === 'USG';
+
   return (
     <div>
       <PageHeader title="Service Template Linking" subtitle="For flat templates only" />
-      
+
       {/* WARNING: This page links to flat ReportTemplate, not sectioned Template */}
-      <div style={{ 
-        padding: 16, 
-        marginBottom: 20, 
-        backgroundColor: '#fff3cd', 
-        border: '1px solid #ffc107', 
-        borderRadius: 8 
+      <div style={{
+        padding: 16,
+        marginBottom: 20,
+        backgroundColor: '#fff3cd',
+        border: '1px solid #ffc107',
+        borderRadius: 8
       }}>
         <strong>⚠️ For USG Services:</strong> Use backend command to link services to sectioned templates.
         <br />
@@ -143,7 +146,7 @@ export default function ServiceTemplates() {
           python manage.py import_usg_template /path/to/template.json --link-service=USG_XXX
         </code>
       </div>
-      
+
       {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
       {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
 
@@ -170,7 +173,9 @@ export default function ServiceTemplates() {
                 }}
               >
                 <div style={{ fontWeight: 600 }}>{service.name}</div>
-                <div style={{ fontSize: 12, color: "#666" }}>{service.code}</div>
+                <div style={{ fontSize: 12, color: "#666" }}>
+                  {service.modality_display || "UNK"} • {service.code}
+                </div>
               </div>
             ))}
           </div>
@@ -179,37 +184,59 @@ export default function ServiceTemplates() {
         <div style={{ border: "1px solid #ddd", borderRadius: 8, padding: 16 }}>
           {selectedService ? (
             <>
-              <h3 style={{ marginTop: 0 }}>{selectedService.name}</h3>
-              <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
-                <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} style={{ padding: 8 }}>
-                  <option value="">Select template...</option>
-                  {templates.map((template) => (
-                    <option key={template.id} value={template.id}>
-                      {template.name}
-                    </option>
-                  ))}
-                </select>
-                <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <input
-                    type="checkbox"
-                    checked={setDefault}
-                    onChange={(e) => setSetDefault(e.target.checked)}
-                  />
-                  Set as default
-                </label>
-                <div style={{ display: "flex", gap: 8 }}>
-                  <Button onClick={attachTemplate} disabled={!templateId}>
-                    Attach
-                  </Button>
-                  <Button variant="secondary" onClick={duplicateAndAttach} disabled={!templateId}>
-                    Duplicate & Attach
-                  </Button>
-                </div>
-              </div>
+              <h3 style={{ marginTop: 0 }}>{selectedService.name} <span style={{ fontSize: '0.8em', color: '#666' }}>({selectedService.modality_display})</span></h3>
 
-              <h4>Linked Templates</h4>
+              {isUsg ? (
+                <div style={{
+                  padding: 20,
+                  backgroundColor: '#ffebec',
+                  color: '#dc3545',
+                  border: '1px solid #ffc107',
+                  borderRadius: 8,
+                  marginBottom: 20,
+                  textAlign: 'center'
+                }}>
+                  <h2>🚫 Action Blocked for USG</h2>
+                  <p>
+                    Ultrasound services require <strong>SECTIONED TEMPLATES</strong>.<br />
+                    You cannot link them to flat reports here.
+                  </p>
+                  <p>
+                    Please use the <strong>Template Import Manager</strong> or backend commands.
+                  </p>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gap: 12, marginBottom: 16 }}>
+                  <select value={templateId} onChange={(e) => setTemplateId(e.target.value)} style={{ padding: 8 }}>
+                    <option value="">Select template...</option>
+                    {templates.map((template) => (
+                      <option key={template.id} value={template.id}>
+                        {template.name}
+                      </option>
+                    ))}
+                  </select>
+                  <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <input
+                      type="checkbox"
+                      checked={setDefault}
+                      onChange={(e) => setSetDefault(e.target.checked)}
+                    />
+                    Set as default
+                  </label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Button onClick={attachTemplate} disabled={!templateId}>
+                      Attach
+                    </Button>
+                    <Button variant="secondary" onClick={duplicateAndAttach} disabled={!templateId}>
+                      Duplicate & Attach
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              <h4>Linked Templates (Flat)</h4>
               {links.length === 0 ? (
-                <p>No templates linked.</p>
+                <p>No flat templates linked.</p>
               ) : (
                 <div style={{ display: "grid", gap: 8 }}>
                   {links.map((link) => (
@@ -220,22 +247,25 @@ export default function ServiceTemplates() {
                         borderRadius: 6,
                         padding: 10,
                         background: link.is_default ? "#f0f7ff" : "#fff",
+                        opacity: isUsg ? 0.6 : 1
                       }}
                     >
                       <div style={{ fontWeight: 600 }}>{link.template.name}</div>
                       <div style={{ fontSize: 12, color: "#666" }}>
                         {link.template.code || "No code"} • {link.template.category || "Uncategorized"}
                       </div>
-                      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
-                        {!link.is_default && (
-                          <Button variant="secondary" onClick={() => makeDefault(link.id)}>
-                            Set Default
+                      {!isUsg && (
+                        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                          {!link.is_default && (
+                            <Button variant="secondary" onClick={() => makeDefault(link.id)}>
+                              Set Default
+                            </Button>
+                          )}
+                          <Button variant="secondary" onClick={() => deactivateLink(link.id)}>
+                            Deactivate
                           </Button>
-                        )}
-                        <Button variant="secondary" onClick={() => deactivateLink(link.id)}>
-                          Deactivate
-                        </Button>
-                      </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

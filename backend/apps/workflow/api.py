@@ -741,11 +741,13 @@ class USGReportViewSet(viewsets.ModelViewSet):
             try:
                 transition_item_status(item, "IN_PROGRESS", request.user)
             except ValidationError as e:
+                logger.error(f"Failed to transition item {item.id} to IN_PROGRESS: {e}", exc_info=True)
                 return Response(
                     {"detail": f"Failed to transition to IN_PROGRESS: {str(e)}"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
             except PermissionDenied as e:
+                logger.error(f"Permission denied transitioning item {item.id} to IN_PROGRESS: {e}", exc_info=True)
                 return Response(
                     {"detail": f"Permission denied for IN_PROGRESS transition: {str(e)}"},
                     status=status.HTTP_403_FORBIDDEN
@@ -755,11 +757,13 @@ class USGReportViewSet(viewsets.ModelViewSet):
         try:
             transition_item_status(item, "PENDING_VERIFICATION", request.user)
         except ValidationError as e:
+            logger.error(f"Failed to transition item {item.id} to PENDING_VERIFICATION: {e}", exc_info=True)
             return Response(
                 {"detail": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
         except PermissionDenied as e:
+            logger.error(f"Permission denied transitioning item {item.id} to PENDING_VERIFICATION: {e}", exc_info=True)
             return Response(
                 {"detail": str(e)},
                 status=status.HTTP_403_FORBIDDEN
