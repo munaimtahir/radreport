@@ -11,7 +11,6 @@ class Migration(migrations.Migration):
     dependencies = [
         ('workflow', '0001_initial'),
         ('catalog', '0001_initial'),
-        ('templates', '0001_initial'),
     ]
 
     operations = [
@@ -122,11 +121,11 @@ class Migration(migrations.Migration):
         ),
         
         # PHASE C: Add template_version to USGReport
-        migrations.AddField(
-            model_name='usgreport',
-            name='template_version',
-            field=models.ForeignKey(blank=True, help_text='Template version used for this report (bridge to template system)', null=True, on_delete=django.db.models.deletion.SET_NULL, to='templates.templateversion'),
-        ),
+        # migrations.AddField(
+        #     model_name='usgreport',
+        #     name='template_version',
+        #     field=models.ForeignKey(blank=True, help_text='Template version used for this report (bridge to template system)', null=True, on_delete=django.db.models.deletion.SET_NULL, to='templates.templateversion'),
+        # ),
         
         # PHASE B: Update OPDVitals
         migrations.AddField(

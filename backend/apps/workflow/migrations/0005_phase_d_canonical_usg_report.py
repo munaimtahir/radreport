@@ -9,7 +9,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('workflow', '0004_phase_b_c_combined'),
-        ('templates', '0001_initial'),
     ]
 
     operations = [

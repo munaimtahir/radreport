@@ -7,7 +7,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('catalog', '0001_initial'),
-        ('templates', '0001_initial'),
     ]
 
     operations = [
