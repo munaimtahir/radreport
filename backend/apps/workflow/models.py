@@ -433,7 +433,7 @@ class USGReport(models.Model):
     return_reason = models.TextField(blank=True, default="")
     
     # PHASE C: Template bridge (preparation for dynamic templates)
-    template_version = models.ForeignKey("templates.TemplateVersion", on_delete=models.SET_NULL, null=True, blank=True, help_text="Template version used for this report (bridge to template system)")
+    # template_version removed in cleanup
 
     class Meta:
         ordering = ["-saved_at"]

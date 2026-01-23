@@ -25,11 +25,11 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.patients",
     "apps.catalog",
-    "apps.templates",
+    # "apps.templates",  # Removed
     "apps.studies",
-    "apps.reporting",
+    # "apps.reporting",  # Removed
     "apps.workflow",
-    "apps.usg",
+    # "apps.usg",        # Removed
     "apps.consultants",
 ]
 

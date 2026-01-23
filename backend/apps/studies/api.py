@@ -189,19 +189,7 @@ class VisitViewSet(viewsets.ModelViewSet):
             status=status.HTTP_410_GONE,
         )
     
-    @action(detail=True, methods=["get"], url_path="usg-reports")
-    def usg_reports(self, request, pk=None):
-        """List all USG reports attached to this visit"""
-        from apps.usg.models import UsgStudy
-        from apps.usg.serializers import UsgStudySerializer
-        
-        visit = self.get_object()
-        usg_studies = UsgStudy.objects.filter(visit=visit).select_related(
-            'patient', 'template', 'created_by', 'verified_by', 'published_by'
-        ).prefetch_related('field_values')
-        
-        serializer = UsgStudySerializer(usg_studies, many=True, context={'request': request})
-        return Response(serializer.data)
+    # usg_reports action removed in cleanup
 
 
 class ReceiptSettingsViewSet(viewsets.ViewSet):
