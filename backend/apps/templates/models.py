@@ -1,6 +1,7 @@
 import uuid
 from django.db import models
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 FIELD_TYPES = (
     ("short_text", "Short Text"),
@@ -99,6 +100,11 @@ class FieldOption(models.Model):
 
 
 class ReportTemplate(models.Model):
+    """
+    DEPRECATED FOR USG: Use Template/TemplateVersion instead.
+    This flat model does not support sections required by USG templates.
+    Only use for simple, non-sectioned forms (OPD, etc.)
+    """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     name = models.CharField(max_length=200)
     code = models.CharField(max_length=80, unique=True, null=True, blank=True)
@@ -113,6 +119,8 @@ class ReportTemplate(models.Model):
 
     class Meta:
         ordering = ["name"]
+        verbose_name = "Report Template (Flat - DEPRECATED for USG)"
+        verbose_name_plural = "Report Templates (Flat - DEPRECATED for USG)"
 
     def __str__(self):
         return self.name
@@ -167,6 +175,16 @@ class ServiceReportTemplate(models.Model):
     class Meta:
         unique_together = ("service", "template")
         ordering = ["-is_default", "created_at"]
+        verbose_name = "Service Report Template Link (DEPRECATED for USG)"
+        verbose_name_plural = "Service Report Template Links (DEPRECATED for USG)"
+
+    def clean(self):
+        if self.service and self.service.modality and self.service.modality.code == 'USG':
+            raise ValidationError("USG services MUST NOT use ReportTemplate. Use Service.default_template (Template/TemplateVersion) instead.")
+
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.service.name}: {self.template.name}"
