@@ -19,6 +19,7 @@ class ServiceSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'code', 'modality', 'name', 'category', 'price', 'charges',
             'default_price', 'tat_value', 'tat_unit', 'tat_minutes', 'turnaround_time',
-            'default_template', 'requires_radiologist_approval', 'is_active',
+            'requires_radiologist_approval', 'is_active',
             'modality_display', 'usage_count'
+
         ]

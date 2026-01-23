@@ -10,7 +10,6 @@ import ConsultantSettlementsPage from "../views/ConsultantSettlementsPage";
 import ConsultantsPage from "../views/ConsultantsPage";
 import RegistrationPage from "../views/RegistrationPage";
 import PatientsWorkflow from "../views/PatientsWorkflow";
-import FinalReportsPage from "../views/FinalReportsPage";
 import AccessDenied from "../views/AccessDenied";
 
 import ModuleDisabled from "../views/ModuleDisabled";
@@ -345,7 +344,6 @@ function Shell() {
                 element={<ModuleDisabled title="OPD module disabled" message="OPD module is disabled in this build." />}
               />
 
-              <Route path="/reports" element={<FinalReportsPage />} />
               <Route
                 path="/admin/consultant-settlements"
                 element={canAdmin ? <ConsultantSettlementsPage /> : <AccessDenied />}

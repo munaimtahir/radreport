@@ -203,7 +203,7 @@ class ServiceCatalogViewSet(viewsets.ReadOnlyModelViewSet):
 class ServiceVisitViewSet(viewsets.ModelViewSet):
     """Service visit management"""
     queryset = ServiceVisit.objects.select_related("patient", "service", "created_by", "assigned_to").prefetch_related(
-        "items__service", "items__service__modality", "items__service__default_template", "status_audit_logs__changed_by"
+        "items__service", "items__service__modality", "status_audit_logs__changed_by"
     ).all()
     serializer_class = ServiceVisitSerializer
     permission_classes = [IsAnyDesk]
@@ -347,7 +347,7 @@ class ServiceVisitItemViewSet(viewsets.ReadOnlyModelViewSet):
     This is the primary interface for worklists and item operations.
     """
     queryset = ServiceVisitItem.objects.select_related(
-        "service_visit", "service_visit__patient", "service", "service__modality", "service__default_template"
+        "service_visit", "service_visit__patient", "service", "service__modality"
     ).prefetch_related(
         "status_audit_logs__changed_by"
     ).all()

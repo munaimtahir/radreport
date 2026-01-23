@@ -10,7 +10,6 @@ class Migration(migrations.Migration):
     initial = True
 
     dependencies = [
-        ('templates', '0001_initial'),
     ]
 
     operations = [
@@ -31,7 +30,6 @@ class Migration(migrations.Migration):
                 ('tat_minutes', models.PositiveIntegerField(default=60)),
                 ('requires_radiologist_approval', models.BooleanField(default=True)),
                 ('is_active', models.BooleanField(default=True)),
-                ('default_template', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='templates.template')),
                 ('modality', models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='services', to='catalog.modality')),
             ],
             options={
