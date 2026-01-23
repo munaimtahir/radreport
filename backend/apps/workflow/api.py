@@ -18,13 +18,14 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 
 from .models import (
     ServiceVisit, ServiceVisitItem, Invoice, Payment,
-    USGReport, OPDVitals, OPDConsult, StatusAuditLog
+    OPDVitals, OPDConsult, StatusAuditLog
 )
 from .serializers import (
     ServiceVisitSerializer, ServiceVisitItemSerializer, InvoiceSerializer,
-    PaymentSerializer, USGReportSerializer, OPDVitalsSerializer,
+    PaymentSerializer, OPDVitalsSerializer,
     OPDConsultSerializer, ServiceVisitCreateSerializer, StatusTransitionSerializer
 )
+
 from .pdf import build_receipt_pdf_from_snapshot
 from apps.catalog.models import Service as CatalogService
 from apps.catalog.serializers import ServiceSerializer
@@ -85,15 +86,6 @@ def _is_numeric_search(value: str) -> bool:
 def _compute_workflow_status(service_visit):
     """
     Compute workflow status for display.
-
-    Mapping:
-    - registered: no items yet
-    - services_added: items exist but no payment recorded
-    - paid: payment recorded, no work started
-    - sample_collected: any item in IN_PROGRESS
-    - report_pending: items waiting verification or finalized but not published
-    - report_ready: report finalized but not published
-    - report_published: report published (PDF available)
     """
     items = list(service_visit.items.all())
     if not items:
@@ -103,28 +95,27 @@ def _compute_workflow_status(service_visit):
     if total_paid <= 0:
         return "services_added"
 
-    report_published = False
-    report_ready = False
-    for item in items:
-        report = getattr(item, "usg_report", None)
-        if not report:
-            continue
-        if report.published_pdf_path:
-            report_published = True
-        elif report.report_status in ("FINAL", "AMENDED"):
-            report_ready = True
-
-    if report_published:
+    # Check item statuses
+    statuses = [item.status for item in items]
+    
+    if all(s == "PUBLISHED" for s in statuses):
         return "report_published"
-    if report_ready:
-        return "report_ready"
+    
+    if any(s == "PUBLISHED" for s in statuses):
+        # Mixed status, but at least one published
+        return "report_published" # Or report_ready?
 
-    if any(item.status in ("PENDING_VERIFICATION", "RETURNED_FOR_CORRECTION", "FINALIZED") for item in items):
+    if any(s == "FINALIZED" for s in statuses):
+         return "report_ready"
+
+    if any(s in ("PENDING_VERIFICATION", "RETURNED_FOR_CORRECTION") for s in statuses):
         return "report_pending"
-    if any(item.status == "IN_PROGRESS" for item in items):
+        
+    if any(s == "IN_PROGRESS" for s in statuses):
         return "sample_collected"
 
     return "paid"
+
 
 
 def _build_receipt_info(service_visit):
@@ -143,29 +134,11 @@ def _build_receipt_info(service_visit):
 
 
 def _build_reports_info(service_visit):
-    items = []
-    available = False
-    for item in service_visit.items.all():
-        report = getattr(item, "usg_report", None)
-        if not report:
-            continue
-        report_status = report.report_status.lower()
-        pdf_url = None
-        if report.published_pdf_path:
-            report_status = "published"
-            pdf_url = f"/api/pdf/{service_visit.id}/report/"
-            available = True
-        items.append(
-            {
-                "service_name": item.service_name_snapshot,
-                "status": report_status,
-                "pdf_url": pdf_url,
-            }
-        )
     return {
-        "available": available,
-        "items": items,
+        "available": False,
+        "items": [],
     }
+
 
 
 def _serialize_receipt_snapshot(snapshot, service_visit):

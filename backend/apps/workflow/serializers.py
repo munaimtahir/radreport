@@ -3,13 +3,14 @@ from django.utils import timezone
 from decimal import Decimal
 from .models import (
     ServiceVisit, ServiceVisitItem, Invoice, Payment,
-    USGReport, OPDVitals, OPDConsult, StatusAuditLog
+    OPDVitals, OPDConsult, StatusAuditLog
 )
 from .receipts import create_receipt_snapshot
 from apps.patients.models import Patient
 from apps.consultants.models import ConsultantProfile
 from apps.patients.serializers import PatientSerializer
 from apps.catalog.models import Service as CatalogService
+
 
 
 class ServiceVisitItemSerializer(serializers.ModelSerializer):
@@ -27,7 +28,7 @@ class ServiceVisitItemSerializer(serializers.ModelSerializer):
     
     # Audit logs
     status_audit_logs = serializers.SerializerMethodField()
-    template_details = serializers.SerializerMethodField()
+
     
     class Meta:
         model = ServiceVisitItem
@@ -39,26 +40,7 @@ class ServiceVisitItemSerializer(serializers.ModelSerializer):
         logs = obj.status_audit_logs.all()[:10]  # Last 10 logs
         return StatusAuditLogSerializer(logs, many=True, context=self.context).data
 
-    def get_template_details(self, obj):
-        """Return latest published template version details for the service."""
-        template = obj.service.default_template if obj.service else None
-        if not template:
-            return None
-        version = template.versions.filter(is_published=True).order_by("-version").first()
-        if not version:
-            return {
-                "template_id": str(template.id),
-                "template_name": template.name,
-                "version": None,
-                "schema": None,
-            }
-        return {
-            "template_id": str(template.id),
-            "template_name": template.name,
-            "version_id": str(version.id),
-            "version": version.version,
-            "schema": version.schema,
-        }
+
 
 
 class StatusAuditLogSerializer(serializers.ModelSerializer):
@@ -130,103 +112,7 @@ class PaymentSerializer(serializers.ModelSerializer):
         read_only_fields = ["received_at"]
 
 
-class USGReportSerializer(serializers.ModelSerializer):
-    """PHASE D: USG Report serializer with canonical template fields"""
-    service_visit_id = serializers.SerializerMethodField()
-    visit_id = serializers.SerializerMethodField()
-    item_id = serializers.UUIDField(source="service_visit_item.id", read_only=True)
-    item_status = serializers.CharField(source="service_visit_item.status", read_only=True)
-    created_by_name = serializers.CharField(source="created_by.username", read_only=True)
-    updated_by_name = serializers.CharField(source="updated_by.username", read_only=True)
-    verifier_name = serializers.CharField(source="verifier.username", read_only=True)
-    performed_by_name = serializers.CharField(source="performed_by.username", read_only=True)
-    interpreted_by_name = serializers.CharField(source="interpreted_by.username", read_only=True)
-    published_pdf_url = serializers.SerializerMethodField()
-    template_version_id = serializers.UUIDField(source="template_version.id", read_only=True)
-    template_version_number = serializers.IntegerField(source="template_version.version", read_only=True)
-    template_schema = serializers.SerializerMethodField()
-    template_name = serializers.CharField(source="template_version.template.name", read_only=True)
-    can_finalize = serializers.SerializerMethodField()
-    finalize_errors = serializers.SerializerMethodField()
-    patient_name = serializers.SerializerMethodField()
-    patient_mrn = serializers.SerializerMethodField()
-    patient_reg_no = serializers.SerializerMethodField()
-    service_code = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = USGReport
-        fields = "__all__"
-        read_only_fields = [
-            "saved_at", "published_pdf_path", "verified_at",
-            "version", "parent_report_id", "amendment_history_json",
-            "signoff_json", "report_datetime"
-        ]
-    
-    def get_service_visit_id(self, obj):
-        sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
-        return str(sv.id) if sv else None
-    
-    def get_visit_id(self, obj):
-        sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
-        return sv.visit_id if sv else None
 
-    def _get_patient(self, obj):
-        sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
-        return sv.patient if sv else None
-
-    def get_patient_name(self, obj):
-        patient = self._get_patient(obj)
-        return patient.name if patient else ""
-
-    def get_patient_mrn(self, obj):
-        patient = self._get_patient(obj)
-        return patient.mrn if patient else ""
-
-    def get_patient_reg_no(self, obj):
-        patient = self._get_patient(obj)
-        return patient.patient_reg_no if patient else ""
-    
-    def get_service_code(self, obj):
-        if obj.service_visit_item and obj.service_visit_item.service:
-            return obj.service_visit_item.service.code
-        return ""
-    
-    def get_published_pdf_url(self, obj):
-        if obj.published_pdf_path:
-            request = self.context.get("request")
-            if request:
-                sv = obj.service_visit_item.service_visit if obj.service_visit_item else obj.service_visit
-                if sv:
-                    return request.build_absolute_uri(f"/api/pdf/{sv.id}/report/")
-        return None
-
-    def get_template_schema(self, obj):
-        """Get template schema, auto-resolving if missing."""
-        if obj.template_version:
-            return obj.template_version.schema
-        
-        # Try to auto-resolve for reports without template_version
-        try:
-            from .template_resolution import resolve_template_schema_for_report
-            schema = resolve_template_schema_for_report(obj)
-            return schema
-        except Exception as e:
-            # Return None instead of failing - frontend should handle gracefully
-            # Log the error for debugging
-            import logging
-            logger = logging.getLogger(__name__)
-            logger.warning(f"Failed to resolve template schema for report {obj.id}: {str(e)}")
-            return None
-    
-    def get_can_finalize(self, obj):
-        """Check if report can be finalized"""
-        can, _ = obj.can_finalize()
-        return can
-    
-    def get_finalize_errors(self, obj):
-        """Get list of errors preventing finalization"""
-        _, errors = obj.can_finalize()
-        return errors
 
 
 class OPDVitalsSerializer(serializers.ModelSerializer):
