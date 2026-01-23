@@ -11,8 +11,8 @@ class Migration(migrations.Migration):
     dependencies = [
         ('workflow', '0001_initial'),
         ('catalog', '0001_initial'),
-        ('templates', '0001_initial'),
     ]
+
 
     operations = [
         # PHASE B: Create ServiceVisitItem model
@@ -121,14 +121,8 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(blank=True, help_text='Legacy field - use service_visit_item instead', null=True, on_delete=django.db.models.deletion.CASCADE, related_name='usg_reports', to='workflow.servicevisit'),
         ),
         
-        # PHASE C: Add template_version to USGReport
-        migrations.AddField(
-            model_name='usgreport',
-            name='template_version',
-            field=models.ForeignKey(blank=True, help_text='Template version used for this report (bridge to template system)', null=True, on_delete=django.db.models.deletion.SET_NULL, to='templates.templateversion'),
-        ),
-        
         # PHASE B: Update OPDVitals
+
         migrations.AddField(
             model_name='opdvitals',
             name='service_visit_item',
