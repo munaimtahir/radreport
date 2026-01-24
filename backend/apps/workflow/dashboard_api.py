@@ -174,7 +174,9 @@ def dashboard_worklist(request):
         
         # Build action URL based on department and status
         action_url = None
-        if item.department_snapshot == "USG":
+        if item.status in ["IN_PROGRESS", "RETURNED_FOR_CORRECTION"]:
+            action_url = f"/worklist/{item.id}/report"
+        elif item.department_snapshot == "USG":
             action_url = f"/worklists/usg?item_id={item.id}"
         elif item.department_snapshot == "OPD":
             action_url = f"/worklists/opd?item_id={item.id}"

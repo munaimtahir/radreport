@@ -11,6 +11,8 @@ import ConsultantsPage from "../views/ConsultantsPage";
 import RegistrationPage from "../views/RegistrationPage";
 import PatientsWorkflow from "../views/PatientsWorkflow";
 import AccessDenied from "../views/AccessDenied";
+import ReportingPage from "../views/ReportingPage";
+
 
 import ModuleDisabled from "../views/ModuleDisabled";
 import Footer from "./components/Footer";
@@ -145,21 +147,7 @@ function Shell() {
               </Link>
             )}
 
-            <Link
-              to="/reports"
-              style={{
-                padding: "10px 12px",
-                textDecoration: "none",
-                color: isActiveRoute("/reports") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                backgroundColor: isActiveRoute("/reports") ? theme.colors.brandBlueSoft : "transparent",
-                borderRadius: theme.radius.base,
-                fontSize: 14,
-                fontWeight: isActiveRoute("/reports") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                transition: theme.transitions.fast,
-              }}
-            >
-              Final Reports
-            </Link>
+
             {canAdmin && (
               <div style={{
                 marginTop: 12,
@@ -359,7 +347,9 @@ function Shell() {
               {/* Legacy endpoints disabled in Phase 2 */}
               <Route path="/studies" element={<Navigate to="/" replace />} />
               <Route path="/reports/:reportId/edit" element={<Navigate to="/reports" replace />} />
+              <Route path="/worklist/:id/report" element={<ReportingPage />} />
             </Routes>
+
           </div>
           <Footer />
         </main>

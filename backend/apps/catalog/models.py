@@ -37,8 +37,6 @@ class Service(models.Model):
     tat_unit = models.CharField(max_length=10, choices=TAT_UNIT_CHOICES, default="hours")
     tat_minutes = models.PositiveIntegerField(default=DEFAULT_TAT_MINUTES, help_text="Calculated TAT in minutes")
     turnaround_time = models.PositiveIntegerField(default=DEFAULT_TAT_MINUTES, help_text="Legacy turnaround time in minutes")
-    # default_template = models.ForeignKey("templates.Template", on_delete=models.SET_NULL, null=True, blank=True)
-
     requires_radiologist_approval = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
 

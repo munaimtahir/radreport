@@ -28,6 +28,8 @@ INSTALLED_APPS = [
     "apps.studies",
     "apps.workflow",
     "apps.consultants",
+    "apps.reporting",
+
 
 ]
 
