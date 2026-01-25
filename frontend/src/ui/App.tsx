@@ -12,6 +12,7 @@ import RegistrationPage from "../views/RegistrationPage";
 import PatientsWorkflow from "../views/PatientsWorkflow";
 import AccessDenied from "../views/AccessDenied";
 import ReportingPage from "../views/ReportingPage";
+import ReportingWorklistPage from "../views/ReportingWorklistPage";
 
 
 import ModuleDisabled from "../views/ModuleDisabled";
@@ -144,6 +145,23 @@ function Shell() {
                 }}
               >
                 Patient workflow
+              </Link>
+            )}
+            {(canPerform || canVerify) && (
+              <Link
+                to="/reporting/worklist"
+                style={{
+                  padding: "10px 12px",
+                  textDecoration: "none",
+                  color: isActiveRoute("/reporting/worklist") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                  backgroundColor: isActiveRoute("/reporting/worklist") ? theme.colors.brandBlueSoft : "transparent",
+                  borderRadius: theme.radius.base,
+                  fontSize: 14,
+                  fontWeight: isActiveRoute("/reporting/worklist") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                  transition: theme.transitions.fast,
+                }}
+              >
+                Reporting worklist
               </Link>
             )}
 
@@ -347,6 +365,7 @@ function Shell() {
               {/* Legacy endpoints disabled in Phase 2 */}
               <Route path="/studies" element={<Navigate to="/" replace />} />
               <Route path="/reports/:reportId/edit" element={<Navigate to="/reports" replace />} />
+              <Route path="/reporting/worklist" element={<ReportingWorklistPage />} />
               <Route path="/worklist/:id/report" element={<ReportingPage />} />
             </Routes>
 

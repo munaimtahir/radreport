@@ -1,47 +1,34 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { apiGet, apiPost } from "../ui/api";
 import { useAuth } from "../ui/auth";
 import { theme } from "../theme";
-
-interface ParameterOption {
-    id: string;
-    label: string;
-    value: string;
-}
-
-interface Parameter {
-    id: string;
-    section: string;
-    name: string;
-    parameter_type: "number" | "dropdown" | "checklist" | "boolean" | "short_text" | "long_text" | "heading" | "separator";
-    unit: string | null;
-    normal_value: string | null;
-    options: ParameterOption[];
-    is_required: boolean;
-}
-
-interface ReportProfile {
-    id: string;
-    code: string;
-    name: string;
-    parameters: Parameter[];
-}
-
-interface ReportValue {
-    parameter: string; // ID
-    value: string;
-}
+import {
+    getReportSchema,
+    getReportValues,
+    saveReport,
+    submitReport,
+    ReportSchema,
+    ReportParameter,
+    ReportValueEntry
+} from "../ui/reporting";
+import Button from "../ui/components/Button";
+import ErrorAlert from "../ui/components/ErrorAlert";
+import SuccessAlert from "../ui/components/SuccessAlert";
 
 export default function ReportingPage() {
-    const { id } = useParams();
+    const { id } = useParams<{ id: string }>();
     const { token } = useAuth();
     const navigate = useNavigate();
-    const [profile, setProfile] = useState<ReportProfile | null>(null);
-    const [values, setValues] = useState<Record<string, string>>({});
+
+    const [schema, setSchema] = useState<ReportSchema | null>(null);
+    const [valuesByParamId, setValuesByParamId] = useState<Record<string, any>>({});
+    const [status, setStatus] = useState<"draft" | "submitted" | "verified">("draft");
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [success, setSuccess] = useState<string | null>(null);
+    const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+    const [showSubmitModal, setShowSubmitModal] = useState(false);
 
     useEffect(() => {
         if (!id || !token) return;
@@ -49,150 +36,344 @@ export default function ReportingPage() {
     }, [id, token]);
 
     const loadData = async () => {
+        if (!id) return;
         try {
             setLoading(true);
+            setError(null);
             const [schemaData, valuesData] = await Promise.all([
-                apiGet(`/reporting/workitems/${id}/schema/`, token),
-                apiGet(`/reporting/workitems/${id}/values/`, token)
+                getReportSchema(id, token),
+                getReportValues(id, token)
             ]);
 
-            setProfile(schemaData);
+            setSchema(schemaData);
+            setStatus(valuesData.status);
 
-            const valMap: Record<string, string> = {};
-            // default values from profile
-            schemaData.parameters.forEach((p: Parameter) => {
-                if (p.normal_value) valMap[p.id] = p.normal_value;
-                if (p.parameter_type === 'boolean' && !valMap[p.id]) valMap[p.id] = 'false';
+            // Defaulting Logic
+            const initialValues: Record<string, any> = {};
+            const existingValuesMap: Record<string, any> = {};
+            (valuesData.values || []).forEach(v => {
+                existingValuesMap[v.parameter_id] = v.value;
             });
 
-            // existing values override defaults
-            valuesData.forEach((v: ReportValue) => {
-                valMap[v.parameter] = v.value;
+            schemaData.parameters.forEach((param: ReportParameter) => {
+                const existingValue = existingValuesMap[param.parameter_id];
+
+                // If value exists in backend, use it
+                if (existingValue !== undefined && existingValue !== null) {
+                    initialValues[param.parameter_id] = existingValue;
+                    return;
+                }
+
+                // Apply defaults for missing values
+                if (param.normal_value) {
+                    if (param.type === "boolean") {
+                        initialValues[param.parameter_id] = param.normal_value.toLowerCase() === "true";
+                    } else if (param.type === "checklist") {
+                        initialValues[param.parameter_id] = param.normal_value.split(",").map(s => s.trim()).filter(Boolean);
+                    } else if (param.type === "number") {
+                        initialValues[param.parameter_id] = parseFloat(param.normal_value);
+                    } else {
+                        initialValues[param.parameter_id] = param.normal_value;
+                    }
+                } else {
+                    // Type-aware empty defaults
+                    switch (param.type) {
+                        case "number":
+                            initialValues[param.parameter_id] = null;
+                            break;
+                        case "short_text":
+                        case "long_text":
+                            initialValues[param.parameter_id] = "";
+                            break;
+                        case "boolean":
+                            initialValues[param.parameter_id] = false;
+                            break;
+                        case "dropdown":
+                            const hasNA = param.options.some(opt => opt.value.toLowerCase() === "na");
+                            initialValues[param.parameter_id] = hasNA ? "na" : "";
+                            break;
+                        case "checklist":
+                            initialValues[param.parameter_id] = [];
+                            break;
+                        default:
+                            initialValues[param.parameter_id] = null;
+                    }
+                }
             });
 
-            setValues(valMap);
+            setValuesByParamId(initialValues);
         } catch (e: any) {
-            setError(e.message);
+            setError(e.message || "Failed to load report data");
         } finally {
             setLoading(false);
         }
     };
 
-    const handleChange = (paramId: string, value: string) => {
-        setValues(prev => ({ ...prev, [paramId]: value }));
+    const handleValueChange = (paramId: string, value: any) => {
+        if (status !== "draft") return;
+        setValuesByParamId(prev => ({ ...prev, [paramId]: value }));
+        // Clear validation error if any
+        if (validationErrors[paramId]) {
+            setValidationErrors(prev => {
+                const next = { ...prev };
+                delete next[paramId];
+                return next;
+            });
+        }
     };
 
-    const handleSave = async () => {
+    const preparePayload = () => {
+        const values: ReportValueEntry[] = Object.entries(valuesByParamId).map(([paramId, value]) => ({
+            parameter_id: paramId,
+            value: value
+        }));
+        return { values };
+    };
+
+    const handleSaveDraft = async () => {
+        if (!id || status !== "draft") return;
         try {
             setSaving(true);
-            await apiPost(`/reporting/workitems/${id}/save/`, token, { values });
-            // maybe show toast
+            setError(null);
+            setSuccess(null);
+            await saveReport(id, preparePayload(), token);
+            setSuccess("Draft saved successfully");
         } catch (e: any) {
-            alert(e.message);
+            setError(e.message || "Failed to save draft");
         } finally {
             setSaving(false);
         }
     };
 
     const handleSubmit = async () => {
-        if (!confirm("Are you sure you want to submit this report? It will handle format validation and lock the report.")) return;
+        if (!id || status !== "draft") return;
         try {
             setSaving(true);
-            // First save to ensure backend has latest
-            await apiPost(`/reporting/workitems/${id}/save/`, token, { values });
-            await apiPost(`/reporting/workitems/${id}/submit/`, token, {});
-            navigate("/patients/workflow"); // Go back to worklist
+            setError(null);
+            setValidationErrors({});
+
+            // Step 1: Save current values
+            await saveReport(id, preparePayload(), token);
+
+            // Step 2: Submit
+            await submitReport(id, token);
+
+            setStatus("submitted");
+            setSuccess("Report submitted and locked");
+            setShowSubmitModal(false);
+
+            // Optional: scroll to top
+            window.scrollTo({ top: 0, behavior: "smooth" });
         } catch (e: any) {
-            alert(e.message);
+            // Backend might return validation errors in a specific format
+            // Assume { detail: "Validation failed", errors: { "param_id": "Error message" } }
+            if (e.errors) {
+                setValidationErrors(e.errors);
+                setError("Please fix the validation errors before submitting.");
+            } else {
+                setError(e.message || "Failed to submit report");
+            }
+            setShowSubmitModal(false);
         } finally {
             setSaving(false);
         }
     };
 
-    if (loading) return <div style={{ padding: 20 }}>Loading report...</div>;
-    if (error) return <div style={{ padding: 20, color: "red" }}>Error: {error}</div>;
-    if (!profile) return <div style={{ padding: 20 }}>No profile found.</div>;
+    const groupedParameters = useMemo(() => {
+        if (!schema) return [];
+        const sections: Record<string, ReportParameter[]> = {};
+        schema.parameters.forEach(p => {
+            const sec = p.section || "General";
+            if (!sections[sec]) sections[sec] = [];
+            sections[sec].push(p);
+        });
+        return Object.entries(sections);
+    }, [schema]);
 
-    // Group by sections
-    const sections: Record<string, Parameter[]> = {};
-    profile.parameters.forEach(p => {
-        if (!sections[p.section]) sections[p.section] = [];
-        sections[p.section].push(p);
-    });
+    if (loading) {
+        return (
+            <div style={{ padding: 40, textAlign: "center", color: theme.colors.textSecondary }}>
+                Loading report template...
+            </div>
+        );
+    }
+
+    if (!schema) {
+        return (
+            <div style={{ padding: 40, textAlign: "center" }}>
+                <ErrorAlert message={error || "Could not load report schema."} />
+                <Button onClick={() => navigate(-1)} variant="secondary" style={{ marginTop: 20 }}>
+                    Go Back
+                </Button>
+            </div>
+        );
+    }
+
+    const isReadOnly = status !== "draft";
 
     return (
-        <div style={{ maxWidth: 900, margin: "0 auto", paddingBottom: 50 }}>
-            <header style={{ marginBottom: 20, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ maxWidth: 1000, margin: "0 auto", paddingBottom: 100 }}>
+            {/* Header */}
+            <div style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 24,
+                paddingBottom: 20,
+                borderBottom: `1px solid ${theme.colors.border}`
+            }}>
                 <div>
-                    <h1 style={{ fontSize: 24, fontWeight: "bold", margin: 0 }}>{profile.name}</h1>
-                    <div style={{ color: theme.colors.textSecondary }}>{profile.code}</div>
-                </div>
-                <div style={{ display: "flex", gap: 10 }}>
-                    <button
-                        onClick={handleSave}
-                        disabled={saving}
-                        style={{
-                            padding: "8px 16px",
-                            borderRadius: theme.radius.base,
-                            border: `1px solid ${theme.colors.brandBlue}`,
-                            background: "white",
-                            color: theme.colors.brandBlue,
-                            cursor: "pointer"
+                    <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, color: theme.colors.textPrimary }}>
+                        {schema.name}
+                    </h1>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 4 }}>
+                        <span style={{ color: theme.colors.textSecondary, fontSize: 14 }}>Code: {schema.code}</span>
+                        <span style={{
+                            padding: "2px 8px",
+                            borderRadius: 4,
+                            fontSize: 12,
+                            fontWeight: 600,
+                            textTransform: "uppercase",
+                            backgroundColor: status === "draft" ? theme.colors.brandBlueSoft :
+                                status === "submitted" ? "#fff3cd" : "#d1e7dd",
+                            color: status === "draft" ? theme.colors.brandBlue :
+                                status === "submitted" ? "#856404" : "#0f5132"
                         }}>
-                        Save Draft
-                    </button>
-                    <button
-                        onClick={handleSubmit}
-                        disabled={saving}
-                        style={{
-                            padding: "8px 16px",
-                            borderRadius: theme.radius.base,
-                            border: "none",
-                            background: theme.colors.brandBlue,
-                            color: "white",
-                            cursor: "pointer"
-                        }}>
-                        Submit
-                    </button>
-                </div>
-            </header>
-
-            {Object.entries(sections).map(([sectionName, params]) => (
-                <section key={sectionName} style={{
-                    background: "white",
-                    padding: 24,
-                    borderRadius: theme.radius.md,
-                    boxShadow: theme.shadows.sm,
-                    marginBottom: 24
-                }}>
-                    <h2 style={{
-                        fontSize: 18,
-                        borderBottom: `1px solid ${theme.colors.border}`,
-                        paddingBottom: 10,
-                        marginBottom: 20,
-                        color: theme.colors.textPrimary
-                    }}>
-                        {sectionName}
-                    </h2>
-                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                        {params.map(p => (
-                            <div key={p.id}>
-                                {renderField(p, values[p.id] || "", handleChange)}
-                            </div>
-                        ))}
+                            {status}
+                        </span>
                     </div>
-                </section>
-            ))}
+                </div>
+                <div style={{ display: "flex", gap: 12 }}>
+                    <Button
+                        variant="secondary"
+                        onClick={() => navigate(-1)}
+                    >
+                        Cancel
+                    </Button>
+                    {!isReadOnly && (
+                        <>
+                            <Button
+                                variant="secondary"
+                                onClick={handleSaveDraft}
+                                disabled={saving}
+                            >
+                                {saving ? "Saving..." : "Save Draft"}
+                            </Button>
+                            <Button
+                                variant="primary"
+                                onClick={() => setShowSubmitModal(true)}
+                                disabled={saving}
+                            >
+                                Submit Report
+                            </Button>
+                        </>
+                    )}
+                </div>
+            </div>
+
+            <div style={{ marginBottom: 20 }}>
+                {error && <ErrorAlert message={error} />}
+                {success && <SuccessAlert message={success} />}
+            </div>
+
+            {/* Dynamic Form */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
+                {groupedParameters.map(([sectionName, params]) => (
+                    <div key={sectionName} style={{
+                        backgroundColor: "white",
+                        borderRadius: theme.radius.lg,
+                        boxShadow: theme.shadows.sm,
+                        border: `1px solid ${theme.colors.border}`,
+                        overflow: "hidden"
+                    }}>
+                        <div style={{
+                            padding: "16px 24px",
+                            backgroundColor: theme.colors.backgroundGray,
+                            borderBottom: `1px solid ${theme.colors.border}`,
+                            fontWeight: 600,
+                            fontSize: 16,
+                            color: theme.colors.textPrimary
+                        }}>
+                            {sectionName}
+                        </div>
+                        <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 20 }}>
+                            {params.map(param => (
+                                <div key={param.parameter_id}>
+                                    {renderParameter(param, valuesByParamId[param.parameter_id], handleValueChange, isReadOnly, validationErrors[param.parameter_id])}
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Confirmation Modal */}
+            {showSubmitModal && (
+                <div style={{
+                    position: "fixed",
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "rgba(0,0,0,0.5)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    zIndex: 1000,
+                    backdropFilter: "blur(4px)"
+                }}>
+                    <div style={{
+                        backgroundColor: "white",
+                        padding: 32,
+                        borderRadius: theme.radius.lg,
+                        maxWidth: 400,
+                        width: "90%",
+                        boxShadow: theme.shadows.lg
+                    }}>
+                        <h3 style={{ marginTop: 0, fontSize: 20 }}>Confirm Submission</h3>
+                        <p style={{ color: theme.colors.textSecondary, lineHeight: 1.5 }}>
+                            Are you sure you want to submit this report? Submitting will lock all values and move the report to the verification queue.
+                        </p>
+                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
+                            <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" onClick={handleSubmit} disabled={saving}>
+                                {saving ? "Submitting..." : "Yes, Submit"}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
 
-function renderField(p: Parameter, value: string, onChange: (id: string, v: string) => void) {
-    if (p.parameter_type === "heading") {
-        return <h3 style={{ margin: "20px 0 10px", fontSize: 16, fontWeight: "bold" }}>{p.name}</h3>;
+function renderParameter(
+    param: ReportParameter,
+    value: any,
+    onChange: (id: string, val: any) => void,
+    isReadOnly: boolean,
+    error?: string
+) {
+    if (param.type === "heading") {
+        return (
+            <h4 style={{
+                marginTop: 10,
+                marginBottom: 5,
+                fontSize: 15,
+                fontWeight: 700,
+                color: theme.colors.brandBlue,
+                textTransform: "uppercase",
+                letterSpacing: "0.5px"
+            }}>
+                {param.name}
+            </h4>
+        );
     }
-    if (p.parameter_type === "separator") {
-        return <hr style={{ margin: "20px 0", borderTop: `1px solid ${theme.colors.border}` }} />;
+
+    if (param.type === "separator") {
+        return <hr style={{ border: 0, borderTop: `1px solid ${theme.colors.border}`, margin: "10px 0" }} />;
     }
 
     const labelStyle = {
@@ -203,104 +384,153 @@ function renderField(p: Parameter, value: string, onChange: (id: string, v: stri
         color: theme.colors.textPrimary
     };
 
-    const inputStyle = {
+    const inputBaseStyle: React.CSSProperties = {
         width: "100%",
-        padding: "8px 12px",
-        borderRadius: 6,
-        border: `1px solid ${theme.colors.border}`,
+        padding: "10px 14px",
+        borderRadius: 8,
+        border: `1px solid ${error ? theme.colors.danger : theme.colors.border}`,
         fontSize: 14,
-        fontFamily: "inherit"
+        fontFamily: "inherit",
+        backgroundColor: isReadOnly ? theme.colors.backgroundGray : "white",
+        color: isReadOnly ? theme.colors.textSecondary : theme.colors.textPrimary,
+        outline: "none",
+        transition: "border-color 0.2s, box-shadow 0.2s"
     };
 
     return (
-        <div style={{ marginBottom: 10 }}>
+        <div style={{ position: "relative" }}>
             <label style={labelStyle}>
-                {p.name} {p.unit && <span style={{ color: theme.colors.textTertiary, fontWeight: 400 }}>({p.unit})</span>}
-                {p.is_required && <span style={{ color: "red" }}> *</span>}
+                {param.name}
+                {param.unit && (
+                    <span style={{ color: theme.colors.textTertiary, fontWeight: 400, marginLeft: 4 }}>
+                        ({param.unit})
+                    </span>
+                )}
+                {param.is_required && <span style={{ color: theme.colors.danger, marginLeft: 4 }}>*</span>}
             </label>
 
-            {p.parameter_type === "short_text" && (
+            {/* Render logic by type */}
+            {param.type === "short_text" && (
                 <input
                     type="text"
-                    value={value}
-                    onChange={e => onChange(p.id, e.target.value)}
-                    style={inputStyle}
+                    value={value || ""}
+                    disabled={isReadOnly}
+                    onChange={e => onChange(param.parameter_id, e.target.value)}
+                    style={inputBaseStyle}
+                    className="focus-ring"
                 />
             )}
 
-            {p.parameter_type === "long_text" && (
+            {param.type === "long_text" && (
                 <textarea
-                    value={value}
-                    onChange={e => onChange(p.id, e.target.value)}
-                    style={{ ...inputStyle, minHeight: 80, resize: "vertical" }}
+                    value={value || ""}
+                    disabled={isReadOnly}
+                    onChange={e => onChange(param.parameter_id, e.target.value)}
+                    style={{ ...inputBaseStyle, minHeight: 100, resize: "vertical" }}
                 />
             )}
 
-            {p.parameter_type === "number" && (
-                <input
-                    type="number"
-                    value={value}
-                    onChange={e => onChange(p.id, e.target.value)}
-                    style={{ ...inputStyle, width: 150 }}
-                />
+            {param.type === "number" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                    <input
+                        type="number"
+                        value={value === null ? "" : value}
+                        disabled={isReadOnly}
+                        onChange={e => onChange(param.parameter_id, e.target.value === "" ? null : parseFloat(e.target.value))}
+                        style={{ ...inputBaseStyle, width: 200 }}
+                    />
+                    {param.unit && <span style={{ fontSize: 14, color: theme.colors.textSecondary }}>{param.unit}</span>}
+                </div>
             )}
 
-            {p.parameter_type === "dropdown" && (
-                <select
-                    value={value}
-                    onChange={e => onChange(p.id, e.target.value)}
-                    style={inputStyle}
-                >
-                    <option value="">Select...</option>
-                    {p.options.map(opt => (
-                        <option key={opt.id} value={opt.value}>{opt.label}</option>
-                    ))}
-                </select>
-            )}
-
-            {p.parameter_type === "boolean" && (
-                <div style={{ display: "flex", gap: 20 }}>
-                    <label style={{ fontWeight: 400 }}>
+            {param.type === "boolean" && (
+                <div style={{ display: "flex", alignItems: "center", gap: 24, padding: "8px 0" }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: isReadOnly ? "default" : "pointer" }}>
                         <input
                             type="radio"
-                            name={p.id}
-                            checked={value === "true"}
-                            onChange={() => onChange(p.id, "true")}
-                        /> Yes
+                            checked={value === true}
+                            disabled={isReadOnly}
+                            onChange={() => onChange(param.parameter_id, true)}
+                            style={{ width: 18, height: 18 }}
+                        />
+                        <span style={{ fontSize: 14 }}>Yes</span>
                     </label>
-                    <label style={{ fontWeight: 400 }}>
+                    <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: isReadOnly ? "default" : "pointer" }}>
                         <input
                             type="radio"
-                            name={p.id}
-                            checked={value === "false"}
-                            onChange={() => onChange(p.id, "false")}
-                        /> No
+                            checked={value === false}
+                            disabled={isReadOnly}
+                            onChange={() => onChange(param.parameter_id, false)}
+                            style={{ width: 18, height: 18 }}
+                        />
+                        <span style={{ fontSize: 14 }}>No</span>
                     </label>
                 </div>
             )}
 
-            {p.parameter_type === "checklist" && (
-                <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                    {/* Checklist logic requires parsing string to array - simplify for MVP: store as comma joined? */}
-                    {p.options.map(opt => {
-                        const currentArr = value ? value.split(",") : [];
-                        const checked = currentArr.includes(opt.value);
+            {param.type === "dropdown" && (
+                <select
+                    value={value || ""}
+                    disabled={isReadOnly}
+                    onChange={e => onChange(param.parameter_id, e.target.value)}
+                    style={inputBaseStyle}
+                >
+                    <option value="">Select an option</option>
+                    {param.options.map(opt => (
+                        <option key={opt.id} value={opt.value}>
+                            {opt.label}
+                        </option>
+                    ))}
+                </select>
+            )}
+
+            {param.type === "checklist" && (
+                <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
+                    gap: 12,
+                    padding: "8px 0"
+                }}>
+                    {param.options.map(opt => {
+                        const currentSelected = Array.isArray(value) ? value : [];
+                        const isChecked = currentSelected.includes(opt.value);
                         return (
-                            <label key={opt.id} style={{ display: "flex", alignItems: "center", gap: 8, fontWeight: 400, fontSize: 14 }}>
+                            <label key={opt.id} style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 10,
+                                cursor: isReadOnly ? "default" : "pointer",
+                                padding: "8px 12px",
+                                borderRadius: 6,
+                                backgroundColor: isChecked ? theme.colors.brandBlueSoft : "transparent",
+                                border: `1px solid ${isChecked ? theme.colors.brandBlue : "transparent"}`,
+                                transition: "all 0.2s"
+                            }}>
                                 <input
                                     type="checkbox"
-                                    checked={checked}
+                                    checked={isChecked}
+                                    disabled={isReadOnly}
+                                    style={{ width: 16, height: 16 }}
                                     onChange={e => {
-                                        let newArr = [...currentArr];
-                                        if (e.target.checked) newArr.push(opt.value);
-                                        else newArr = newArr.filter(x => x !== opt.value);
-                                        onChange(p.id, newArr.filter(Boolean).join(","));
+                                        if (e.target.checked) {
+                                            onChange(param.parameter_id, [...currentSelected, opt.value]);
+                                        } else {
+                                            onChange(param.parameter_id, currentSelected.filter(v => v !== opt.value));
+                                        }
                                     }}
                                 />
-                                {opt.label}
+                                <span style={{ fontSize: 13, color: isChecked ? theme.colors.brandBlue : theme.colors.textPrimary }}>
+                                    {opt.label}
+                                </span>
                             </label>
-                        )
+                        );
                     })}
+                </div>
+            )}
+
+            {error && (
+                <div style={{ color: theme.colors.danger, fontSize: 12, marginTop: 4, fontWeight: 500 }}>
+                    {error}
                 </div>
             )}
         </div>
