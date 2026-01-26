@@ -50,3 +50,21 @@ export async function saveReport(serviceVisitItemId: string, valuesPayload: { va
 export async function submitReport(serviceVisitItemId: string, token: string | null) {
     return apiPost(`/reporting/workitems/${serviceVisitItemId}/submit/`, token, {});
 }
+
+export interface NarrativeResponse {
+    status: string;
+    narrative: {
+        version: string;
+        findings_text: string;
+        impression_text: string;
+        limitations_text: string;
+    };
+}
+
+export async function generateNarrative(serviceVisitItemId: string, token: string | null): Promise<NarrativeResponse> {
+    return apiPost(`/reporting/workitems/${serviceVisitItemId}/generate-narrative/`, token, {});
+}
+
+export async function getNarrative(serviceVisitItemId: string, token: string | null): Promise<NarrativeResponse> {
+    return apiGet(`/reporting/workitems/${serviceVisitItemId}/narrative/`, token);
+}

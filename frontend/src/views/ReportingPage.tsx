@@ -7,9 +7,12 @@ import {
     getReportValues,
     saveReport,
     submitReport,
+    generateNarrative,
+    getNarrative,
     ReportSchema,
     ReportParameter,
-    ReportValueEntry
+    ReportValueEntry,
+    NarrativeResponse
 } from "../ui/reporting";
 import Button from "../ui/components/Button";
 import ErrorAlert from "../ui/components/ErrorAlert";
@@ -28,7 +31,12 @@ export default function ReportingPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
     const [showSubmitModal, setShowSubmitModal] = useState(false);
+
+    // Stage 2: Narrative State
+    const [narrative, setNarrative] = useState<NarrativeResponse['narrative'] | null>(null);
+    const [generatingNarrative, setGeneratingNarrative] = useState(false);
 
     useEffect(() => {
         if (!id || !token) return;
@@ -41,13 +49,17 @@ export default function ReportingPage() {
             setLoading(true);
             setError(null);
             // Parallel Fetching (MANDATORY)
-            const [schemaData, valuesResponse] = await Promise.all([
+
+            // Parallel Fetching (MANDATORY)
+            const [schemaData, valuesResponse, narrativeResponse] = await Promise.all([
                 getReportSchema(id, token),
-                getReportValues(id, token)
+                getReportValues(id, token),
+                getNarrative(id, token)
             ]);
 
             setSchema(schemaData);
             setStatus(valuesResponse.status);
+            setNarrative(narrativeResponse.narrative);
 
             // Defaulting Logic (MANDATORY)
             const initialValues: Record<string, any> = {};
@@ -184,6 +196,27 @@ export default function ReportingPage() {
         }
     };
 
+    const handleGenerateNarrative = async () => {
+        if (!id || !token) return;
+        try {
+            setGeneratingNarrative(true);
+            setError(null);
+
+            // If draft, save first to ensure DB has latest values for generator
+            if (status === "draft") {
+                await saveReport(id, preparePayload(), token);
+            }
+
+            const response = await generateNarrative(id, token);
+            setNarrative(response.narrative);
+            setSuccess("Narrative generated and saved.");
+        } catch (e: any) {
+            setError(e.message || "Failed to generate narrative");
+        } finally {
+            setGeneratingNarrative(false);
+        }
+    };
+
     const groupedParameters = useMemo(() => {
         if (!schema) return [];
         const sections: Record<string, ReportParameter[]> = {};
@@ -312,45 +345,153 @@ export default function ReportingPage() {
                 ))}
             </div>
 
-            {/* Confirmation Modal */}
-            {showSubmitModal && (
+
+
+            {/* Narrative Preview Panel - Stage 2 */}
+            <div style={{
+                marginTop: 40,
+                backgroundColor: "white",
+                borderRadius: theme.radius.lg,
+                boxShadow: theme.shadows.sm,
+                border: `1px solid ${theme.colors.border}`,
+                overflow: "hidden"
+            }}>
                 <div style={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: "rgba(0,0,0,0.5)",
+                    padding: "16px 24px",
+                    backgroundColor: theme.colors.brandBlueDark,
+                    color: "white",
+                    fontWeight: 600,
+                    fontSize: 16,
                     display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 1000,
-                    backdropFilter: "blur(4px)"
+                    justifyContent: "space-between",
+                    alignItems: "center"
                 }}>
-                    <div style={{
-                        backgroundColor: "white",
-                        padding: 32,
-                        borderRadius: theme.radius.lg,
-                        maxWidth: 400,
-                        width: "90%",
-                        boxShadow: theme.shadows.lg
-                    }}>
-                        <h3 style={{ marginTop: 0, fontSize: 20 }}>Confirm Submission</h3>
-                        <p style={{ color: theme.colors.textSecondary, lineHeight: 1.5 }}>
-                            Are you sure you want to submit this report? Submitting will lock all values and move the report to the verification queue.
-                        </p>
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
-                            <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>
-                                Cancel
-                            </Button>
-                            <Button variant="primary" onClick={handleSubmit} disabled={saving}>
-                                {saving ? "Submitting..." : "Yes, Submit"}
-                            </Button>
+                    <span>Narrative Preview</span>
+                    <Button
+                        onClick={handleGenerateNarrative}
+                        disabled={generatingNarrative}
+                        style={{ backgroundColor: "rgba(255,255,255,0.2)", border: "none", color: "white", padding: "6px 12px", fontSize: 13 }}
+                    >
+                        {generatingNarrative ? "Generating..." : "Generate Preview"}
+                    </Button>
+                </div>
+
+                {narrative && (
+                    <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
+                        <div>
+                            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
+                                Findings
+                            </label>
+                            <textarea
+                                value={narrative.findings_text}
+                                readOnly
+                                style={{
+                                    width: "100%",
+                                    minHeight: 150,
+                                    padding: 12,
+                                    borderRadius: 8,
+                                    border: `1px solid ${theme.colors.border}`,
+                                    backgroundColor: theme.colors.backgroundGray,
+                                    fontFamily: "monospace",
+                                    fontSize: 14,
+                                    lineHeight: 1.5,
+                                    resize: "vertical"
+                                }}
+                            />
+                        </div>
+
+                        {(narrative.impression_text || status === 'submitted' || status === 'verified') && (
+                            <div>
+                                <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
+                                    Impression
+                                </label>
+                                <textarea
+                                    value={narrative.impression_text}
+                                    readOnly
+                                    style={{
+                                        width: "100%",
+                                        minHeight: 80,
+                                        padding: 12,
+                                        borderRadius: 8,
+                                        border: `1px solid ${theme.colors.border}`,
+                                        backgroundColor: theme.colors.backgroundGray,
+                                        fontFamily: "monospace",
+                                        fontSize: 14
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        {(narrative.limitations_text || status === 'submitted' || status === 'verified') && (
+                            <div>
+                                <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
+                                    Limitations
+                                </label>
+                                <textarea
+                                    value={narrative.limitations_text}
+                                    readOnly
+                                    style={{
+                                        width: "100%",
+                                        minHeight: 60,
+                                        padding: 12,
+                                        borderRadius: 8,
+                                        border: `1px solid ${theme.colors.border}`,
+                                        backgroundColor: theme.colors.backgroundGray,
+                                        fontFamily: "monospace",
+                                        fontSize: 14
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        <div style={{ fontSize: 12, color: theme.colors.textTertiary, textAlign: "right" }}>
+                            Version: {narrative.version}
                         </div>
                     </div>
-                </div>
-            )}
-        </div>
+                )}
+            </div>
+
+            {/* Confirmation Modal */}
+            {
+                showSubmitModal && (
+                    <div style={{
+                        position: "fixed",
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        backgroundColor: "rgba(0,0,0,0.5)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        zIndex: 1000,
+                        backdropFilter: "blur(4px)"
+                    }}>
+                        <div style={{
+                            backgroundColor: "white",
+                            padding: 32,
+                            borderRadius: theme.radius.lg,
+                            maxWidth: 400,
+                            width: "90%",
+                            boxShadow: theme.shadows.lg
+                        }}>
+                            <h3 style={{ marginTop: 0, fontSize: 20 }}>Confirm Submission</h3>
+                            <p style={{ color: theme.colors.textSecondary, lineHeight: 1.5 }}>
+                                Are you sure you want to submit this report? Submitting will lock all values and move the report to the verification queue.
+                            </p>
+                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
+                                <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>
+                                    Cancel
+                                </Button>
+                                <Button variant="primary" onClick={handleSubmit} disabled={saving}>
+                                    {saving ? "Submitting..." : "Yes, Submit"}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                )
+            }
+        </div >
     );
 }
 

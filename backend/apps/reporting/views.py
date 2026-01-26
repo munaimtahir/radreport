@@ -11,6 +11,7 @@ from .models import ServiceReportProfile, ReportInstance, ReportValue, ReportPro
 from .serializers import (
     ReportProfileSerializer, ReportInstanceSerializer, ReportValueSerializer, ReportSaveSerializer
 )
+from .services.narrative_v1 import generate_report_narrative
 
 class ReportWorkItemViewSet(viewsets.ViewSet):
     """
@@ -161,3 +162,64 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             item.save()
 
         return Response({"status": "submitted"})
+
+    @action(detail=True, methods=["post"], url_path="generate-narrative")
+    def generate_narrative(self, request, pk=None):
+        """
+        Generates and saves the narrative.
+        """
+        item = self._get_item(pk)
+        instance = self._get_instance(item)
+
+        if not instance:
+            raise exceptions.NotFound("Report must be started (saved as draft) before generating narrative.")
+
+        # Logic per requirements: 
+        # Allowed when report exists (draft or submitted).
+        # We allow re-generation even if submitted/verified? 
+        # Requirement: "When reportStatus is submitted/verified: Read-only already; still allow Generate Preview only if permitted (optional)"
+        # Let's allow it. It updates the narrative fields in the DB.
+        
+        narrative_data = generate_report_narrative(str(instance.id))
+        
+        with transaction.atomic():
+            instance.findings_text = narrative_data["findings_text"]
+            instance.impression_text = narrative_data["impression_text"]
+            instance.limitations_text = narrative_data["limitations_text"]
+            instance.narrative_version = narrative_data["version"]
+            instance.narrative_updated_at = timezone.now()
+            instance.save()
+            
+        return Response({
+            "status": instance.status,
+            "narrative": narrative_data
+        })
+
+    @action(detail=True, methods=["get"], url_path="narrative")
+    def narrative(self, request, pk=None):
+        """
+        Returns stored narrative fields.
+        """
+        item = self._get_item(pk)
+        instance = self._get_instance(item)
+        
+        if not instance:
+            return Response({
+                "status": "draft",
+                "narrative": {
+                    "version": "v1",
+                    "findings_text": "",
+                    "impression_text": "",
+                    "limitations_text": ""
+                }
+            })
+            
+        return Response({
+            "status": instance.status,
+            "narrative": {
+                "version": instance.narrative_version,
+                "findings_text": instance.findings_text or "",
+                "impression_text": instance.impression_text or "",
+                "limitations_text": instance.limitations_text or ""
+            }
+        })

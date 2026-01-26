@@ -11,6 +11,8 @@ class ReportProfile(models.Model):
     code = models.CharField(max_length=50, unique=True, help_text="Unique code, e.g., USG_KUB")
     name = models.CharField(max_length=150, help_text="Human readable name")
     modality = models.CharField(max_length=20, help_text="Modality code, e.g., USG")
+    enable_narrative = models.BooleanField(default=True)
+    narrative_mode = models.CharField(max_length=50, default="rule_based", choices=[("rule_based", "Rule Based")])
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -42,6 +44,21 @@ class ReportParameter(models.Model):
     normal_value = models.CharField(max_length=500, blank=True, null=True, help_text="Default/Normal value")
     order = models.PositiveIntegerField(default=0)
     is_required = models.BooleanField(default=False)
+    
+    # Stage 2: Narrative Generation
+    sentence_template = models.TextField(blank=True, null=True, help_text="Template like: {name}: {value}{unit}.")
+    narrative_role = models.CharField(
+        max_length=50,
+        default="finding",
+        choices=[
+            ("finding", "Finding"),
+            ("impression_hint", "Impression Hint"),
+            ("limitation_hint", "Limitation Hint"),
+            ("ignore", "Ignore"),
+        ]
+    )
+    omit_if_values = models.JSONField(blank=True, null=True, help_text="List of values to omit sentence for, e.g. ['na', false]")
+    join_label = models.CharField(max_length=50, blank=True, null=True, help_text="Join label for checklists, e.g. 'and'")
 
     class Meta:
         ordering = ["profile", "order"]
@@ -96,6 +113,14 @@ class ReportInstance(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="created_reports")
+    
+    # Stage 2: Narrative Output
+    findings_text = models.TextField(blank=True, null=True)
+    impression_text = models.TextField(blank=True, null=True)
+    limitations_text = models.TextField(blank=True, null=True)
+    narrative_version = models.CharField(max_length=20, default="v1")
+    narrative_updated_at = models.DateTimeField(blank=True, null=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
