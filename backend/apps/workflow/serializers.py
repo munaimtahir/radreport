@@ -26,15 +26,23 @@ class ServiceVisitItemSerializer(serializers.ModelSerializer):
     patient_mrn = serializers.CharField(source="service_visit.patient.mrn", read_only=True)
     patient_reg_no = serializers.CharField(source="service_visit.patient.patient_reg_no", read_only=True)
     
+    # Report info
+    report_status = serializers.SerializerMethodField()
+    
     # Audit logs
     status_audit_logs = serializers.SerializerMethodField()
 
-    
     class Meta:
         model = ServiceVisitItem
         fields = "__all__"
         read_only_fields = ["created_at", "updated_at", "started_at", "submitted_at", "verified_at", "published_at"]
     
+    def get_report_status(self, obj):
+        try:
+            return obj.report_instance.status
+        except:
+            return None
+
     def get_status_audit_logs(self, obj):
         """Get audit logs for this item"""
         logs = obj.status_audit_logs.all()[:10]  # Last 10 logs

@@ -49,12 +49,16 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         instance = self._get_instance(item)
         
         if not instance:
-            # Return empty structure or defaults?
-            # Start with empty list as per simple requirement
-            return Response([])
+            return Response({
+                "status": "draft",
+                "values": []
+            })
         
         serializer = ReportValueSerializer(instance.values.all(), many=True)
-        return Response(serializer.data)
+        return Response({
+            "status": instance.status,
+            "values": serializer.data
+        })
 
     @action(detail=True, methods=["post"])
     def save(self, request, pk=None):
@@ -68,7 +72,7 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
 
         save_serializer = ReportSaveSerializer(data=request.data)
         save_serializer.is_valid(raise_exception=True)
-        values_dict = save_serializer.validated_data["values"]
+        values_list = save_serializer.validated_data["values"]
 
         with transaction.atomic():
             if not instance:
@@ -80,15 +84,22 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
                 )
             
             # Simple bulk update/create logic
-            current_values = {v.parameter_id: v for v in instance.values.all()}
+            current_values = {str(v.parameter_id): v for v in instance.values.all()}
             
-            for param_id, val_str in values_dict.items():
+            for item_data in values_list:
+                param_id = str(item_data["parameter_id"])
+                val = item_data["value"]
+                
+                # val might be list or string, save as string/JSON
+                if isinstance(val, (list, dict)):
+                    import json
+                    val_str = json.dumps(val)
+                else:
+                    val_str = str(val) if val is not None else None
+
                 # Validate param belongs to profile
                 if not profile.parameters.filter(id=param_id).exists():
                     continue # Ignore invalid params
-                
-                 # Skip nulls if you want, or store them as empty??
-                 # Text field can store whatever string
                 
                 if param_id in current_values:
                     rv = current_values[param_id]
@@ -109,11 +120,6 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         instance = self._get_instance(item)
 
         if not instance:
-             # Need to save at least once or create empty instance
-             # But usually one should save data first.
-             # If user submits empty form, we could try to create it.
-             # Implementation choice: Error if no draft exists? 
-             # Let's support creating if it doesn't exist (assuming empty report is valid if no required fields)
              profile = self._get_profile(item)
              instance = ReportInstance.objects.create(
                  service_visit_item=item,
@@ -128,22 +134,28 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         # Validation
         profile = instance.profile
         required_params = profile.parameters.filter(is_required=True)
-        existing_values = {v.parameter_id: v.value for v in instance.values.all()}
+        existing_values = {str(v.parameter_id): v.value for v in instance.values.all()}
         
         missing = []
         for rp in required_params:
-            if str(rp.id) not in existing_values or not existing_values[str(rp.id)]:
-                missing.append(rp.name)
+            param_id_str = str(rp.id)
+            if param_id_str not in existing_values or not existing_values[param_id_str]:
+                missing.append({
+                    "parameter_id": param_id_str,
+                    "message": "Required"
+                })
         
         if missing:
-            return Response({"error": "Missing required fields", "fields": missing}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({
+                "error": "validation_failed", 
+                "missing": missing
+            }, status=status.HTTP_400_BAD_REQUEST)
 
         with transaction.atomic():
             instance.status = "submitted"
             instance.save()
             
             # Update workflow status to PENDING_VERIFICATION
-            # This triggers derived status logic in ServiceVisitItem.save()
             item.status = "PENDING_VERIFICATION" 
             item.submitted_at = timezone.now()
             item.save()

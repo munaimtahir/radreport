@@ -15,6 +15,7 @@ interface ServiceVisitItem {
     service_name: string;
     department: string;
     status: string;
+    report_status: "draft" | "submitted" | "verified" | null;
     status_display: string;
     created_at: string;
     updated_at: string;
@@ -38,8 +39,6 @@ export default function ReportingWorklistPage() {
         try {
             setLoading(true);
             setError(null);
-            // Fetching from the item-centric worklist endpoint
-            // We filter for reporting-related statuses
             const data = await apiGet("/workflow/items/worklist/", token);
             setItems(data || []);
         } catch (e: any) {
@@ -50,17 +49,23 @@ export default function ReportingWorklistPage() {
     };
 
     const getActionLabel = (item: ServiceVisitItem) => {
-        const status = item.status;
-        if (["REGISTERED", "IN_PROGRESS", "RETURNED_FOR_CORRECTION"].includes(status)) {
+        if (["REGISTERED", "IN_PROGRESS", "RETURNED_FOR_CORRECTION"].includes(item.status)) {
             return "Enter Report";
         }
-        return "View Report";
+        if (["submitted", "verified"].includes(item.report_status as string)) {
+            return "View Report";
+        }
+        return "Enter Report";
     };
 
     const filteredItems = items.filter(item => {
         if (filter === "ALL") return true;
-        if (filter === "PENDING") return ["REGISTERED", "IN_PROGRESS", "RETURNED_FOR_CORRECTION"].includes(item.status);
-        if (filter === "COMPLETED") return ["PENDING_VERIFICATION", "FINALIZED", "PUBLISHED"].includes(item.status);
+        if (filter === "PENDING") {
+            return !item.report_status || item.report_status === "draft";
+        }
+        if (filter === "COMPLETED") {
+            return item.report_status === "submitted" || item.report_status === "verified";
+        }
         return true;
     });
 
@@ -70,6 +75,7 @@ export default function ReportingWorklistPage() {
             case "IN_PROGRESS": return { bg: "#fff3cd", text: "#856404" };
             case "RETURNED_FOR_CORRECTION": return { bg: "#f8d7da", text: "#842029" };
             case "PENDING_VERIFICATION": return { bg: theme.colors.brandBlueSoft, text: theme.colors.brandBlue };
+            case "FINALIZED":
             case "PUBLISHED": return { bg: "#d1e7dd", text: "#0f5132" };
             default: return { bg: theme.colors.backgroundGray, text: theme.colors.textPrimary };
         }
@@ -203,7 +209,7 @@ export default function ReportingWorklistPage() {
                                                 <Button
                                                     variant={["REGISTERED", "IN_PROGRESS", "RETURNED_FOR_CORRECTION"].includes(item.status) ? "primary" : "secondary"}
                                                     style={{ padding: "6px 12px", fontSize: 13 }}
-                                                    onClick={() => navigate(`/worklist/${item.id}/report`)}
+                                                    onClick={() => navigate(`/reporting/worklist/${item.id}/report`)}
                                                 >
                                                     {getActionLabel(item)}
                                                 </Button>

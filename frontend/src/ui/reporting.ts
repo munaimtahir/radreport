@@ -7,9 +7,9 @@ export interface ReportParameterOption {
 }
 
 export interface ReportParameter {
-    parameter_id: string;
+    id: string; // Internal UUID
+    parameter_id: string; // The UUID that should be used for value mapping as per spec
     name: string;
-    slug: string;
     type: "number" | "dropdown" | "checklist" | "boolean" | "short_text" | "long_text" | "heading" | "separator";
     unit: string | null;
     normal_value: string | null;
@@ -35,18 +35,18 @@ export interface ReportValuesResponse {
     values: ReportValueEntry[];
 }
 
-export async function getReportSchema(workitemId: string, token: string | null): Promise<ReportSchema> {
-    return apiGet(`/reporting/workitems/${workitemId}/schema/`, token);
+export async function getReportSchema(serviceVisitItemId: string, token: string | null): Promise<ReportSchema> {
+    return apiGet(`/reporting/workitems/${serviceVisitItemId}/schema/`, token);
 }
 
-export async function getReportValues(workitemId: string, token: string | null): Promise<ReportValuesResponse> {
-    return apiGet(`/reporting/workitems/${workitemId}/values/`, token);
+export async function getReportValues(serviceVisitItemId: string, token: string | null): Promise<ReportValuesResponse> {
+    return apiGet(`/reporting/workitems/${serviceVisitItemId}/values/`, token);
 }
 
-export async function saveReport(workitemId: string, valuesPayload: { values: ReportValueEntry[] }, token: string | null) {
-    return apiPost(`/reporting/workitems/${workitemId}/save/`, token, valuesPayload);
+export async function saveReport(serviceVisitItemId: string, valuesPayload: { values: ReportValueEntry[] }, token: string | null) {
+    return apiPost(`/reporting/workitems/${serviceVisitItemId}/save/`, token, valuesPayload);
 }
 
-export async function submitReport(workitemId: string, token: string | null) {
-    return apiPost(`/reporting/workitems/${workitemId}/submit/`, token, {});
+export async function submitReport(serviceVisitItemId: string, token: string | null) {
+    return apiPost(`/reporting/workitems/${serviceVisitItemId}/submit/`, token, {});
 }

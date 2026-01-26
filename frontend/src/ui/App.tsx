@@ -366,7 +366,7 @@ function Shell() {
               <Route path="/studies" element={<Navigate to="/" replace />} />
               <Route path="/reports/:reportId/edit" element={<Navigate to="/reports" replace />} />
               <Route path="/reporting/worklist" element={<ReportingWorklistPage />} />
-              <Route path="/worklist/:id/report" element={<ReportingPage />} />
+              <Route path="/reporting/worklist/:service_visit_item_id/report" element={<ReportingPage />} />
             </Routes>
 
           </div>
