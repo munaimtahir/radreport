@@ -13,20 +13,26 @@ import {
     ReportParameter,
     ReportValueEntry,
     NarrativeResponse,
-    fetchReportPdf
+    fetchReportPdf,
+    verifyReport,
+    returnReport,
+    publishReport,
+    getPublishHistory,
+    fetchPublishedPdf
 } from "../ui/reporting";
 import Button from "../ui/components/Button";
 import ErrorAlert from "../ui/components/ErrorAlert";
 import SuccessAlert from "../ui/components/SuccessAlert";
 
 export default function ReportingPage() {
-    const { service_visit_item_id: id } = useParams<{ service_visit_item_id: string }>(); // This is service_visit_item_id
-    const { token } = useAuth();
+    const { service_visit_item_id: id } = useParams<{ service_visit_item_id: string }>();
+    const { token, user } = useAuth(); // Assume user object has groups/permissions
     const navigate = useNavigate();
 
     const [schema, setSchema] = useState<ReportSchema | null>(null);
     const [valuesByParamId, setValuesByParamId] = useState<Record<string, any>>({});
     const [status, setStatus] = useState<"draft" | "submitted" | "verified">("draft");
+    const [isPublished, setIsPublished] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -34,6 +40,14 @@ export default function ReportingPage() {
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
 
     const [showSubmitModal, setShowSubmitModal] = useState(false);
+
+    // Stage 4 Modals
+    const [showReturnModal, setShowReturnModal] = useState(false);
+    const [showPublishModal, setShowPublishModal] = useState(false);
+    const [returnReason, setReturnReason] = useState("");
+    const [publishNotes, setPublishNotes] = useState("");
+    const [publishConfirm, setPublishConfirm] = useState("");
+    const [publishHistory, setPublishHistory] = useState<any[]>([]);
 
     // Stage 2: Narrative State
     const [narrative, setNarrative] = useState<NarrativeResponse['narrative'] | null>(null);
@@ -49,9 +63,7 @@ export default function ReportingPage() {
         try {
             setLoading(true);
             setError(null);
-            // Parallel Fetching (MANDATORY)
 
-            // Parallel Fetching (MANDATORY)
             const [schemaData, valuesResponse, narrativeResponse] = await Promise.all([
                 getReportSchema(id, token),
                 getReportValues(id, token),
@@ -60,13 +72,18 @@ export default function ReportingPage() {
 
             setSchema(schemaData);
             setStatus(valuesResponse.status);
+            const published = !!valuesResponse.is_published;
+            setIsPublished(published);
             setNarrative(narrativeResponse.narrative);
 
-            // Defaulting Logic (MANDATORY)
+            if (published) {
+                getPublishHistory(id, token).then(setPublishHistory).catch(console.error);
+            }
+
+            // Defaulting Logic
             const initialValues: Record<string, any> = {};
             const existingValuesMap: Record<string, any> = {};
             (valuesResponse.values || []).forEach(v => {
-                // Try to parse JSON if it looks like an array (for checklist)
                 let val = v.value;
                 if (typeof val === "string" && (val.startsWith("[") || val.startsWith("{"))) {
                     try { val = JSON.parse(val); } catch (e) { }
@@ -76,14 +93,10 @@ export default function ReportingPage() {
 
             schemaData.parameters.forEach((param: ReportParameter) => {
                 const existingValue = existingValuesMap[param.parameter_id];
-
-                // If value exists from backend -> use it
                 if (existingValue !== undefined && existingValue !== null) {
                     initialValues[param.parameter_id] = existingValue;
                     return;
                 }
-
-                // Else if normal_value exists -> initialize from normal_value
                 if (param.normal_value !== null && param.normal_value !== undefined) {
                     if (param.type === "boolean") {
                         initialValues[param.parameter_id] = param.normal_value.toLowerCase() === "true" || param.normal_value === "1";
@@ -95,7 +108,6 @@ export default function ReportingPage() {
                         initialValues[param.parameter_id] = param.normal_value;
                     }
                 } else {
-                    // Else initialize as:
                     switch (param.type) {
                         case "short_text":
                         case "long_text":
@@ -170,26 +182,17 @@ export default function ReportingPage() {
             setError(null);
             setValidationErrors({});
 
-            // Path for Submission as per spec
             await saveReport(id, preparePayload(), token);
             await submitReport(id, token);
 
             setStatus("submitted");
-            setSuccess("Report submitted and locked");
+            setSuccess("Report submitted and locked for verification");
             setShowSubmitModal(false);
             window.scrollTo({ top: 0, behavior: "smooth" });
         } catch (e: any) {
-            // Updated behavior for validation failure as per spec
             if (e.message.includes("validation_failed") || (typeof e === 'object' && e !== null && 'missing' in e)) {
-                // If it's a JSON response with 'missing'
-                try {
-                    // Some fetch wrappers might throw error with body attached
-                    // If not, we need to handle it based on how api.ts behaves
-                } catch (err) { }
+                // handle validation
             }
-
-            // Checking for the spec'ed error structure
-            // Note: api.ts current implementation might obscure the JSON body if it's not "detail"
             setError("Validation failed. Please check required fields.");
             setShowSubmitModal(false);
         } finally {
@@ -202,12 +205,9 @@ export default function ReportingPage() {
         try {
             setGeneratingNarrative(true);
             setError(null);
-
-            // If draft, save first to ensure DB has latest values for generator
             if (status === "draft") {
                 await saveReport(id, preparePayload(), token);
             }
-
             const response = await generateNarrative(id, token);
             setNarrative(response.narrative);
             setSuccess("Narrative generated and saved.");
@@ -226,13 +226,77 @@ export default function ReportingPage() {
                 await saveReport(id, preparePayload(), token);
                 setSaving(false);
             }
-
             const blob = await fetchReportPdf(id, token);
             const url = window.URL.createObjectURL(blob);
             window.open(url, '_blank');
         } catch (e: any) {
             setError("Failed to load PDF: " + e.message);
             setSaving(false);
+        }
+    };
+
+    // Stage 4 Handlers
+    const handleVerify = async () => {
+        if (!id) return;
+        try {
+            setSaving(true);
+            await verifyReport(id, "", token);
+            setStatus("verified");
+            setSuccess("Report verified successfully. Ready to publish.");
+        } catch (e: any) {
+            setError(e.message || "Verification failed");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleReturn = async () => {
+        if (!id) return;
+        if (!returnReason.trim()) {
+            alert("Reason is required");
+            return;
+        }
+        try {
+            setSaving(true);
+            await returnReport(id, returnReason, token);
+            setStatus("draft");
+            setSuccess("Report returned for correction.");
+            setShowReturnModal(false);
+            setReturnReason("");
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        } catch (e: any) {
+            setError(e.message || "Return failed");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handlePublish = async () => {
+        if (!id) return;
+        if (publishConfirm !== "PUBLISH") return;
+        try {
+            setSaving(true);
+            await publishReport(id, publishNotes, token);
+            setIsPublished(true);
+            setSuccess("Report published successfully!");
+            setShowPublishModal(false);
+            // Reload history
+            getPublishHistory(id, token).then(setPublishHistory).catch(console.error);
+        } catch (e: any) {
+            setError(e.message || "Publish failed");
+        } finally {
+            setSaving(false);
+        }
+    };
+
+    const handleViewPublishedPdf = async (version: number) => {
+        if (!id) return;
+        try {
+            const blob = await fetchPublishedPdf(id, version, token);
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        } catch (e: any) {
+            setError("Failed to fetch published PDF: " + e.message);
         }
     };
 
@@ -247,89 +311,56 @@ export default function ReportingPage() {
         return Object.entries(sections);
     }, [schema]);
 
-    if (loading) {
-        return (
-            <div style={{ padding: 40, textAlign: "center", color: theme.colors.textSecondary }}>
-                Loading report template...
-            </div>
-        );
-    }
-
-    if (!schema) {
-        return (
-            <div style={{ padding: 40, textAlign: "center" }}>
-                <ErrorAlert message={error || "Could not load report schema."} />
-                <Button onClick={() => navigate(-1)} variant="secondary" style={{ marginTop: 20 }}>
-                    Go Back
-                </Button>
-            </div>
-        );
-    }
+    if (loading) return <div style={{ padding: 40, textAlign: "center" }}>Loading report...</div>;
+    if (!schema) return <div style={{ padding: 40, textAlign: "center" }}><ErrorAlert message={error || "Error loading."} /></div>;
 
     const isReadOnly = status !== "draft";
+    const statusColor = status === "draft" ? theme.colors.brandBlue : status === "submitted" ? "#856404" : "#0f5132";
+    const statusBg = status === "draft" ? theme.colors.brandBlueSoft : status === "submitted" ? "#fff3cd" : "#d1e7dd";
 
     return (
         <div style={{ maxWidth: 1000, margin: "0 auto", paddingBottom: 100 }}>
             {/* Header */}
             <div style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 24,
-                paddingBottom: 20,
-                borderBottom: `1px solid ${theme.colors.border}`
+                display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 24, paddingBottom: 20, borderBottom: `1px solid ${theme.colors.border}`
             }}>
                 <div>
-                    <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, color: theme.colors.textPrimary }}>
-                        {schema.name}
-                    </h1>
+                    <h1 style={{ fontSize: 28, fontWeight: 700, margin: 0, color: theme.colors.textPrimary }}>{schema.name}</h1>
                     <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 4 }}>
                         <span style={{ color: theme.colors.textSecondary, fontSize: 14 }}>Code: {schema.code}</span>
                         <span style={{
-                            padding: "2px 8px",
-                            borderRadius: 4,
-                            fontSize: 12,
-                            fontWeight: 600,
-                            textTransform: "uppercase",
-                            backgroundColor: status === "draft" ? theme.colors.brandBlueSoft :
-                                status === "submitted" ? "#fff3cd" : "#d1e7dd",
-                            color: status === "draft" ? theme.colors.brandBlue :
-                                status === "submitted" ? "#856404" : "#0f5132"
+                            padding: "2px 8px", borderRadius: 4, fontSize: 12, fontWeight: 600, textTransform: "uppercase",
+                            backgroundColor: isPublished ? theme.colors.success : statusBg,
+                            color: isPublished ? "white" : statusColor
                         }}>
-                            {status}
+                            {isPublished ? "PUBLISHED" : status}
                         </span>
                     </div>
                 </div>
                 <div style={{ display: "flex", gap: 12 }}>
-                    <Button
-                        variant="secondary"
-                        onClick={() => navigate("/reporting/worklist")}
-                    >
-                        Back to Worklist
-                    </Button>
-                    <Button
-                        variant="secondary"
-                        onClick={handlePreviewPdf}
-                        disabled={loading || saving}
-                    >
-                        Preview PDF
-                    </Button>
-                    {!isReadOnly && (
+                    <Button variant="secondary" onClick={() => navigate("/reporting/worklist")}>Worklist</Button>
+
+                    {/* Actions based on status */}
+                    {status === "draft" && (
                         <>
-                            <Button
-                                variant="secondary"
-                                onClick={handleSaveDraft}
-                                disabled={saving}
-                            >
-                                {saving ? "Saving..." : "Save Draft"}
-                            </Button>
-                            <Button
-                                variant="primary"
-                                onClick={() => setShowSubmitModal(true)}
-                                disabled={saving}
-                            >
-                                Submit Report
-                            </Button>
+                            <Button variant="secondary" onClick={handleSaveDraft} disabled={saving}>Save Draft</Button>
+                            <Button variant="primary" onClick={() => setShowSubmitModal(true)} disabled={saving}>Submit Report</Button>
+                        </>
+                    )}
+
+                    {status === "submitted" && (
+                        <>
+                            <Button variant="secondary" onClick={handlePreviewPdf}>Preview PDF</Button>
+                            <Button variant="secondary" onClick={() => setShowReturnModal(true)} style={{ color: theme.colors.danger, borderColor: theme.colors.danger }}>Return</Button>
+                            <Button variant="primary" onClick={handleVerify} disabled={saving}>Verify</Button>
+                        </>
+                    )}
+
+                    {status === "verified" && (
+                        <>
+                            <Button variant="secondary" onClick={handlePreviewPdf}>Preview PDF</Button>
+                            <Button variant="secondary" onClick={() => setShowReturnModal(true)} style={{ color: theme.colors.danger, borderColor: theme.colors.danger }}>Return</Button>
+                            <Button variant="primary" onClick={() => setShowPublishModal(true)} disabled={saving} style={{ backgroundColor: theme.colors.success, borderColor: theme.colors.success }}>Publish</Button>
                         </>
                     )}
                 </div>
@@ -343,23 +374,8 @@ export default function ReportingPage() {
             {/* Dynamic Form */}
             <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
                 {groupedParameters.map(([sectionName, params]) => (
-                    <div key={sectionName} style={{
-                        backgroundColor: "white",
-                        borderRadius: theme.radius.lg,
-                        boxShadow: theme.shadows.sm,
-                        border: `1px solid ${theme.colors.border}`,
-                        overflow: "hidden"
-                    }}>
-                        <div style={{
-                            padding: "16px 24px",
-                            backgroundColor: theme.colors.backgroundGray,
-                            borderBottom: `1px solid ${theme.colors.border}`,
-                            fontWeight: 600,
-                            fontSize: 16,
-                            color: theme.colors.textPrimary
-                        }}>
-                            {sectionName}
-                        </div>
+                    <div key={sectionName} style={{ backgroundColor: "white", borderRadius: theme.radius.lg, boxShadow: theme.shadows.sm, border: `1px solid ${theme.colors.border}`, overflow: "hidden" }}>
+                        <div style={{ padding: "16px 24px", backgroundColor: theme.colors.backgroundGray, borderBottom: `1px solid ${theme.colors.border}`, fontWeight: 600, fontSize: 16 }}>{sectionName}</div>
                         <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 20 }}>
                             {params.map(param => (
                                 <div key={param.parameter_id}>
@@ -371,155 +387,160 @@ export default function ReportingPage() {
                 ))}
             </div>
 
-
-
-            {/* Narrative Preview Panel - Stage 2 */}
-            <div style={{
-                marginTop: 40,
-                backgroundColor: "white",
-                borderRadius: theme.radius.lg,
-                boxShadow: theme.shadows.sm,
-                border: `1px solid ${theme.colors.border}`,
-                overflow: "hidden"
-            }}>
-                <div style={{
-                    padding: "16px 24px",
-                    backgroundColor: theme.colors.brandBlueDark,
-                    color: "white",
-                    fontWeight: 600,
-                    fontSize: 16,
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center"
-                }}>
+            {/* Narrative Preview */}
+            <div style={{ marginTop: 40, backgroundColor: "white", borderRadius: theme.radius.lg, boxShadow: theme.shadows.sm, border: `1px solid ${theme.colors.border}`, overflow: "hidden" }}>
+                <div style={{ padding: "16px 24px", backgroundColor: theme.colors.brandBlueDark, color: "white", fontWeight: 600, fontSize: 16, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                     <span>Narrative Preview</span>
-                    <Button
-                        onClick={handleGenerateNarrative}
-                        disabled={generatingNarrative}
-                        style={{ backgroundColor: "rgba(255,255,255,0.2)", border: "none", color: "white", padding: "6px 12px", fontSize: 13 }}
-                    >
+                    <Button onClick={handleGenerateNarrative} disabled={generatingNarrative} style={{ backgroundColor: "rgba(255,255,255,0.2)", border: "none", color: "white", padding: "6px 12px", fontSize: 13 }}>
                         {generatingNarrative ? "Generating..." : "Generate Preview"}
                     </Button>
                 </div>
-
                 {narrative && (
                     <div style={{ padding: 24, display: "flex", flexDirection: "column", gap: 20 }}>
                         <div>
-                            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
-                                Findings
-                            </label>
-                            <textarea
-                                value={narrative.findings_text}
-                                readOnly
-                                style={{
-                                    width: "100%",
-                                    minHeight: 150,
-                                    padding: 12,
-                                    borderRadius: 8,
-                                    border: `1px solid ${theme.colors.border}`,
-                                    backgroundColor: theme.colors.backgroundGray,
-                                    fontFamily: "monospace",
-                                    fontSize: 14,
-                                    lineHeight: 1.5,
-                                    resize: "vertical"
-                                }}
-                            />
+                            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>Findings</label>
+                            <textarea value={narrative.findings_text} readOnly style={{ width: "100%", minHeight: 150, padding: 12, borderRadius: 8, border: `1px solid ${theme.colors.border}`, backgroundColor: theme.colors.backgroundGray, fontFamily: "monospace", fontSize: 14, lineHeight: 1.5, resize: "vertical" }} />
                         </div>
-
-                        {(narrative.impression_text || status === 'submitted' || status === 'verified') && (
-                            <div>
-                                <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
-                                    Impression
-                                </label>
-                                <textarea
-                                    value={narrative.impression_text}
-                                    readOnly
-                                    style={{
-                                        width: "100%",
-                                        minHeight: 80,
-                                        padding: 12,
-                                        borderRadius: 8,
-                                        border: `1px solid ${theme.colors.border}`,
-                                        backgroundColor: theme.colors.backgroundGray,
-                                        fontFamily: "monospace",
-                                        fontSize: 14
-                                    }}
-                                />
-                            </div>
-                        )}
-
-                        {(narrative.limitations_text || status === 'submitted' || status === 'verified') && (
-                            <div>
-                                <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>
-                                    Limitations
-                                </label>
-                                <textarea
-                                    value={narrative.limitations_text}
-                                    readOnly
-                                    style={{
-                                        width: "100%",
-                                        minHeight: 60,
-                                        padding: 12,
-                                        borderRadius: 8,
-                                        border: `1px solid ${theme.colors.border}`,
-                                        backgroundColor: theme.colors.backgroundGray,
-                                        fontFamily: "monospace",
-                                        fontSize: 14
-                                    }}
-                                />
-                            </div>
-                        )}
-
-                        <div style={{ fontSize: 12, color: theme.colors.textTertiary, textAlign: "right" }}>
-                            Version: {narrative.version}
+                        {/* Impression & Limitations omitted for brevity but logic same as before or collapsed */}
+                        <div>
+                            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>Impression</label>
+                            <textarea value={narrative.impression_text} readOnly style={{ width: "100%", minHeight: 80, padding: 12, borderRadius: 8, border: `1px solid ${theme.colors.border}`, backgroundColor: theme.colors.backgroundGray, fontFamily: "monospace", fontSize: 14 }} />
                         </div>
+                        <div>
+                            <label style={{ display: "block", fontSize: 13, fontWeight: 700, color: theme.colors.textSecondary, marginBottom: 8, textTransform: "uppercase" }}>Limitations</label>
+                            <textarea value={narrative.limitations_text} readOnly style={{ width: "100%", minHeight: 60, padding: 12, borderRadius: 8, border: `1px solid ${theme.colors.border}`, backgroundColor: theme.colors.backgroundGray, fontFamily: "monospace", fontSize: 14 }} />
+                        </div>
+                        <div style={{ fontSize: 12, color: theme.colors.textTertiary, textAlign: "right" }}>Version: {narrative.version}</div>
                     </div>
                 )}
             </div>
 
-            {/* Confirmation Modal */}
-            {
-                showSubmitModal && (
-                    <div style={{
-                        position: "fixed",
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        backgroundColor: "rgba(0,0,0,0.5)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        zIndex: 1000,
-                        backdropFilter: "blur(4px)"
-                    }}>
-                        <div style={{
-                            backgroundColor: "white",
-                            padding: 32,
-                            borderRadius: theme.radius.lg,
-                            maxWidth: 400,
-                            width: "90%",
-                            boxShadow: theme.shadows.lg
-                        }}>
-                            <h3 style={{ marginTop: 0, fontSize: 20 }}>Confirm Submission</h3>
-                            <p style={{ color: theme.colors.textSecondary, lineHeight: 1.5 }}>
-                                Are you sure you want to submit this report? Submitting will lock all values and move the report to the verification queue.
-                            </p>
-                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24 }}>
-                                <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>
-                                    Cancel
-                                </Button>
-                                <Button variant="primary" onClick={handleSubmit} disabled={saving}>
-                                    {saving ? "Submitting..." : "Yes, Submit"}
-                                </Button>
-                            </div>
+            {/* Publish History */}
+            {publishHistory.length > 0 && (
+                <div style={{ marginTop: 40 }}>
+                    <h3 style={{ fontSize: 20, marginBottom: 16 }}>Publish History</h3>
+                    <div style={{ backgroundColor: "white", borderRadius: theme.radius.lg, boxShadow: theme.shadows.sm, border: `1px solid ${theme.colors.border}`, overflow: "hidden" }}>
+                        <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                            <thead>
+                                <tr style={{ borderBottom: `1px solid ${theme.colors.border}`, backgroundColor: theme.colors.backgroundGray }}>
+                                    <th style={{ textAlign: "left", padding: 12, fontSize: 12 }}>Version</th>
+                                    <th style={{ textAlign: "left", padding: 12, fontSize: 12 }}>Published At</th>
+                                    <th style={{ textAlign: "left", padding: 12, fontSize: 12 }}>By</th>
+                                    <th style={{ textAlign: "left", padding: 12, fontSize: 12 }}>Notes</th>
+                                    <th style={{ textAlign: "right", padding: 12, fontSize: 12 }}>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {publishHistory.map((snap) => (
+                                    <tr key={snap.version} style={{ borderBottom: `1px solid ${theme.colors.borderLight}` }}>
+                                        <td style={{ padding: 12 }}>v{snap.version}</td>
+                                        <td style={{ padding: 12 }}>{new Date(snap.published_at).toLocaleString()}</td>
+                                        <td style={{ padding: 12 }}>{snap.published_by}</td>
+                                        <td style={{ padding: 12 }}>{snap.notes}</td>
+                                        <td style={{ padding: 12, textAlign: "right" }}>
+                                            <Button variant="secondary" style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => handleViewPublishedPdf(snap.version)}>
+                                                View PDF
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
+
+            {/* Submit Modal */}
+            {showSubmitModal && (
+                <div style={modalOverlayStyle}>
+                    <div style={modalContentStyle}>
+                        <h3 style={{ marginTop: 0 }}>Confirm Submission</h3>
+                        <p style={{ color: theme.colors.textSecondary }}>Submit report? This locks the report.</p>
+                        <div style={modalFooterStyle}>
+                            <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>Cancel</Button>
+                            <Button variant="primary" onClick={handleSubmit} disabled={saving}>{saving ? "Submitting..." : "Submit"}</Button>
                         </div>
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+
+            {/* Return Modal */}
+            {showReturnModal && (
+                <div style={modalOverlayStyle}>
+                    <div style={modalContentStyle}>
+                        <h3 style={{ marginTop: 0 }}>Return for Correction</h3>
+                        <p style={{ color: theme.colors.textSecondary }}>Please specify the reason for return:</p>
+                        <textarea
+                            value={returnReason}
+                            onChange={e => setReturnReason(e.target.value)}
+                            style={{ width: "100%", minHeight: 80, padding: 10, borderRadius: 6, border: `1px solid ${theme.colors.border}`, marginBottom: 20 }}
+                            placeholder="Correction notes..."
+                        />
+                        <div style={modalFooterStyle}>
+                            <Button variant="secondary" onClick={() => setShowReturnModal(false)}>Cancel</Button>
+                            <Button variant="primary" onClick={handleReturn} disabled={saving} style={{ backgroundColor: theme.colors.danger, borderColor: theme.colors.danger }}>Return</Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Publish Modal */}
+            {showPublishModal && (
+                <div style={modalOverlayStyle}>
+                    <div style={modalContentStyle}>
+                        <h3 style={{ marginTop: 0 }}>Publish Report</h3>
+                        <p style={{ color: theme.colors.textSecondary }}>
+                            You are about to publish an immutable snapshot of this report.
+                            Changes cannot be made to this version after publishing.
+                        </p>
+                        <div style={{ marginBottom: 16 }}>
+                            <label style={{ display: "block", fontSize: 13, marginBottom: 4 }}>Notes (Optional)</label>
+                            <input
+                                type="text"
+                                value={publishNotes}
+                                onChange={e => setPublishNotes(e.target.value)}
+                                style={{ width: "100%", padding: 8, borderRadius: 6, border: `1px solid ${theme.colors.border}` }}
+                            />
+                        </div>
+                        <div style={{ marginBottom: 20 }}>
+                            <label style={{ display: "block", fontSize: 13, marginBottom: 4 }}>Type "PUBLISH" to confirm</label>
+                            <input
+                                type="text"
+                                value={publishConfirm}
+                                onChange={e => setPublishConfirm(e.target.value)}
+                                style={{ width: "100%", padding: 8, borderRadius: 6, border: `1px solid ${theme.colors.border}` }}
+                                placeholder="PUBLISH"
+                            />
+                        </div>
+                        <div style={modalFooterStyle}>
+                            <Button variant="secondary" onClick={() => setShowPublishModal(false)}>Cancel</Button>
+                            <Button
+                                variant="primary"
+                                onClick={handlePublish}
+                                disabled={saving || publishConfirm !== "PUBLISH"}
+                                style={{ backgroundColor: theme.colors.success, borderColor: theme.colors.success }}
+                            >
+                                {saving ? "Publishing..." : "Publish"}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
+
+// Helper Styles
+const modalOverlayStyle: React.CSSProperties = {
+    position: "fixed", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.5)",
+    display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000, backdropFilter: "blur(4px)"
+};
+const modalContentStyle: React.CSSProperties = {
+    backgroundColor: "white", padding: 32, borderRadius: theme.radius.lg, maxWidth: 450, width: "90%", boxShadow: theme.shadows.lg
+};
+const modalFooterStyle: React.CSSProperties = {
+    display: "flex", justifyContent: "flex-end", gap: 12, marginTop: 24
+};
 
 function renderParameter(
     param: ReportParameter,
@@ -529,171 +550,66 @@ function renderParameter(
     error?: string
 ) {
     if (param.type === "heading") {
-        return (
-            <h4 style={{
-                marginTop: 10,
-                marginBottom: 5,
-                fontSize: 15,
-                fontWeight: 700,
-                color: theme.colors.brandBlue,
-                textTransform: "uppercase",
-                letterSpacing: "0.5px"
-            }}>
-                {param.name}
-            </h4>
-        );
+        return <h4 style={{ marginTop: 10, marginBottom: 5, fontSize: 15, fontWeight: 700, color: theme.colors.brandBlue, textTransform: "uppercase" }}>{param.name}</h4>;
     }
-
     if (param.type === "separator") {
         return <hr style={{ border: 0, borderTop: `1px solid ${theme.colors.border}`, margin: "10px 0" }} />;
     }
 
-    const labelStyle = {
-        display: "block",
-        marginBottom: 6,
-        fontWeight: 500,
-        fontSize: 14,
-        color: theme.colors.textPrimary
-    };
-
+    const labelStyle = { display: "block", marginBottom: 6, fontWeight: 500, fontSize: 14, color: theme.colors.textPrimary };
     const inputBaseStyle: React.CSSProperties = {
-        width: "100%",
-        padding: "10px 14px",
-        borderRadius: 8,
-        border: `1px solid ${error ? theme.colors.danger : theme.colors.border}`,
-        fontSize: 14,
-        fontFamily: "inherit",
-        backgroundColor: isReadOnly ? theme.colors.backgroundGray : "white",
-        color: isReadOnly ? theme.colors.textSecondary : theme.colors.textPrimary,
-        outline: "none",
-        transition: "border-color 0.2s, box-shadow 0.2s"
+        width: "100%", padding: "10px 14px", borderRadius: 8, border: `1px solid ${error ? theme.colors.danger : theme.colors.border}`,
+        fontSize: 14, fontFamily: "inherit", backgroundColor: isReadOnly ? theme.colors.backgroundGray : "white",
+        color: isReadOnly ? theme.colors.textSecondary : theme.colors.textPrimary, outline: "none", transition: "border-color 0.2s"
     };
 
     return (
         <div style={{ position: "relative" }}>
             <label style={labelStyle}>
                 {param.name}
-                {param.unit && (
-                    <span style={{ color: theme.colors.textTertiary, fontWeight: 400, marginLeft: 4 }}>
-                        ({param.unit})
-                    </span>
-                )}
+                {param.unit && <span style={{ color: theme.colors.textTertiary, marginLeft: 4 }}>({param.unit})</span>}
                 {param.is_required && <span style={{ color: theme.colors.danger, marginLeft: 4 }}>*</span>}
             </label>
-
-            {/* Render logic by type strictly following spec */}
-            {param.type === "short_text" && (
-                <input
-                    type="text"
-                    value={value || ""}
-                    disabled={isReadOnly}
-                    onChange={e => onChange(param.parameter_id, e.target.value)}
-                    style={inputBaseStyle}
-                />
-            )}
-
-            {param.type === "long_text" && (
-                <textarea
-                    value={value || ""}
-                    disabled={isReadOnly}
-                    onChange={e => onChange(param.parameter_id, e.target.value)}
-                    style={{ ...inputBaseStyle, minHeight: 100, resize: "vertical" }}
-                />
-            )}
-
+            {param.type === "short_text" && <input type="text" value={value || ""} disabled={isReadOnly} onChange={e => onChange(param.parameter_id, e.target.value)} style={inputBaseStyle} />}
+            {param.type === "long_text" && <textarea value={value || ""} disabled={isReadOnly} onChange={e => onChange(param.parameter_id, e.target.value)} style={{ ...inputBaseStyle, minHeight: 100, resize: "vertical" }} />}
             {param.type === "number" && (
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                    <input
-                        type="number"
-                        value={value === null ? "" : value}
-                        disabled={isReadOnly}
-                        onChange={e => onChange(param.parameter_id, e.target.value === "" ? null : parseFloat(e.target.value))}
-                        style={{ ...inputBaseStyle, width: 200 }}
-                    />
+                    <input type="number" value={value === null ? "" : value} disabled={isReadOnly} onChange={e => onChange(param.parameter_id, e.target.value === "" ? null : parseFloat(e.target.value))} style={{ ...inputBaseStyle, width: 200 }} />
                     {param.unit && <span style={{ fontSize: 14, color: theme.colors.textSecondary }}>{param.unit}</span>}
                 </div>
             )}
-
             {param.type === "boolean" && (
                 <div style={{ padding: "8px 0" }}>
                     <label style={{ display: "flex", alignItems: "center", gap: 10, cursor: isReadOnly ? "default" : "pointer" }}>
-                        <input
-                            type="checkbox"
-                            checked={!!value}
-                            disabled={isReadOnly}
-                            onChange={e => onChange(param.parameter_id, e.target.checked)}
-                            style={{ width: 20, height: 20 }}
-                        />
+                        <input type="checkbox" checked={!!value} disabled={isReadOnly} onChange={e => onChange(param.parameter_id, e.target.checked)} style={{ width: 20, height: 20 }} />
                         <span style={{ fontSize: 14 }}>{param.name}</span>
                     </label>
                 </div>
             )}
-
             {param.type === "dropdown" && (
-                <select
-                    value={value || ""}
-                    disabled={isReadOnly}
-                    onChange={e => onChange(param.parameter_id, e.target.value)}
-                    style={inputBaseStyle}
-                >
+                <select value={value || ""} disabled={isReadOnly} onChange={e => onChange(param.parameter_id, e.target.value)} style={inputBaseStyle}>
                     <option value="">Select...</option>
-                    {param.options.map(opt => (
-                        <option key={opt.id} value={opt.value}>
-                            {opt.label}
-                        </option>
-                    ))}
+                    {param.options.map(opt => <option key={opt.id} value={opt.value}>{opt.label}</option>)}
                 </select>
             )}
-
             {param.type === "checklist" && (
-                <div style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-                    gap: 12,
-                    padding: "8px 0"
-                }}>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 12, padding: "8px 0" }}>
                     {param.options.map(opt => {
                         const currentSelected = Array.isArray(value) ? value : [];
                         const isChecked = currentSelected.includes(opt.value);
                         return (
-                            <label key={opt.id} style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 10,
-                                cursor: isReadOnly ? "default" : "pointer",
-                                padding: "8px 12px",
-                                borderRadius: 6,
-                                backgroundColor: isChecked ? theme.colors.brandBlueSoft : "transparent",
-                                border: `1px solid ${isChecked ? theme.colors.brandBlue : "transparent"}`,
-                                transition: "all 0.2s"
-                            }}>
-                                <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    disabled={isReadOnly}
-                                    style={{ width: 16, height: 16 }}
-                                    onChange={e => {
-                                        if (e.target.checked) {
-                                            onChange(param.parameter_id, [...currentSelected, opt.value]);
-                                        } else {
-                                            onChange(param.parameter_id, currentSelected.filter(v => v !== opt.value));
-                                        }
-                                    }}
-                                />
-                                <span style={{ fontSize: 13, color: isChecked ? theme.colors.brandBlue : theme.colors.textPrimary }}>
-                                    {opt.label}
-                                </span>
+                            <label key={opt.id} style={{ display: "flex", alignItems: "center", gap: 10, cursor: isReadOnly ? "default" : "pointer", padding: "8px 12px", borderRadius: 6, backgroundColor: isChecked ? theme.colors.brandBlueSoft : "transparent", border: `1px solid ${isChecked ? theme.colors.brandBlue : "transparent"}` }}>
+                                <input type="checkbox" checked={isChecked} disabled={isReadOnly} onChange={e => {
+                                    if (e.target.checked) onChange(param.parameter_id, [...currentSelected, opt.value]);
+                                    else onChange(param.parameter_id, currentSelected.filter(v => v !== opt.value));
+                                }} style={{ width: 16, height: 16 }} />
+                                <span style={{ fontSize: 13, color: isChecked ? theme.colors.brandBlue : theme.colors.textPrimary }}>{opt.label}</span>
                             </label>
                         );
                     })}
                 </div>
             )}
-
-            {error && (
-                <div style={{ color: theme.colors.danger, fontSize: 12, marginTop: 4, fontWeight: 500 }}>
-                    {error}
-                </div>
-            )}
+            {error && <div style={{ color: theme.colors.danger, fontSize: 12, marginTop: 4, fontWeight: 500 }}>{error}</div>}
         </div>
     );
 }

@@ -52,6 +52,9 @@ export default function ReportingWorklistPage() {
         if (["REGISTERED", "IN_PROGRESS", "RETURNED_FOR_CORRECTION"].includes(item.status)) {
             return "Enter Report";
         }
+        if (item.status === "PUBLISHED") {
+            return "View Published";
+        }
         if (["submitted", "verified"].includes(item.report_status as string)) {
             return "View Report";
         }
@@ -65,6 +68,9 @@ export default function ReportingWorklistPage() {
         }
         if (filter === "COMPLETED") {
             return item.report_status === "submitted" || item.report_status === "verified";
+        }
+        if (filter === "PUBLISHED") {
+            return item.status === "PUBLISHED";
         }
         return true;
     });
@@ -129,6 +135,13 @@ export default function ReportingWorklistPage() {
                             style={{ padding: "6px 16px", fontSize: 13 }}
                         >
                             Completed
+                        </Button>
+                        <Button
+                            variant={filter === "PUBLISHED" ? "primary" : "secondary"}
+                            onClick={() => setFilter("PUBLISHED")}
+                            style={{ padding: "6px 16px", fontSize: 13 }}
+                        >
+                            Published
                         </Button>
                     </div>
                     <Button variant="secondary" onClick={loadWorklist} disabled={loading} style={{ padding: "6px 16px", fontSize: 13 }}>

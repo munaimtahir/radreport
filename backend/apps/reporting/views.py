@@ -14,6 +14,12 @@ from .serializers import (
 )
 from .services.narrative_v1 import generate_report_narrative
 from .pdf_engine.report_pdf import generate_report_pdf
+from .models import ReportPublishSnapshot, ReportActionLog
+import hashlib
+import json
+from django.core.files.base import ContentFile
+from .services.narrative_v1 import generate_report_narrative
+from .pdf_engine.report_pdf import generate_report_pdf
 
 class ReportWorkItemViewSet(viewsets.ViewSet):
     """
@@ -60,6 +66,7 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         serializer = ReportValueSerializer(instance.values.all(), many=True)
         return Response({
             "status": instance.status,
+            "is_published": instance.is_published,
             "values": serializer.data
         })
 
@@ -259,5 +266,216 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         filename = f"Report_{item.service_visit.visit_id}.pdf"
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
         # Content-Disposition: inline; filename="..."
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response
+
+    @action(detail=True, methods=["post"], url_path="return-for-correction")
+    def return_for_correction(self, request, pk=None):
+        item = self._get_item(pk)
+        instance = self._get_instance(item)
+        
+        if not instance:
+            raise exceptions.NotFound("Report not found.")
+            
+        # Permission check: Verifier only
+        if not (request.user.is_superuser or request.user.groups.filter(name="reporting_verifier").exists()):
+            raise exceptions.PermissionDenied("Only verifiers can return reports.")
+
+        # Logic: Allowed only if submitted or verified
+        if instance.status not in ["submitted", "verified"]:
+            return Response({"error": "Report can only be returned if submitted or verified."}, status=409)
+
+        reason = request.data.get("reason", "").strip()
+        if not reason:
+             return Response({"error": "Reason is required."}, status=400)
+
+        with transaction.atomic():
+            instance.status = "draft"
+            instance.save()
+            
+            # Update workflow status if possible
+            item.status = "RETURNED_FOR_CORRECTION"
+            item.save()
+            
+            ReportActionLog.objects.create(
+                report=instance,
+                action="return",
+                actor=request.user,
+                meta={"reason": reason}
+            )
+
+        return Response({"status": "returned"})
+
+    @action(detail=True, methods=["post"])
+    def verify(self, request, pk=None):
+        item = self._get_item(pk)
+        instance = self._get_instance(item)
+        
+        if not instance:
+             raise exceptions.NotFound("Report not found.")
+
+        # Permission check: Verifier only
+        if not (request.user.is_superuser or request.user.groups.filter(name="reporting_verifier").exists()):
+            raise exceptions.PermissionDenied("Only verifiers can verify reports.")
+
+        if instance.status != "submitted":
+             return Response({"error": "Only submitted reports can be verified."}, status=409)
+
+        notes = request.data.get("notes", "")
+
+        with transaction.atomic():
+            # Ensure narrative exists
+            if not instance.findings_text:
+                narrative_data = generate_report_narrative(str(instance.id))
+                instance.findings_text = narrative_data["findings_text"]
+                instance.impression_text = narrative_data["impression_text"]
+                instance.limitations_text = narrative_data["limitations_text"]
+                instance.narrative_version = narrative_data["version"]
+                instance.narrative_updated_at = timezone.now()
+            
+            instance.status = "verified"
+            instance.save()
+            
+            # Log action
+            ReportActionLog.objects.create(
+                report=instance,
+                action="verify",
+                actor=request.user,
+                meta={"notes": notes}
+            )
+            
+        return Response({"status": "verified"})
+
+    @action(detail=True, methods=["post"])
+    def publish(self, request, pk=None):
+        item = self._get_item(pk)
+        instance = self._get_instance(item)
+        
+        if not instance:
+             raise exceptions.NotFound("Report not found.")
+
+        # Permission check: Verifier only
+        if not (request.user.is_superuser or request.user.groups.filter(name="reporting_verifier").exists()):
+            raise exceptions.PermissionDenied("Only verifiers can publish reports.")
+
+        if instance.status != "verified":
+             return Response({"error": "Only verified reports can be published."}, status=409)
+
+        notes = request.data.get("notes", "")
+
+        with transaction.atomic():
+            # Ensure narrative exists (should be there from verify, but double check)
+            if not instance.findings_text:
+                narrative_data = generate_report_narrative(str(instance.id))
+                instance.findings_text = narrative_data["findings_text"]
+                instance.impression_text = narrative_data["impression_text"]
+                instance.limitations_text = narrative_data["limitations_text"]
+                instance.narrative_version = narrative_data["version"]
+                instance.narrative_updated_at = timezone.now()
+                instance.save() # Save narrative parts first so PDF gen picks them up? 
+                # generate_report_pdf reads from DB usually, so we need to save instance first or pass data. 
+                # looking at pdf_engine/report_pdf, it takes report_id. So we MUST save instance first.
+            
+            # Calculate next version
+            last_snapshot = instance.publish_snapshots.order_by("-version").first()
+            version = (last_snapshot.version + 1) if last_snapshot else 1
+
+            # Generate JSON map
+            # We want FULL map including defaults? Prompt says: "values_json = FULL map of all parameters in profile (including defaults) keyed by parameter_id"
+            # We'll rely on what's in DB + what's not in DB but in profile?
+            # Ideally we iterate profile parameters
+            values_map = {}
+            # Get all existing values
+            existing_values = {str(v.parameter_id): v.value for v in instance.values.all()}
+            
+            # Get all parameters from profile
+            for param in instance.profile.parameters.all():
+                p_id = str(param.id)
+                val = existing_values.get(p_id)
+                if val is None:
+                    val = param.normal_value # Use default/normal if missing? Prompt says "including defaults". 
+                    # Note: ReportParameter has 'normal_value'.
+                values_map[p_id] = val
+            
+            # Canonical JSON for hash
+            canonical_json = json.dumps(values_map, sort_keys=True)
+            narrative_concat = (instance.findings_text or "") + (instance.impression_text or "") + (instance.limitations_text or "")
+            hash_input = canonical_json + narrative_concat
+            sha256_hash = hashlib.sha256(hash_input.encode('utf-8')).hexdigest()
+
+            # Generate PDF
+            pdf_bytes = generate_report_pdf(str(instance.id))
+            file_name = f"Report_{item.service_visit.visit_id}_v{version}.pdf"
+            
+            snapshot = ReportPublishSnapshot(
+                report=instance,
+                version=version,
+                published_by=request.user,
+                findings_text=instance.findings_text or "",
+                impression_text=instance.impression_text or "",
+                limitations_text=instance.limitations_text or "",
+                values_json=values_map, # This stores dictionary, Django JSONField handles it
+                sha256=sha256_hash,
+                notes=notes
+            )
+            snapshot.pdf_file.save(file_name, ContentFile(pdf_bytes), save=False)
+            snapshot.save()
+
+            # Update workflow status
+            item.status = "PUBLISHED"
+            item.published_at = timezone.now()
+            item.save()
+
+            ReportActionLog.objects.create(
+                report=instance,
+                action="publish",
+                actor=request.user,
+                meta={"version": version, "sha256": sha256_hash, "notes": notes}
+            )
+
+        return Response({"status": "published", "version": version})
+
+    @action(detail=True, methods=["get"], url_path="publish-history")
+    def publish_history(self, request, pk=None):
+        item = self._get_item(pk)
+        instance = self._get_instance(item)
+        if not instance:
+             return Response([])
+        
+        snapshots = instance.publish_snapshots.all().order_by("-version")
+        history = []
+        for snap in snapshots:
+            history.append({
+                "version": snap.version,
+                "published_at": snap.published_at,
+                "published_by": snap.published_by.username if snap.published_by else "Unknown",
+                "sha256": snap.sha256,
+                "notes": snap.notes,
+                "pdf_url": request.build_absolute_uri(snap.pdf_file.url) if snap.pdf_file else None
+            })
+        return Response(history)
+
+    @action(detail=True, methods=["get"], url_path="published-pdf")
+    def published_pdf(self, request, pk=None):
+        item = self._get_item(pk)
+        instance = self._get_instance(item)
+        if not instance:
+             raise exceptions.NotFound("Report not found.")
+        
+        version = request.query_params.get("version")
+        if not version:
+             return Response({"error": "Version required"}, status=400)
+             
+        try:
+            snapshot = instance.publish_snapshots.get(version=version)
+        except ReportPublishSnapshot.DoesNotExist:
+             raise exceptions.NotFound("Snapshot not found.")
+             
+        if not snapshot.pdf_file:
+             raise exceptions.NotFound("PDF file missing for this snapshot.")
+
+        # Return file response
+        response = HttpResponse(snapshot.pdf_file.read(), content_type='application/pdf')
+        filename = f"Report_{item.service_visit.visit_id}_v{version}.pdf"
         response['Content-Disposition'] = f'inline; filename="{filename}"'
         return response

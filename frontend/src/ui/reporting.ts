@@ -32,6 +32,7 @@ export interface ReportValueEntry {
 
 export interface ReportValuesResponse {
     status: "draft" | "submitted" | "verified";
+    is_published?: boolean;
     values: ReportValueEntry[];
 }
 
@@ -71,6 +72,36 @@ export async function getNarrative(serviceVisitItemId: string, token: string | n
 
 export async function fetchReportPdf(serviceVisitItemId: string, token: string | null): Promise<Blob> {
     const response = await fetch(`${API_BASE}/reporting/workitems/${serviceVisitItemId}/report-pdf/`, {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        throw new Error("Failed to fetch PDF");
+    }
+    return response.blob();
+}
+
+// Stage 4 Additions
+export async function verifyReport(serviceVisitItemId: string, notes: string, token: string | null) {
+    return apiPost(`/reporting/workitems/${serviceVisitItemId}/verify/`, token, { notes });
+}
+
+export async function returnReport(serviceVisitItemId: string, reason: string, token: string | null) {
+    return apiPost(`/reporting/workitems/${serviceVisitItemId}/return-for-correction/`, token, { reason });
+}
+
+export async function publishReport(serviceVisitItemId: string, notes: string, token: string | null) {
+    return apiPost(`/reporting/workitems/${serviceVisitItemId}/publish/`, token, { notes });
+}
+
+export async function getPublishHistory(serviceVisitItemId: string, token: string | null) {
+    return apiGet(`/reporting/workitems/${serviceVisitItemId}/publish-history/`, token);
+}
+
+export async function fetchPublishedPdf(serviceVisitItemId: string, version: number, token: string | null): Promise<Blob> {
+    const response = await fetch(`${API_BASE}/reporting/workitems/${serviceVisitItemId}/published-pdf/?version=${version}`, {
         method: "GET",
         headers: {
             "Authorization": `Bearer ${token}`
