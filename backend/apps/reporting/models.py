@@ -124,6 +124,10 @@ class ReportInstance(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    @property
+    def is_published(self):
+        return self.publish_snapshots.exists()
+
     def __str__(self):
         return f"Report {self.id} for {self.service_visit_item.service_visit.visit_id}"
 
@@ -142,3 +146,55 @@ class ReportValue(models.Model):
 
     def __str__(self):
         return f"{self.parameter.name}: {self.value}"
+
+class ReportPublishSnapshot(models.Model):
+    """
+    Immutable snapshot of a published report version.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(ReportInstance, on_delete=models.CASCADE, related_name="publish_snapshots")
+    version = models.PositiveIntegerField()
+    published_at = models.DateTimeField(auto_now_add=True)
+    published_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    
+    # Snapshot content
+    findings_text = models.TextField()
+    impression_text = models.TextField(blank=True, default="")
+    limitations_text = models.TextField(blank=True, default="")
+    values_json = models.JSONField() # Store full parameter_id -> value map
+    sha256 = models.CharField(max_length=64, help_text="SHA256 hash of canonical content")
+    notes = models.TextField(blank=True, default="")
+    
+    # PDF Artifact
+    pdf_file = models.FileField(upload_to="report_snapshots/%Y/%m/%d/")
+
+    class Meta:
+        ordering = ["-version"]
+        unique_together = ("report", "version")
+
+    def __str__(self):
+        return f"Snapshot v{self.version} for {self.report}"
+
+class ReportActionLog(models.Model):
+    """
+    Audit log for critical reporting actions.
+    """
+    ACTION_CHOICES = (
+        ("submit", "Submit"),
+        ("verify", "Verify"),
+        ("return", "Return for Correction"),
+        ("publish", "Publish"),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(ReportInstance, on_delete=models.CASCADE, related_name="action_logs")
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    meta = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.action} on {self.report} by {self.actor}"
