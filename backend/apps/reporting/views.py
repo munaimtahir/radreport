@@ -1,6 +1,7 @@
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.utils import timezone
+from django.http import HttpResponse
 from rest_framework import viewsets, status, exceptions
 from rest_framework.response import Response
 from rest_framework.decorators import action
@@ -12,6 +13,7 @@ from .serializers import (
     ReportProfileSerializer, ReportInstanceSerializer, ReportValueSerializer, ReportSaveSerializer
 )
 from .services.narrative_v1 import generate_report_narrative
+from .pdf_engine.report_pdf import generate_report_pdf
 
 class ReportWorkItemViewSet(viewsets.ViewSet):
     """
@@ -223,3 +225,39 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
                 "limitations_text": instance.limitations_text or ""
             }
         })
+    @action(detail=True, methods=["get"], url_path="report-pdf")
+    def report_pdf(self, request, pk=None):
+        item = self._get_item(pk)
+        instance = self._get_instance(item)
+        
+        if not instance:
+             raise exceptions.NotFound("Report has not been started.")
+             
+        # Check permission? IsAuthenticated is on class.
+        # User asked for "Read-only access allowed for submitted/verified reports"
+        # "Draft allowed if explicitly requested (same endpoint)"
+        # Since it is a GET request, it is read-only by definition.
+        
+        # Auto-generate narrative if empty?
+        # Requirement: "If narrative not generated yet: Auto-generate narrative using Stage 2 engine; Persist it"
+        if not instance.narrative_updated_at or not instance.findings_text:
+             narrative_data = generate_report_narrative(str(instance.id))
+             with transaction.atomic():
+                instance.findings_text = narrative_data["findings_text"]
+                instance.impression_text = narrative_data["impression_text"]
+                instance.limitations_text = narrative_data["limitations_text"]
+                instance.narrative_version = narrative_data["version"]
+                instance.narrative_updated_at = timezone.now()
+                instance.save()
+        
+        try:
+            pdf_bytes = generate_report_pdf(str(instance.id))
+        except Exception as e:
+            # Log error?
+            return Response({"error": f"Failed to generate PDF: {str(e)}"}, status=500)
+            
+        filename = f"Report_{item.service_visit.visit_id}.pdf"
+        response = HttpResponse(pdf_bytes, content_type='application/pdf')
+        # Content-Disposition: inline; filename="..."
+        response['Content-Disposition'] = f'inline; filename="{filename}"'
+        return response

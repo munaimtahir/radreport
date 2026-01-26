@@ -12,7 +12,8 @@ import {
     ReportSchema,
     ReportParameter,
     ReportValueEntry,
-    NarrativeResponse
+    NarrativeResponse,
+    fetchReportPdf
 } from "../ui/reporting";
 import Button from "../ui/components/Button";
 import ErrorAlert from "../ui/components/ErrorAlert";
@@ -217,6 +218,24 @@ export default function ReportingPage() {
         }
     };
 
+    const handlePreviewPdf = async () => {
+        if (!id || !token) return;
+        try {
+            if (status === 'draft') {
+                setSaving(true);
+                await saveReport(id, preparePayload(), token);
+                setSaving(false);
+            }
+
+            const blob = await fetchReportPdf(id, token);
+            const url = window.URL.createObjectURL(blob);
+            window.open(url, '_blank');
+        } catch (e: any) {
+            setError("Failed to load PDF: " + e.message);
+            setSaving(false);
+        }
+    };
+
     const groupedParameters = useMemo(() => {
         if (!schema) return [];
         const sections: Record<string, ReportParameter[]> = {};
@@ -287,6 +306,13 @@ export default function ReportingPage() {
                         onClick={() => navigate("/reporting/worklist")}
                     >
                         Back to Worklist
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={handlePreviewPdf}
+                        disabled={loading || saving}
+                    >
+                        Preview PDF
                     </Button>
                     {!isReadOnly && (
                         <>

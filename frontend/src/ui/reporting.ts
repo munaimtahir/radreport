@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from "./api";
+import { apiGet, apiPost, API_BASE } from "./api";
 
 export interface ReportParameterOption {
     id: string;
@@ -67,4 +67,17 @@ export async function generateNarrative(serviceVisitItemId: string, token: strin
 
 export async function getNarrative(serviceVisitItemId: string, token: string | null): Promise<NarrativeResponse> {
     return apiGet(`/reporting/workitems/${serviceVisitItemId}/narrative/`, token);
+}
+
+export async function fetchReportPdf(serviceVisitItemId: string, token: string | null): Promise<Blob> {
+    const response = await fetch(`${API_BASE}/reporting/workitems/${serviceVisitItemId}/report-pdf/`, {
+        method: "GET",
+        headers: {
+            "Authorization": `Bearer ${token}`
+        }
+    });
+    if (!response.ok) {
+        throw new Error("Failed to fetch PDF");
+    }
+    return response.blob();
 }
