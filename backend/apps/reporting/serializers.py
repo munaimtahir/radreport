@@ -37,10 +37,20 @@ class ReportValueSerializer(serializers.ModelSerializer):
 
 class ReportInstanceSerializer(serializers.ModelSerializer):
     values = ReportValueSerializer(many=True, read_only=True)
+    last_saved_at = serializers.DateTimeField(source="updated_at", read_only=True)
+    last_published_at = serializers.SerializerMethodField()
 
     class Meta:
         model = ReportInstance
-        fields = ["id", "service_visit_item", "profile", "status", "values", "created_at", "updated_at"]
+        fields = [
+            "id", "service_visit_item", "profile", "status", "values", 
+            "created_at", "updated_at", "narrative_updated_at",
+            "last_saved_at", "last_published_at"
+        ]
+
+    def get_last_published_at(self, obj):
+        last_snap = obj.publish_snapshots.order_by("-published_at").first()
+        return last_snap.published_at if last_snap else None
 
 class ReportSaveItemSerializer(serializers.Serializer):
     parameter_id = serializers.UUIDField()

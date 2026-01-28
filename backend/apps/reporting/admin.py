@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
     ReportProfile, ReportParameter, ReportParameterOption, 
-    ServiceReportProfile, ReportInstance, ReportValue
+    ServiceReportProfile, ReportInstance, ReportValue,
+    ReportActionLog, ReportPublishSnapshot
 )
 
 class ReportParameterOptionInline(admin.TabularInline):
@@ -44,3 +45,16 @@ class ReportInstanceAdmin(admin.ModelAdmin):
     list_display = ("id", "service_visit_item", "profile", "status", "created_at")
     list_filter = ("status", "profile")
     inlines = [ReportValueInline]
+
+@admin.register(ReportActionLog)
+class ReportActionLogAdmin(admin.ModelAdmin):
+    list_display = ("report", "action", "actor", "created_at")
+    list_filter = ("action", "actor", "created_at")
+    search_fields = ("report__id", "actor__username")
+
+@admin.register(ReportPublishSnapshot)
+class ReportPublishSnapshotAdmin(admin.ModelAdmin):
+    list_display = ("report", "version", "published_at", "published_by", "sha256")
+    list_filter = ("published_at", "published_by", "version")
+    search_fields = ("report__id", "sha256", "published_by__username")
+    readonly_fields = ("sha256", "values_json", "findings_text", "impression_text", "limitations_text")

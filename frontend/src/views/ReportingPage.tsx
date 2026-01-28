@@ -18,7 +18,8 @@ import {
     returnReport,
     publishReport,
     getPublishHistory,
-    fetchPublishedPdf
+    fetchPublishedPdf,
+    checkIntegrity
 } from "../ui/reporting";
 import Button from "../ui/components/Button";
 import ErrorAlert from "../ui/components/ErrorAlert";
@@ -38,6 +39,11 @@ export default function ReportingPage() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
     const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+
+    const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+    const [narrativeUpdatedAt, setNarrativeUpdatedAt] = useState<string | null>(null);
+    const [lastPublishedAt, setLastPublishedAt] = useState<string | null>(null);
+    const [integrityStatus, setIntegrityStatus] = useState<Record<number, boolean>>({});
 
     const [showSubmitModal, setShowSubmitModal] = useState(false);
 
@@ -75,9 +81,19 @@ export default function ReportingPage() {
             const published = !!valuesResponse.is_published;
             setIsPublished(published);
             setNarrative(narrativeResponse.narrative);
+            setLastSavedAt(valuesResponse.last_saved_at || null);
+            setNarrativeUpdatedAt(valuesResponse.narrative_updated_at || null);
+            setLastPublishedAt(valuesResponse.last_published_at || null);
 
             if (published) {
-                getPublishHistory(id, token).then(setPublishHistory).catch(console.error);
+                const history = await getPublishHistory(id, token);
+                setPublishHistory(history);
+                // Trigger background integrity checks
+                history.forEach((snap: any) => {
+                    checkIntegrity(id, snap.version, token)
+                        .then(res => setIntegrityStatus(prev => ({ ...prev, [snap.version]: res.match })))
+                        .catch(console.error);
+                });
             }
 
             // Defaulting Logic
@@ -168,6 +184,7 @@ export default function ReportingPage() {
             setSuccess(null);
             await saveReport(id, preparePayload(), token);
             setSuccess("Draft saved successfully");
+            setLastSavedAt(new Date().toISOString());
         } catch (e: any) {
             setError(e.message || "Failed to save draft");
         } finally {
@@ -283,7 +300,11 @@ export default function ReportingPage() {
             // Reload history
             getPublishHistory(id, token).then(setPublishHistory).catch(console.error);
         } catch (e: any) {
-            setError(e.message || "Publish failed");
+            if (e.status === 409) {
+                setError("Another publish occurred. Please refresh.");
+            } else {
+                setError(e.message || "Publish failed");
+            }
         } finally {
             setSaving(false);
         }
@@ -333,9 +354,16 @@ export default function ReportingPage() {
                             backgroundColor: isPublished ? theme.colors.success : statusBg,
                             color: isPublished ? "white" : statusColor
                         }}>
-                            {isPublished ? "PUBLISHED" : status}
+                            {isPublished ? `Published (Draft: ${status})` : status}
                         </span>
                     </div>
+                    {(lastSavedAt || narrativeUpdatedAt || lastPublishedAt) && (
+                        <div style={{ display: "flex", gap: 16, marginTop: 8, fontSize: 11, color: theme.colors.textTertiary }}>
+                            {lastSavedAt && <span>Saved: {new Date(lastSavedAt).toLocaleString()}</span>}
+                            {narrativeUpdatedAt && <span>Narrative: {new Date(narrativeUpdatedAt).toLocaleString()}</span>}
+                            {lastPublishedAt && <span style={{ color: theme.colors.success }}>Published: {new Date(lastPublishedAt).toLocaleString()}</span>}
+                        </div>
+                    )}
                 </div>
                 <div style={{ display: "flex", gap: 12 }}>
                     <Button variant="secondary" onClick={() => navigate("/reporting/worklist")}>Worklist</Button>
@@ -427,6 +455,7 @@ export default function ReportingPage() {
                                     <th style={{ textAlign: "left", padding: 12, fontSize: 12 }}>Published At</th>
                                     <th style={{ textAlign: "left", padding: 12, fontSize: 12 }}>By</th>
                                     <th style={{ textAlign: "left", padding: 12, fontSize: 12 }}>Notes</th>
+                                    <th style={{ textAlign: "left", padding: 12, fontSize: 12 }}>Integrity</th>
                                     <th style={{ textAlign: "right", padding: 12, fontSize: 12 }}>Action</th>
                                 </tr>
                             </thead>
@@ -437,6 +466,17 @@ export default function ReportingPage() {
                                         <td style={{ padding: 12 }}>{new Date(snap.published_at).toLocaleString()}</td>
                                         <td style={{ padding: 12 }}>{snap.published_by}</td>
                                         <td style={{ padding: 12 }}>{snap.notes}</td>
+                                        <td style={{ padding: 12 }}>
+                                            {integrityStatus[snap.version] === true && (
+                                                <span style={{ color: theme.colors.success, fontSize: 11 }}>● OK</span>
+                                            )}
+                                            {integrityStatus[snap.version] === false && (
+                                                <span style={{ color: theme.colors.danger, fontSize: 11, fontWeight: 700, backgroundColor: "#fee2e2", padding: "2px 6px", borderRadius: 4 }}>! MISMATCH</span>
+                                            )}
+                                            {integrityStatus[snap.version] === undefined && (
+                                                <span style={{ color: theme.colors.textTertiary, fontSize: 11 }}>Checking...</span>
+                                            )}
+                                        </td>
                                         <td style={{ padding: 12, textAlign: "right" }}>
                                             <Button variant="secondary" style={{ padding: "4px 8px", fontSize: 12 }} onClick={() => handleViewPublishedPdf(snap.version)}>
                                                 View PDF

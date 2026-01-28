@@ -34,6 +34,9 @@ export interface ReportValuesResponse {
     status: "draft" | "submitted" | "verified";
     is_published?: boolean;
     values: ReportValueEntry[];
+    last_saved_at?: string;
+    narrative_updated_at?: string;
+    last_published_at?: string;
 }
 
 export async function getReportSchema(serviceVisitItemId: string, token: string | null): Promise<ReportSchema> {
@@ -93,7 +96,11 @@ export async function returnReport(serviceVisitItemId: string, reason: string, t
 }
 
 export async function publishReport(serviceVisitItemId: string, notes: string, token: string | null) {
-    return apiPost(`/reporting/workitems/${serviceVisitItemId}/publish/`, token, { notes });
+    return apiPost(`/reporting/workitems/${serviceVisitItemId}/publish/`, token, { notes, confirm: "PUBLISH" });
+}
+
+export async function checkIntegrity(serviceVisitItemId: string, version: number, token: string | null) {
+    return apiGet(`/reporting/workitems/${serviceVisitItemId}/published-integrity/?version=${version}`, token);
 }
 
 export async function getPublishHistory(serviceVisitItemId: string, token: string | null) {
