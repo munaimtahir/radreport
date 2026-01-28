@@ -2,7 +2,8 @@ from django.contrib import admin
 from .models import (
     ReportProfile, ReportParameter, ReportParameterOption, 
     ServiceReportProfile, ReportInstance, ReportValue,
-    ReportActionLog, ReportPublishSnapshot
+    ReportActionLog, ReportPublishSnapshot,
+    ReportingOrganizationConfig, ReportParameterLibraryItem, ReportProfileParameterLink
 )
 
 class ReportParameterOptionInline(admin.TabularInline):
@@ -23,15 +24,21 @@ class ReportParameterInline(admin.TabularInline):
     readonly_fields = ("section", "name", "parameter_type", "order")
     show_change_link = True
 
+class ReportProfileParameterLinkInline(admin.TabularInline):
+    model = ReportProfileParameterLink
+    extra = 1
+    autocomplete_fields = ["library_item"]
+
 @admin.register(ReportProfile)
 class ReportProfileAdmin(admin.ModelAdmin):
     list_display = ("code", "name", "modality", "is_active")
     search_fields = ("code", "name")
-    inlines = [ReportParameterInline]
+    inlines = [ReportParameterInline, ReportProfileParameterLinkInline]
 
 @admin.register(ServiceReportProfile)
 class ServiceReportProfileAdmin(admin.ModelAdmin):
-    list_display = ("service", "profile", "enforce_single_profile")
+    list_display = ("service", "profile", "is_default", "enforce_single_profile")
+    list_editable = ("is_default",)
     search_fields = ("service__name", "profile__code")
 
 class ReportValueInline(admin.TabularInline):
@@ -58,3 +65,21 @@ class ReportPublishSnapshotAdmin(admin.ModelAdmin):
     list_filter = ("published_at", "published_by", "version")
     search_fields = ("report__id", "sha256", "published_by__username")
     readonly_fields = ("sha256", "values_json", "findings_text", "impression_text", "limitations_text")
+
+@admin.register(ReportingOrganizationConfig)
+class ReportingOrganizationConfigAdmin(admin.ModelAdmin):
+    list_display = ("org_name", "updated_at")
+    
+    def has_add_permission(self, request):
+        # Enforce singleton in admin UI
+        if self.model.objects.exists():
+            return False
+        return True
+
+@admin.register(ReportParameterLibraryItem)
+class ReportParameterLibraryItemAdmin(admin.ModelAdmin):
+    list_display = ("slug", "name", "modality", "parameter_type")
+    search_fields = ("slug", "name")
+    list_filter = ("modality", "parameter_type")
+
+

@@ -93,9 +93,19 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
                     status="draft"
                 )
             
-            # Simple bulk update/create logic
-            current_values = {str(v.parameter_id): v for v in instance.values.all()}
+            # Create a map of existing values: ID -> ReportValue obj
+            # ID is either parameter.id or profile_link.id
+            current_values = {}
+            for v in instance.values.all():
+                if v.parameter_id:
+                    current_values[str(v.parameter_id)] = v
+                if v.profile_link_id:
+                    current_values[str(v.profile_link_id)] = v
             
+            # Pre-fetch valid IDs for validation
+            valid_param_ids = set(str(p.id) for p in profile.parameters.all())
+            valid_link_ids = set(str(l.id) for l in profile.library_links.all())
+
             for item_data in values_list:
                 param_id = str(item_data["parameter_id"])
                 val = item_data["value"]
@@ -107,20 +117,32 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
                 else:
                     val_str = str(val) if val is not None else None
 
-                # Validate param belongs to profile
-                if not profile.parameters.filter(id=param_id).exists():
+                # Determine type
+                if param_id in valid_param_ids:
+                    is_legacy = True
+                elif param_id in valid_link_ids:
+                    is_legacy = False
+                else:
                     continue # Ignore invalid params
                 
+    
                 if param_id in current_values:
                     rv = current_values[param_id]
                     rv.value = val_str
                     rv.save()
                 else:
-                    ReportValue.objects.create(
-                        report=instance,
-                        parameter_id=param_id,
-                        value=val_str
-                    )
+                    if is_legacy:
+                        ReportValue.objects.create(
+                            report=instance,
+                            parameter_id=param_id,
+                            value=val_str
+                        )
+                    else:
+                        ReportValue.objects.create(
+                            report=instance,
+                            profile_link_id=param_id,
+                            value=val_str
+                        )
 
         return Response({"status": "saved", "report_id": instance.id})
 
@@ -144,14 +166,31 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         # Validation
         profile = instance.profile
         required_params = profile.parameters.filter(is_required=True)
-        existing_values = {str(v.parameter_id): v.value for v in instance.values.all()}
+        required_links = profile.library_links.filter(is_required=True)
+        
+        existing_values = {}
+        for v in instance.values.all():
+            val = v.value
+            if v.parameter_id:
+                existing_values[str(v.parameter_id)] = val
+            if v.profile_link_id:
+                existing_values[str(v.profile_link_id)] = val
         
         missing = []
+        # Check legacy
         for rp in required_params:
             param_id_str = str(rp.id)
             if param_id_str not in existing_values or not existing_values[param_id_str]:
                 missing.append({
                     "parameter_id": param_id_str,
+                    "message": "Required"
+                })
+        # Check links
+        for rl in required_links:
+            link_id_str = str(rl.id)
+            if link_id_str not in existing_values or not existing_values[link_id_str]:
+                missing.append({
+                    "parameter_id": link_id_str,
                     "message": "Required"
                 })
         

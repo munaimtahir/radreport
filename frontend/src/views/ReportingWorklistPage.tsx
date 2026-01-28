@@ -19,6 +19,7 @@ interface ServiceVisitItem {
     status_display: string;
     created_at: string;
     updated_at: string;
+    profile_code: string | null;
 }
 
 export default function ReportingWorklistPage() {
@@ -49,6 +50,8 @@ export default function ReportingWorklistPage() {
     };
 
     const getActionLabel = (item: ServiceVisitItem) => {
+        if (!item.profile_code) return "No Profile";
+
         if (["REGISTERED", "IN_PROGRESS", "RETURNED_FOR_CORRECTION"].includes(item.status)) {
             return "Enter Report";
         }
@@ -191,6 +194,15 @@ export default function ReportingWorklistPage() {
                                             <td style={tdStyle}>
                                                 <div style={{ fontSize: 14 }}>{item.service_name}</div>
                                                 <div style={{ fontSize: 11, color: theme.colors.textTertiary }}>Visit: {item.visit_id}</div>
+                                                {item.profile_code ? (
+                                                    <span style={{ fontSize: 10, backgroundColor: "#e2e3e5", color: "#383d41", padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>
+                                                        {item.profile_code}
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ fontSize: 10, backgroundColor: "#f8d7da", color: "#721c24", padding: "1px 4px", borderRadius: 3, marginLeft: 4 }}>
+                                                        NO PROFILE
+                                                    </span>
+                                                )}
                                             </td>
                                             <td style={tdStyle}>
                                                 <span style={{
@@ -223,6 +235,8 @@ export default function ReportingWorklistPage() {
                                                     variant={["REGISTERED", "IN_PROGRESS", "RETURNED_FOR_CORRECTION"].includes(item.status) ? "primary" : "secondary"}
                                                     style={{ padding: "6px 12px", fontSize: 13 }}
                                                     onClick={() => navigate(`/reporting/worklist/${item.id}/report`)}
+                                                    disabled={!item.profile_code}
+                                                    title={!item.profile_code ? "No report profile mapped to this service" : ""}
                                                 >
                                                     {getActionLabel(item)}
                                                 </Button>

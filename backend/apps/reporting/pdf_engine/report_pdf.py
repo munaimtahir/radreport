@@ -9,7 +9,7 @@ from reportlab.lib.utils import ImageReader
 from django.conf import settings
 from django.utils import timezone
 
-from apps.reporting.models import ReportInstance
+from apps.reporting.models import ReportInstance, ReportingOrganizationConfig
 from .styles import ReportStyles
 
 logger = logging.getLogger(__name__)
@@ -47,28 +47,58 @@ class ReportPDFGenerator:
         patient = visit.patient
         service = item.service
 
-        # Consultant Logic: Preferred is item consultant (performing), fallback to booked (referring?)
-        # Actually usually report shows "Referred By" and signed by "Radiologist"
-        # The prompt says: "consultant": "..." in patient section. This is likely "Referred By".
-        # And "signatories" in footer.
-        
+        # Consultant Logic
         referring_consultant = visit.booked_consultant.name if visit.booked_consultant else (patient.referrer or "Self")
         
-        # Signatory: The user who created the report or the item consultant
+        # Dynamic Signatory (Radiologist)
         radiologist_name = "Dr. Unknown"
         if item.consultant:
              radiologist_name = item.consultant.name
         elif report.created_by:
              radiologist_name = f"Dr. {report.created_by.get_full_name()}"
+        
+        dynamic_signatories = [
+            {"name": radiologist_name, "designation": "Consultant Radiologist"}
+        ]
 
-        # Lab details - Hardcoded for now as per Receipt Engine or Config
-        # In receipt.pdf: "Adjacent Excel Labs..."
+        # Config / Branding Logic
         lab_details = {
              "lab_name": "Adjacent Excel Labs",
              "lab_address": "Near Arman Pan Shop Faisalabad Road Jaranwala",
              "lab_contact": "Tel: 041 4313 777 | WhatsApp: 03279640897",
-             "logo_path": str(settings.BASE_DIR / "static" / "branding" / "logo.png")
+             "logo_path": str(settings.BASE_DIR / "static" / "branding" / "logo.png"),
+             "disclaimer": "Electronically verified. Laboratory results should be interpreted by a physician in correlation with clinical and radiologic findings."
         }
+        
+        static_signatories = []
+
+        # Load Config
+        config = ReportingOrganizationConfig.objects.first()
+        if config:
+            lab_details["lab_name"] = config.org_name
+            if config.address:
+                lab_details["lab_address"] = config.address
+            if config.phone:
+                lab_details["lab_contact"] = config.phone
+            
+            # Handle Logo
+            if config.logo:
+                try:
+                    # Use .path for filesystem access (standard Django FileField)
+                    lab_details["logo_path"] = config.logo.path
+                except Exception:
+                    # Fallback if storage backend doesn't support .path or other issue
+                    pass
+            
+            if config.disclaimer_text:
+                lab_details["disclaimer"] = config.disclaimer_text
+            
+            if config.signatories_json and isinstance(config.signatories_json, list):
+                static_signatories = config.signatories_json
+
+        # Final Signatories: Static (e.g. HOD) + Dynamic (Radiologist) ? 
+        # Usually Dynamic is most important. We'll append Static ones if any.
+        final_signatories = dynamic_signatories + static_signatories
 
         self.data = {
             "header": lab_details,
@@ -91,10 +121,8 @@ class ReportPDFGenerator:
                 "limitations": report.limitations_text
             },
             "footer": {
-                "disclaimer": "Electronically verified. Laboratory results should be interpreted by a physician in correlation with clinical and radiologic findings.",
-                "signatories": [
-                    {"name": radiologist_name, "designation": "Consultant Radiologist"}
-                ]
+                "disclaimer": lab_details["disclaimer"],
+                "signatories": final_signatories
             }
         }
         

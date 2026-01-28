@@ -22,18 +22,83 @@ class ReportParameterSerializer(serializers.ModelSerializer):
         ]
 
 class ReportProfileSerializer(serializers.ModelSerializer):
-    parameters = ReportParameterSerializer(many=True, read_only=True)
+    parameters = serializers.SerializerMethodField()
 
     class Meta:
         model = ReportProfile
         fields = ["id", "code", "name", "modality", "parameters"]
 
+    def get_parameters(self, obj):
+        # 1. Get legacy parameters
+        legacy_params = obj.parameters.prefetch_related("options").all()
+        
+        # 2. Get library links (ReportProfileParameterLink)
+        links = obj.library_links.select_related('library_item').all()
+        
+        combined = []
+        
+        # Helper to format legacy
+        for p in legacy_params:
+            combined.append({
+                "id": p.id,
+                "parameter_id": p.id,
+                "section": p.section,
+                "name": p.name,
+                "parameter_type": p.parameter_type,
+                "unit": p.unit,
+                "normal_value": p.normal_value,
+                "order": p.order,
+                "is_required": p.is_required,
+                "options": ReportParameterOptionSerializer(p.options.all(), many=True).data
+            })
+            
+        # Helper to format links
+        for link in links:
+            item = link.library_item
+            overrides = link.overrides_json or {}
+            
+            # Format options from default_options_json
+            options = []
+            if item.parameter_type in ["dropdown", "checklist"]:
+                raw_options = item.default_options_json or []
+                for i, opt in enumerate(raw_options):
+                    options.append({
+                        "id": f"opt_{link.id}_{i}",
+                        "label": opt.get("label", ""),
+                        "value": opt.get("value", ""),
+                        "order": i
+                    })
+
+            combined.append({
+                "id": link.id, # Use link ID as the parameter identifier
+                "parameter_id": link.id,
+                "section": link.section,
+                "name": overrides.get("name", item.name),
+                "parameter_type": item.parameter_type,
+                "unit": overrides.get("unit", item.unit),
+                "normal_value": overrides.get("normal_value", item.default_normal_value),
+                "order": link.order,
+                "is_required": link.is_required,
+                "options": options
+            })
+            
+        # Sort by order
+        combined.sort(key=lambda x: x["order"])
+        return combined
+
 class ReportValueSerializer(serializers.ModelSerializer):
-    parameter_id = serializers.UUIDField(source="parameter.id", read_only=True)
+    parameter_id = serializers.SerializerMethodField()
     
     class Meta:
         model = ReportValue
         fields = ["parameter_id", "value"]
+
+    def get_parameter_id(self, obj):
+        if obj.parameter_id:
+            return obj.parameter_id
+        if obj.profile_link_id:
+            return obj.profile_link_id
+        return None
 
 class ReportInstanceSerializer(serializers.ModelSerializer):
     values = ReportValueSerializer(many=True, read_only=True)

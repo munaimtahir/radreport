@@ -28,6 +28,7 @@ class ServiceVisitItemSerializer(serializers.ModelSerializer):
     
     # Report info
     report_status = serializers.SerializerMethodField()
+    profile_code = serializers.SerializerMethodField()
     
     # Audit logs
     status_audit_logs = serializers.SerializerMethodField()
@@ -41,6 +42,16 @@ class ServiceVisitItemSerializer(serializers.ModelSerializer):
         try:
             return obj.report_instance.status
         except:
+            return None
+
+    def get_profile_code(self, obj):
+        from django.apps import apps
+        try:
+            ServiceReportProfile = apps.get_model('reporting', 'ServiceReportProfile')
+            # Check mapping for service
+            srp = ServiceReportProfile.objects.filter(service=obj.service).select_related('profile').first()
+            return srp.profile.code if srp else None
+        except LookupError:
             return None
 
     def get_status_audit_logs(self, obj):
