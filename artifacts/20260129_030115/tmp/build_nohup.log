@@ -1,0 +1,70 @@
+nohup: ignoring input
+#0 building with "default" instance using docker driver
+
+#1 [internal] load build definition from Dockerfile
+#1 transferring dockerfile: 1.98kB done
+#1 WARN: FromAsCasing: 'as' and 'FROM' keywords' casing do not match (line 2)
+#1 DONE 0.0s
+
+#2 [internal] load metadata for docker.io/library/python:3.11-slim
+#2 DONE 0.2s
+
+#3 [internal] load .dockerignore
+#3 transferring context: 136B done
+#3 DONE 0.0s
+
+#4 [builder 1/5] FROM docker.io/library/python:3.11-slim@sha256:5be45dbade29bebd6886af6b438fd7e0b4eb7b611f39ba62b430263f82de36d2
+#4 resolve docker.io/library/python:3.11-slim@sha256:5be45dbade29bebd6886af6b438fd7e0b4eb7b611f39ba62b430263f82de36d2 0.0s done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 48.47kB 0.3s done
+#5 DONE 0.3s
+
+#6 [stage-1 2/8] RUN apt-get update && apt-get install -y --no-install-recommends     postgresql-client     libpq5     libcairo2     libpango-1.0-0     libpangoft2-1.0-0     libgobject-2.0-0     libgdk-pixbuf-2.0-0     libgirepository-1.0-1     libffi8     shared-mime-info     fontconfig     fonts-dejavu-core     && rm -rf /var/lib/apt/lists/*
+#6 CACHED
+
+#7 [builder 3/5] RUN python -m venv /opt/venv
+#7 CACHED
+
+#8 [stage-1 3/8] COPY --from=builder /opt/venv /opt/venv
+#8 CACHED
+
+#9 [builder 4/5] COPY requirements.txt /tmp/
+#9 CACHED
+
+#10 [builder 2/5] RUN apt-get update && apt-get install -y --no-install-recommends     gcc     postgresql-client     libpq-dev     && rm -rf /var/lib/apt/lists/*
+#10 CACHED
+
+#11 [builder 5/5] RUN pip install --no-cache-dir -r /tmp/requirements.txt
+#11 CACHED
+
+#12 [stage-1 4/8] WORKDIR /app
+#12 CACHED
+
+#13 [stage-1 5/8] COPY . /app/
+#13 DONE 0.1s
+
+#14 [stage-1 6/8] RUN chmod +x /app/scripts/entrypoint.sh
+#14 DONE 0.3s
+
+#15 [stage-1 7/8] RUN mkdir -p /app/media /app/staticfiles /app/static
+#15 DONE 0.2s
+
+#16 [stage-1 8/8] RUN useradd -m -u 1000 appuser &&     chown -R appuser:appuser /app
+#16 DONE 0.6s
+
+#17 exporting to image
+#17 exporting layers
+#17 exporting layers 12.1s done
+#17 exporting manifest sha256:88a6450b9eedb2ece9e6a568b6f106edaa5b592d8e39dd789029277622ee98b9 0.0s done
+#17 exporting config sha256:95ffc9e701c3fe6a3ba1224cf3031f5983f8fcc33ce3547cb48115aaa6866592 done
+#17 exporting attestation manifest sha256:5310543ddb367465eef93f8b474aa8752da4d276ceaa0a302a8acfdedd2bc190 0.0s done
+#17 exporting manifest list sha256:a91b850a416ddef99aa2c2e68fe85910e947d8d6b9da7c94d77bb70ab6dbb331 done
+#17 naming to docker.io/library/smoke-test-backend:latest done
+#17 unpacking to docker.io/library/smoke-test-backend:latest
+#17 unpacking to docker.io/library/smoke-test-backend:latest 4.3s done
+#17 DONE 16.4s
+
+ [33m1 warning found (use docker --debug to expand):
+[0m - FromAsCasing: 'as' and 'FROM' keywords' casing do not match (line 2)

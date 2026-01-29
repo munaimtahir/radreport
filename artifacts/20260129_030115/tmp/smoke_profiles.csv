@@ -1,0 +1,4 @@
+profile_code,name,section,parameter_slug,parameter_label,input_type,options,default_value,validation_rules
+USG_SMOKE,USG Smoke Test,Findings,liver_size,Liver Size,text,,Normal,
+USG_SMOKE,USG Smoke Test,Findings,liver_echogenicity,Liver Echogenicity,dropdown,Normal|Coarse|Fatty,Normal,
+USG_SMOKE,USG Smoke Test,Conclusion,impression,Impression,long_text,,,,

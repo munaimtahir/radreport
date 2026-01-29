@@ -313,3 +313,192 @@ STARTING DOCKER BUILD
 #18 9.621 Preparing to unpack .../openssl-provider-legacy_3.5.4-1~deb13u2_amd64.deb ...
 #18 9.678 Unpacking openssl-provider-legacy (3.5.4-1~deb13u2) over (3.5.4-1~deb13u1) ...
 
+ Image smoke_radreport-backend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 610B done
+#1 DONE 0.0s
+unable to prepare context: path "/home/munaim/srv/apps/radreport/artifacts/20260129_030115/tmp/backend" not found
+
+ Image smoke_radreport-frontend Building 
+ Image smoke_radreport-backend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.12kB done
+#1 DONE 0.0s
+unable to prepare context: path "/home/munaim/srv/apps/radreport/artifacts/20260129_030115/tmp/backend" not found
+
+ Image smoke_radreport-backend Building 
+ Image smoke_radreport-frontend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.02kB done
+#1 DONE 0.0s
+
+#2 [frontend internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.12kB done
+#2 WARN: FromAsCasing: 'as' and 'FROM' keywords' casing do not match (line 2)
+#2 DONE 0.0s
+
+#3 [backend internal] load build definition from Dockerfile
+#3 transferring dockerfile: 1.98kB done
+#3 WARN: FromAsCasing: 'as' and 'FROM' keywords' casing do not match (line 2)
+#3 DONE 0.0s
+
+#4 [backend internal] load metadata for docker.io/library/python:3.11-slim
+#4 ...
+
+#5 [frontend internal] load metadata for docker.io/library/node:18-alpine
+#5 DONE 0.3s
+
+#6 [frontend internal] load metadata for docker.io/library/nginx:1.25-alpine
+#6 DONE 0.3s
+
+#4 [backend internal] load metadata for docker.io/library/python:3.11-slim
+#4 DONE 0.3s
+
+#7 [frontend internal] load .dockerignore
+#7 transferring context: 2B done
+#7 DONE 0.0s
+
+#8 [backend internal] load .dockerignore
+#8 transferring context: 2B done
+#8 DONE 0.0s
+
+#9 [frontend builder 1/6] FROM docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
+#9 resolve docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e 0.0s done
+#9 DONE 0.0s
+
+#10 [frontend stage-1 1/3] FROM docker.io/library/nginx:1.25-alpine@sha256:516475cc129da42866742567714ddc681e5eed7b9ee0b9e9c015e464b4221a00
+#10 resolve docker.io/library/nginx:1.25-alpine@sha256:516475cc129da42866742567714ddc681e5eed7b9ee0b9e9c015e464b4221a00 0.0s done
+#10 DONE 0.0s
+
+#11 [backend builder 1/5] FROM docker.io/library/python:3.11-slim@sha256:5be45dbade29bebd6886af6b438fd7e0b4eb7b611f39ba62b430263f82de36d2
+#11 resolve docker.io/library/python:3.11-slim@sha256:5be45dbade29bebd6886af6b438fd7e0b4eb7b611f39ba62b430263f82de36d2 0.0s done
+#11 DONE 0.0s
+
+#12 [frontend internal] load build context
+#12 transferring context: 7.38kB done
+#12 DONE 0.0s
+
+#13 [frontend builder 4/6] RUN npm ci
+#13 CACHED
+
+#14 [frontend builder 3/6] COPY package*.json ./
+#14 CACHED
+
+#15 [frontend builder 5/6] COPY . .
+#15 CACHED
+
+#16 [frontend builder 2/6] WORKDIR /app
+#16 CACHED
+
+#17 [frontend builder 6/6] RUN npm run build
+#17 CACHED
+
+#18 [frontend stage-1 2/3] COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
+#18 CACHED
+
+#19 [frontend stage-1 3/3] COPY --from=builder /app/dist /usr/share/nginx/html
+#19 CACHED
+
+#20 [frontend] exporting to image
+#20 exporting layers done
+#20 exporting manifest sha256:39a371afcefda56f2f05835f03063aceaf2d4b4cafd652720e9371027d042776 done
+#20 exporting config sha256:934aeed6d8c57554ad1e98fe5bdf8e6df9ca8c8eafea8f7ef7c824990b89cc93 done
+#20 exporting attestation manifest sha256:52f7cda4e70eaab57695980c03b9052578bd180610fbd24f3cdb1861d97e27bb 0.0s done
+#20 exporting manifest list sha256:87685ae3a18905aea56b894023a7512483121417e64c3900f3093b93c89c0796 0.0s done
+#20 naming to docker.io/library/smoke_radreport-frontend:latest done
+#20 unpacking to docker.io/library/smoke_radreport-frontend:latest 0.0s done
+#20 DONE 0.1s
+
+#21 [backend internal] load build context
+#21 ...
+
+#22 [frontend] resolving provenance for metadata file
+#22 DONE 0.0s
+
+#21 [backend internal] load build context
+#21 transferring context: 2.62MB 0.7s done
+#21 DONE 0.7s
+
+#23 [backend builder 2/5] RUN apt-get update && apt-get install -y --no-install-recommends     gcc     postgresql-client     libpq-dev     && rm -rf /var/lib/apt/lists/*
+#23 CACHED
+
+#24 [backend builder 3/5] RUN python -m venv /opt/venv
+#24 CACHED
+
+#25 [backend builder 4/5] COPY requirements.txt /tmp/
+#25 CACHED
+
+#26 [backend builder 5/5] RUN pip install --no-cache-dir -r /tmp/requirements.txt
+#26 CACHED
+
+#27 [backend stage-1 2/8] RUN apt-get update && apt-get install -y --no-install-recommends     postgresql-client     libpq5     libcairo2     libpango-1.0-0     libpangoft2-1.0-0     libgobject-2.0-0     libgdk-pixbuf-2.0-0     libgirepository-1.0-1     libffi8     shared-mime-info     fontconfig     fonts-dejavu-core     && rm -rf /var/lib/apt/lists/*
+#27 CACHED
+
+#28 [backend stage-1 3/8] COPY --from=builder /opt/venv /opt/venv
+#28 DONE 2.7s
+
+#29 [backend stage-1 4/8] WORKDIR /app
+#29 DONE 0.1s
+
+#30 [backend stage-1 5/8] COPY . /app/
+
+HTTP/1.1 404 Not Found
+Server: gunicorn
+Date: Thu, 29 Jan 2026 08:36:22 GMT
+Connection: close
+Content-Type: text/html; charset=utf-8
+HTTP/1.1 200 OK
+Server: nginx/1.25.5
+Date: Thu, 29 Jan 2026 08:36:22 GMT
+Content-Type: text/html
+Content-Length: 400
+backend-1  |   Applying reporting.0002_reportinstance_findings_text_and_more... OK
+backend-1  |   Applying reporting.0003_reportactionlog_reportpublishsnapshot... OK
+backend-1  |   Applying reporting.0004_reportingorganizationconfig_and_more... OK
+backend-1  |   Applying reporting.0005_alter_reportvalue_unique_together_and_more... OK
+backend-1  |   Applying sessions.0001_initial... OK
+backend-1  |   Applying studies.0001_initial... OK
+backend-1  |   Applying studies.0002_orderitem_study_order_item_visit_orderitem_visit_and_more... OK
+backend-1  |   Applying studies.0003_receiptsequence_receiptsettings_and_more... OK
+backend-1  |   Applying studies.0004_receiptsettings_footer_text... OK
+backend-1  |   Applying studies.0005_backfill_receipt_settings... OK
+backend-1  |   Applying studies.0006_alter_receiptsettings_footer_text_and_more... OK
+backend-1  | ==> Creating superuser and seeding initial data...
+backend-1  | ============================================================
+backend-1  | RIMS Data Seeding
+backend-1  | ============================================================
+backend-1  | 
+backend-1  | [1/3] Creating superuser...
+backend-1  | ✓ Created superuser: admin / admin123
+backend-1  | 
+backend-1  | [2/3] Creating modalities...
+backend-1  | ✓ Created: USG - Ultrasound
+backend-1  | ✓ Created: XRAY - X-Ray
+backend-1  | ✓ Created: CT - CT Scan
+backend-1  | ✓ Created: MRI - MRI
+backend-1  | 
+backend-1  | [3/3] Calling app seeders...
+backend-1  | Running seed_reporting...
+backend-1  | Seeding reporting profiles...
+backend-1  | Created profile: USG_KUB - USG KUB (Kidneys, Ureters, Bladder)
+backend-1  | No matching KUB service found to link.
+backend-1  | Seeding complete.
+backend-1  | ✓ seed_reporting complete
+backend-1  | 
+backend-1  | ============================================================
+backend-1  | ✅ Data seeding completed!
+backend-1  | ============================================================
+backend-1  | 
+backend-1  | Login: admin / admin123
+backend-1  | ==> Starting Gunicorn...
+backend-1  | [2026-01-29 08:36:12 +0000] [1] [INFO] Starting gunicorn 24.1.1
+backend-1  | [2026-01-29 08:36:12 +0000] [1] [INFO] Listening at: http://0.0.0.0:8000 (1)
+backend-1  | [2026-01-29 08:36:12 +0000] [1] [INFO] Using worker: sync
+backend-1  | [2026-01-29 08:36:12 +0000] [26] [INFO] Booting worker with pid: 26
+backend-1  | [2026-01-29 08:36:12 +0000] [27] [INFO] Booting worker with pid: 27
+backend-1  | [2026-01-29 08:36:12 +0000] [28] [INFO] Booting worker with pid: 28
+backend-1  | [2026-01-29 08:36:12 +0000] [29] [INFO] Booting worker with pid: 29
+backend-1  | 127.0.0.1 - - [29/Jan/2026:13:36:14 +0500] "GET /api/health/ HTTP/1.1" 200 148 "-" "Python-urllib/3.11"
+backend-1  | Not Found: /
+backend-1  | 2026-01-29 13:36:22,889 WARNING django.request Not Found: /
+backend-1  | 172.20.0.1 - - [29/Jan/2026:13:36:22 +0500] "HEAD / HTTP/1.1" 404 5029 "-" "curl/8.5.0"

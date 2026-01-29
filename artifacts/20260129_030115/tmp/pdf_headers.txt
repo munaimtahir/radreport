@@ -1,0 +1,14 @@
+HTTP/1.1 200 OK
+Server: gunicorn
+Date: Thu, 29 Jan 2026 08:41:28 GMT
+Connection: close
+Content-Type: application/pdf
+Content-Disposition: inline; filename="Report_2601-0001_v1.pdf"
+Vary: Accept, origin
+Allow: GET, HEAD, OPTIONS
+X-Frame-Options: DENY
+Content-Length: 320577
+X-Content-Type-Options: nosniff
+Referrer-Policy: same-origin
+Cross-Origin-Opener-Policy: same-origin
+
