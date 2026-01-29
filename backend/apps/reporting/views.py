@@ -1,6 +1,11 @@
+import csv
+import io
+import json
+import hashlib
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.utils import timezone
+from django.utils.text import slugify
 from django.http import HttpResponse
 from rest_framework import viewsets, status, exceptions
 from rest_framework.response import Response
@@ -10,7 +15,8 @@ from rest_framework.permissions import IsAuthenticated
 from apps.workflow.models import ServiceVisitItem, ServiceVisit
 from .models import (
     ServiceReportProfile, ReportInstance, ReportValue,
-    ReportProfile, ReportParameter, ReportParameterOption
+    ReportProfile, ReportParameter, ReportParameterOption,
+    ReportParameterLibraryItem, ReportProfileParameterLink
 )
 from .serializers import (
     ReportProfileSerializer, ReportInstanceSerializer, ReportValueSerializer, ReportSaveSerializer,
@@ -19,8 +25,6 @@ from .serializers import (
 from .services.narrative_v1 import generate_report_narrative
 from .pdf_engine.report_pdf import generate_report_pdf
 from .models import ReportPublishSnapshot, ReportActionLog
-import hashlib
-import json
 from django.core.files.base import ContentFile
 from .services.narrative_v1 import generate_report_narrative
 from .pdf_engine.report_pdf import generate_report_pdf
@@ -31,6 +35,295 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     search_fields = ["code", "name", "modality"]
     filterset_fields = ["modality", "is_active"]
+
+    @action(detail=False, methods=["get"], url_path="template-csv")
+    def template_csv(self, request):
+        fieldnames = [
+            "profile_code", "profile_name", "modality",
+            "section", "field_name", "field_slug", "field_type",
+            "unit", "normal_value", "is_required", "order",
+            "options", "sentence_template", "narrative_role",
+            "omit_if_values_json", "join_label"
+        ]
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerow({
+            "profile_code": "USG_KUB",
+            "profile_name": "USG KUB",
+            "modality": "USG",
+            "section": "Kidneys",
+            "field_name": "Right Kidney Size",
+            "field_slug": "right_kidney_size",
+            "field_type": "number",
+            "unit": "mm",
+            "normal_value": "100",
+            "is_required": "true",
+            "order": "1",
+            "options": "",
+            "sentence_template": "{name}: {value}{unit}.",
+            "narrative_role": "finding",
+            "omit_if_values_json": "[]",
+            "join_label": "",
+        })
+        response = HttpResponse(output.getvalue(), content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="report_template_schema.csv"'
+        return response
+
+    @action(detail=False, methods=["get"], url_path="export-csv")
+    def export_csv(self, request):
+        fieldnames = [
+            "profile_code", "profile_name", "modality",
+            "section", "field_name", "field_slug", "field_type",
+            "unit", "normal_value", "is_required", "order",
+            "options", "sentence_template", "narrative_role",
+            "omit_if_values_json", "join_label"
+        ]
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+
+        profiles = ReportProfile.objects.all().prefetch_related("parameters", "parameters__options", "library_links", "library_links__library_item")
+        for profile in profiles.order_by("code"):
+            links = profile.library_links.select_related("library_item").order_by("order")
+            if links.exists():
+                for link in links:
+                    item = link.library_item
+                    options_str = ""
+                    if item.default_options_json:
+                        opts = []
+                        for option in item.default_options_json:
+                            if option.get("label") == option.get("value"):
+                                opts.append(option.get("value"))
+                            else:
+                                opts.append(f"{option.get('label')}:{option.get('value')}")
+                        options_str = "|".join(opts)
+                    writer.writerow({
+                        "profile_code": profile.code,
+                        "profile_name": profile.name,
+                        "modality": profile.modality,
+                        "section": link.section,
+                        "field_name": item.name,
+                        "field_slug": item.slug,
+                        "field_type": item.parameter_type,
+                        "unit": item.unit or "",
+                        "normal_value": item.default_normal_value or "",
+                        "is_required": "true" if link.is_required else "false",
+                        "order": link.order,
+                        "options": options_str,
+                        "sentence_template": item.default_sentence_template or "",
+                        "narrative_role": item.default_narrative_role,
+                        "omit_if_values_json": json.dumps(item.default_omit_if_values) if item.default_omit_if_values else "",
+                        "join_label": item.default_join_label or "",
+                    })
+            else:
+                params = profile.parameters.prefetch_related("options").order_by("order")
+                for param in params:
+                    options_str = ""
+                    options = param.options.all().order_by("order")
+                    if options.exists():
+                        opts = []
+                        for option in options:
+                            if option.label == option.value:
+                                opts.append(option.value)
+                            else:
+                                opts.append(f"{option.label}:{option.value}")
+                        options_str = "|".join(opts)
+                    writer.writerow({
+                        "profile_code": profile.code,
+                        "profile_name": profile.name,
+                        "modality": profile.modality,
+                        "section": param.section,
+                        "field_name": param.name,
+                        "field_slug": param.slug or slugify(param.name).replace("-", "_"),
+                        "field_type": param.parameter_type,
+                        "unit": param.unit or "",
+                        "normal_value": param.normal_value or "",
+                        "is_required": "true" if param.is_required else "false",
+                        "order": param.order,
+                        "options": options_str,
+                        "sentence_template": param.sentence_template or "",
+                        "narrative_role": param.narrative_role,
+                        "omit_if_values_json": json.dumps(param.omit_if_values) if param.omit_if_values else "",
+                        "join_label": param.join_label or "",
+                    })
+
+        response = HttpResponse(output.getvalue(), content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="report_templates_export.csv"'
+        return response
+
+    @action(detail=False, methods=["post"], url_path="import-csv")
+    def import_csv(self, request):
+        if "file" not in request.FILES:
+            return Response({"detail": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        file = request.FILES["file"]
+        if not file.name.endswith(".csv"):
+            return Response({"detail": "File must be a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+
+        use_library = str(request.data.get("use_library", "false")).lower() in ("true", "1", "yes")
+        decoded_file = file.read().decode("utf-8-sig")
+        reader = csv.DictReader(io.StringIO(decoded_file))
+        rows = list(reader)
+
+        required_cols = ["profile_code", "profile_name", "modality", "field_slug", "field_type"]
+        errors = []
+        parsed_rows = []
+        param_slugs_by_profile = {}
+        valid_types = [t[0] for t in ReportParameter.PARAMETER_TYPES]
+
+        for idx, row in enumerate(rows, start=2):
+            try:
+                for col in required_cols:
+                    if not row.get(col):
+                        raise ValueError(f"Missing required column: {col}")
+
+                p_type = row["field_type"]
+                if p_type not in valid_types:
+                    raise ValueError(f"Invalid field_type: {p_type}. Must be one of {valid_types}")
+
+                if p_type in ["dropdown", "checklist"] and not row.get("options"):
+                    raise ValueError(f"Options required for {p_type}")
+
+                omit_json = row.get("omit_if_values_json")
+                if omit_json:
+                    try:
+                        json.loads(omit_json)
+                    except json.JSONDecodeError as exc:
+                        raise ValueError("Invalid JSON in omit_if_values_json") from exc
+
+                p_code = row["profile_code"]
+                slug = row["field_slug"]
+                key = (p_code, slug)
+                if key in param_slugs_by_profile:
+                    raise ValueError(f"Duplicate slug '{slug}' for profile '{p_code}' in file")
+                param_slugs_by_profile[key] = True
+
+                parsed_rows.append(row)
+            except Exception as exc:
+                errors.append(f"Row {idx}: {exc}")
+
+        if errors:
+            return Response({"detail": "Validation errors", "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        created_profiles = 0
+        updated_profiles = 0
+        created_fields = 0
+        updated_fields = 0
+
+        with transaction.atomic():
+            profiles_map = {}
+            for row in parsed_rows:
+                p_code = row["profile_code"]
+                if p_code not in profiles_map:
+                    profile, created = ReportProfile.objects.update_or_create(
+                        code=p_code,
+                        defaults={
+                            "name": row["profile_name"],
+                            "modality": row["modality"],
+                            "narrative_mode": "rule_based",
+                        }
+                    )
+                    profiles_map[p_code] = profile
+                    if created:
+                        created_profiles += 1
+                    else:
+                        updated_profiles += 1
+
+                profile = profiles_map[p_code]
+                field_data = {
+                    "section": row.get("section", ""),
+                    "name": row.get("field_name") or row.get("field_slug"),
+                    "parameter_type": row["field_type"],
+                    "unit": row.get("unit") or None,
+                    "normal_value": row.get("normal_value") or None,
+                    "order": int(row["order"]) if row.get("order") else 0,
+                    "is_required": str(row.get("is_required", "")).lower() in ("true", "1", "yes"),
+                    "sentence_template": row.get("sentence_template") or None,
+                    "narrative_role": row.get("narrative_role") or "finding",
+                    "omit_if_values": json.loads(row["omit_if_values_json"]) if row.get("omit_if_values_json") else None,
+                    "join_label": row.get("join_label") or None,
+                }
+                slug = row["field_slug"]
+
+                options_list = []
+                options_raw = row.get("options", "")
+                if options_raw:
+                    for opt in options_raw.split("|"):
+                        if ":" in opt:
+                            lbl, val = opt.split(":", 1)
+                            options_list.append({"label": lbl.strip(), "value": val.strip()})
+                        else:
+                            options_list.append({"label": opt.strip(), "value": opt.strip()})
+
+                if use_library:
+                    lib_item, created = ReportParameterLibraryItem.objects.update_or_create(
+                        slug=slug,
+                        modality=row["modality"],
+                        defaults={
+                            "name": field_data["name"],
+                            "parameter_type": field_data["parameter_type"],
+                            "unit": field_data["unit"],
+                            "default_normal_value": field_data["normal_value"],
+                            "default_sentence_template": field_data["sentence_template"],
+                            "default_omit_if_values": field_data["omit_if_values"],
+                            "default_join_label": field_data["join_label"],
+                            "default_narrative_role": field_data["narrative_role"],
+                            "default_options_json": options_list if options_list else None,
+                        }
+                    )
+                    link, created = ReportProfileParameterLink.objects.update_or_create(
+                        profile=profile,
+                        library_item=lib_item,
+                        defaults={
+                            "section": field_data["section"],
+                            "order": field_data["order"],
+                            "is_required": field_data["is_required"],
+                            "overrides_json": {},
+                        }
+                    )
+                    if created:
+                        created_fields += 1
+                    else:
+                        updated_fields += 1
+                else:
+                    param, created = ReportParameter.objects.update_or_create(
+                        profile=profile,
+                        slug=slug,
+                        defaults={
+                            "name": field_data["name"],
+                            "section": field_data["section"],
+                            "parameter_type": field_data["parameter_type"],
+                            "unit": field_data["unit"],
+                            "normal_value": field_data["normal_value"],
+                            "order": field_data["order"],
+                            "is_required": field_data["is_required"],
+                            "sentence_template": field_data["sentence_template"],
+                            "narrative_role": field_data["narrative_role"],
+                            "omit_if_values": field_data["omit_if_values"],
+                            "join_label": field_data["join_label"],
+                        }
+                    )
+                    if options_list:
+                        param.options.all().delete()
+                        for i, opt in enumerate(options_list):
+                            ReportParameterOption.objects.create(
+                                parameter=param,
+                                label=opt["label"],
+                                value=opt["value"],
+                                order=i,
+                            )
+                    if created:
+                        created_fields += 1
+                    else:
+                        updated_fields += 1
+
+        return Response({
+            "profiles_created": created_profiles,
+            "profiles_updated": updated_profiles,
+            "fields_created": created_fields,
+            "fields_updated": updated_fields,
+        })
 
 class ReportParameterViewSet(viewsets.ModelViewSet):
     queryset = ReportParameter.objects.all()
