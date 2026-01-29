@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
 import { apiGet, apiDelete } from "../../ui/api";
@@ -6,18 +6,21 @@ import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
 
+interface TemplateProfile {
+    id: string;
+    code: string;
+    name: string;
+    modality: string;
+}
+
 export default function TemplatesList() {
     const { token } = useAuth();
     const navigate = useNavigate();
-    const [profiles, setProfiles] = useState<any[]>([]);
+    const [profiles, setProfiles] = useState<TemplateProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadData();
-    }, [token]);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         if (!token) return;
         try {
             setLoading(true);
@@ -28,7 +31,11 @@ export default function TemplatesList() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     const handleDelete = async (id: string) => {
         if (!window.confirm("Are you sure you want to delete this template?")) return;
@@ -36,7 +43,7 @@ export default function TemplatesList() {
             await apiDelete(`/reporting/profiles/${id}/`, token);
             loadData();
         } catch (e: any) {
-            alert(e.message || "Failed to delete");
+            setError(e.message || "Failed to delete");
         }
     };
 

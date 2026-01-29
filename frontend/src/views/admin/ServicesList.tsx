@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
 import { apiGet, apiDelete, apiPatch } from "../../ui/api";
@@ -6,19 +6,23 @@ import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
 
+interface Service {
+    id: string;
+    code: string;
+    name: string;
+    category: string;
+    price: number;
+}
+
 export default function ServicesList() {
     const { token } = useAuth();
     const navigate = useNavigate();
-    const [services, setServices] = useState<any[]>([]);
+    const [services, setServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [search, setSearch] = useState("");
 
-    useEffect(() => {
-        loadData();
-    }, [token, search]);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         if (!token) return;
         try {
             setLoading(true);
@@ -31,7 +35,11 @@ export default function ServicesList() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [token, search]);
+
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
 
     const handleDelete = async (id: string) => {
         if (!window.confirm("Are you sure you want to deactivate this service?")) return;

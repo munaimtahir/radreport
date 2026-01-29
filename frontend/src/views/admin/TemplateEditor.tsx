@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
 import { apiGet, apiPost, apiPut, apiDelete } from "../../ui/api";
@@ -7,20 +7,36 @@ import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
 import SuccessAlert from "../../ui/components/SuccessAlert";
 
+interface Profile {
+    code: string;
+    name: string;
+    modality: string;
+    enable_narrative: boolean;
+    narrative_mode: string;
+}
+
+interface Parameter {
+    parameter_id: string;
+    section: string;
+    name: string;
+    type: string;
+    parameter_type?: string;
+}
+
 export default function TemplateEditor() {
     const { id } = useParams<{ id: string }>();
     const isNew = !id || id === "new";
     const { token } = useAuth();
     const navigate = useNavigate();
 
-    const [profile, setProfile] = useState<any>({
+    const [profile, setProfile] = useState<Profile>({
         code: "",
         name: "",
         modality: "",
         enable_narrative: true,
         narrative_mode: "rule_based"
     });
-    const [parameters, setParameters] = useState<any[]>([]);
+    const [parameters, setParameters] = useState<Parameter[]>([]);
 
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -29,15 +45,9 @@ export default function TemplateEditor() {
 
     // Parameter Modal
     const [showParamModal, setShowParamModal] = useState(false);
-    const [currentParam, setCurrentParam] = useState<any>(null); // null = new
+    const [currentParam, setCurrentParam] = useState<Parameter | null>(null); // null = new
 
-    useEffect(() => {
-        if (!isNew && token) {
-            loadData();
-        }
-    }, [id, token]);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         setLoading(true);
         try {
             const data = await apiGet(`/reporting/profiles/${id}/`, token);
@@ -48,7 +58,13 @@ export default function TemplateEditor() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, token]);
+
+    useEffect(() => {
+        if (!isNew && token) {
+            loadData();
+        }
+    }, [loadData, isNew, token]);
 
     const handleSaveProfile = async () => {
         setSaving(true);
