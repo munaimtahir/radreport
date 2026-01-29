@@ -1,0 +1,315 @@
+STARTING DOCKER BUILD
+ Image radreport-frontend Building 
+ Image radreport-backend Building 
+#1 [internal] load local bake definitions
+#1 reading from stdin 1.04kB done
+#1 DONE 0.0s
+
+#2 [backend internal] load build definition from Dockerfile
+#2 transferring dockerfile: 1.98kB done
+#2 WARN: FromAsCasing: 'as' and 'FROM' keywords' casing do not match (line 2)
+#2 DONE 0.0s
+
+#3 [frontend internal] load build definition from Dockerfile
+#3 transferring dockerfile: 1.12kB done
+#3 WARN: FromAsCasing: 'as' and 'FROM' keywords' casing do not match (line 2)
+#3 DONE 0.0s
+
+#4 [frontend internal] load metadata for docker.io/library/node:18-alpine
+#4 DONE 0.3s
+
+#5 [frontend internal] load metadata for docker.io/library/nginx:1.25-alpine
+#5 DONE 0.3s
+
+#6 [backend internal] load metadata for docker.io/library/python:3.11-slim
+#6 DONE 0.3s
+
+#7 [frontend internal] load .dockerignore
+#7 transferring context: 2B done
+#7 DONE 0.0s
+
+#8 [backend internal] load .dockerignore
+#8 transferring context: 2B done
+#8 DONE 0.0s
+
+#9 [frontend builder 1/6] FROM docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e
+#9 resolve docker.io/library/node:18-alpine@sha256:8d6421d663b4c28fd3ebc498332f249011d118945588d0a35cb9bc4b8ca09d9e 0.0s done
+#9 DONE 0.0s
+
+#10 [frontend stage-1 1/3] FROM docker.io/library/nginx:1.25-alpine@sha256:516475cc129da42866742567714ddc681e5eed7b9ee0b9e9c015e464b4221a00
+#10 resolve docker.io/library/nginx:1.25-alpine@sha256:516475cc129da42866742567714ddc681e5eed7b9ee0b9e9c015e464b4221a00 0.0s done
+#10 CACHED
+
+#11 [frontend builder 2/6] WORKDIR /app
+#11 CACHED
+
+#12 [backend builder 1/5] FROM docker.io/library/python:3.11-slim@sha256:5be45dbade29bebd6886af6b438fd7e0b4eb7b611f39ba62b430263f82de36d2
+#12 resolve docker.io/library/python:3.11-slim@sha256:5be45dbade29bebd6886af6b438fd7e0b4eb7b611f39ba62b430263f82de36d2 0.0s done
+#12 CACHED
+
+#13 [frontend internal] load build context
+#13 transferring context: 1.27MB 0.0s done
+#13 DONE 0.1s
+
+#14 [frontend builder 3/6] COPY package*.json ./
+#14 DONE 0.1s
+
+#15 [frontend builder 4/6] RUN npm ci
+#15 ...
+
+#16 [frontend stage-1 2/3] COPY nginx.prod.conf /etc/nginx/conf.d/default.conf
+#16 DONE 0.1s
+
+#17 [backend internal] load build context
+#17 transferring context: 200.52MB 5.1s
+#17 transferring context: 229.99MB 6.3s done
+#17 DONE 6.3s
+
+#18 [backend builder 2/5] RUN apt-get update && apt-get install -y --no-install-recommends     gcc     postgresql-client     libpq-dev     && rm -rf /var/lib/apt/lists/*
+#18 0.720 Hit:1 http://deb.debian.org/debian trixie InRelease
+#18 0.720 Get:2 http://deb.debian.org/debian trixie-updates InRelease [47.3 kB]
+#18 0.723 Get:3 http://deb.debian.org/debian-security trixie-security InRelease [43.4 kB]
+#18 0.776 Get:4 http://deb.debian.org/debian trixie/main amd64 Packages [9670 kB]
+#18 0.958 Get:5 http://deb.debian.org/debian trixie-updates/main amd64 Packages [5412 B]
+#18 0.958 Get:6 http://deb.debian.org/debian-security trixie-security/main amd64 Packages [98.2 kB]
+#18 2.466 Fetched 9865 kB in 2s (4909 kB/s)
+#18 2.466 Reading package lists...
+#18 3.781 Reading package lists...
+#18 5.049 Building dependency tree...
+#18 5.405 Reading state information...
+#18 5.885 The following additional packages will be installed:
+#18 5.886   binutils binutils-common binutils-x86-64-linux-gnu cpp cpp-14
+#18 5.886   cpp-14-x86-64-linux-gnu cpp-x86-64-linux-gnu gcc-14 gcc-14-x86-64-linux-gnu
+#18 5.887   gcc-x86-64-linux-gnu libasan8 libatomic1 libbinutils libcc1-0 libcom-err2
+#18 5.888   libctf-nobfd0 libctf0 libgcc-14-dev libgdbm-compat4t64 libgomp1 libgprofng0
+#18 5.921   libgssapi-krb5-2 libhwasan0 libisl23 libitm1 libjansson4 libk5crypto3
+#18 5.921   libkeyutils1 libkrb5-3 libkrb5support0 libldap2 liblsan0 libmpc3 libmpfr6
+#18 5.925   libperl5.40 libpq5 libquadmath0 libsasl2-2 libsasl2-modules-db libsframe1
+#18 5.925   libssl-dev libssl3t64 libtsan2 libubsan1 openssl openssl-provider-legacy
+#18 5.925   perl perl-modules-5.40 postgresql-client-17 postgresql-client-common
+#18 5.925   sensible-utils
+#18 5.930 Suggested packages:
+#18 5.930   binutils-doc gprofng-gui binutils-gold cpp-doc gcc-14-locales cpp-14-doc
+#18 5.930   gcc-multilib make manpages-dev autoconf automake libtool flex bison gdb
+#18 5.930   gcc-doc gcc-14-multilib gcc-14-doc gdb-x86-64-linux-gnu krb5-doc krb5-user
+#18 5.930   postgresql-doc-17 libssl-doc perl-doc libterm-readline-gnu-perl
+#18 5.930   | libterm-readline-perl-perl libtap-harness-archive-perl postgresql-17
+#18 5.930 Recommended packages:
+#18 5.930   libc6-dev | libc-dev libc6-dev libc-dev krb5-locales libldap-common
+#18 5.930   libsasl2-modules
+#18 6.474 The following NEW packages will be installed:
+#18 6.474   binutils binutils-common binutils-x86-64-linux-gnu cpp cpp-14
+#18 6.474   cpp-14-x86-64-linux-gnu cpp-x86-64-linux-gnu gcc gcc-14
+#18 6.474   gcc-14-x86-64-linux-gnu gcc-x86-64-linux-gnu libasan8 libatomic1 libbinutils
+#18 6.474   libcc1-0 libcom-err2 libctf-nobfd0 libctf0 libgcc-14-dev libgdbm-compat4t64
+#18 6.474   libgomp1 libgprofng0 libgssapi-krb5-2 libhwasan0 libisl23 libitm1
+#18 6.474   libjansson4 libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0 libldap2
+#18 6.474   liblsan0 libmpc3 libmpfr6 libperl5.40 libpq-dev libpq5 libquadmath0
+#18 6.474   libsasl2-2 libsasl2-modules-db libsframe1 libssl-dev libtsan2 libubsan1 perl
+#18 6.474   perl-modules-5.40 postgresql-client postgresql-client-17
+#18 6.474   postgresql-client-common sensible-utils
+#18 6.474 The following packages will be upgraded:
+#18 6.474   libssl3t64 openssl openssl-provider-legacy
+#18 6.531 3 upgraded, 51 newly installed, 0 to remove and 0 not upgraded.
+#18 6.531 Need to get 70.2 MB of archives.
+#18 6.531 After this operation, 275 MB of additional disk space will be used.
+#18 6.531 Get:1 http://deb.debian.org/debian-security trixie-security/main amd64 openssl-provider-legacy amd64 3.5.4-1~deb13u2 [308 kB]
+#18 6.580 Get:2 http://deb.debian.org/debian-security trixie-security/main amd64 libssl3t64 amd64 3.5.4-1~deb13u2 [2442 kB]
+#18 6.614 Get:3 http://deb.debian.org/debian trixie/main amd64 sensible-utils all 0.0.25 [25.0 kB]
+#18 6.620 Get:4 http://deb.debian.org/debian trixie/main amd64 perl-modules-5.40 all 5.40.1-6 [3019 kB]
+#18 6.644 Get:5 http://deb.debian.org/debian trixie/main amd64 libgdbm-compat4t64 amd64 1.24-2 [50.3 kB]
+#18 6.645 Get:6 http://deb.debian.org/debian trixie/main amd64 libperl5.40 amd64 5.40.1-6 [4341 kB]
+#18 6.680 Get:7 http://deb.debian.org/debian trixie/main amd64 perl amd64 5.40.1-6 [267 kB]
+#18 6.681 Get:8 http://deb.debian.org/debian trixie/main amd64 libsframe1 amd64 2.44-3 [78.4 kB]
+#18 6.682 Get:9 http://deb.debian.org/debian trixie/main amd64 binutils-common amd64 2.44-3 [2509 kB]
+#18 6.699 Get:10 http://deb.debian.org/debian trixie/main amd64 libbinutils amd64 2.44-3 [534 kB]
+#18 6.702 Get:11 http://deb.debian.org/debian trixie/main amd64 libgprofng0 amd64 2.44-3 [808 kB]
+#18 6.707 Get:12 http://deb.debian.org/debian trixie/main amd64 libctf-nobfd0 amd64 2.44-3 [156 kB]
+#18 6.708 Get:13 http://deb.debian.org/debian trixie/main amd64 libctf0 amd64 2.44-3 [88.6 kB]
+#18 6.709 Get:14 http://deb.debian.org/debian trixie/main amd64 libjansson4 amd64 2.14-2+b3 [39.8 kB]
+#18 6.710 Get:15 http://deb.debian.org/debian trixie/main amd64 binutils-x86-64-linux-gnu amd64 2.44-3 [1014 kB]
+#18 6.715 Get:16 http://deb.debian.org/debian trixie/main amd64 binutils amd64 2.44-3 [265 kB]
+#18 6.716 Get:17 http://deb.debian.org/debian trixie/main amd64 libisl23 amd64 0.27-1 [659 kB]
+#18 6.720 Get:18 http://deb.debian.org/debian trixie/main amd64 libmpfr6 amd64 4.2.2-1 [729 kB]
+#18 6.725 Get:19 http://deb.debian.org/debian trixie/main amd64 libmpc3 amd64 1.3.1-1+b3 [52.2 kB]
+#18 6.732 Get:20 http://deb.debian.org/debian trixie/main amd64 cpp-14-x86-64-linux-gnu amd64 14.2.0-19 [11.0 MB]
+#18 6.807 Get:21 http://deb.debian.org/debian trixie/main amd64 cpp-14 amd64 14.2.0-19 [1280 B]
+#18 6.808 Get:22 http://deb.debian.org/debian trixie/main amd64 cpp-x86-64-linux-gnu amd64 4:14.2.0-1 [4840 B]
+#18 6.809 Get:23 http://deb.debian.org/debian trixie/main amd64 cpp amd64 4:14.2.0-1 [1568 B]
+#18 6.810 Get:24 http://deb.debian.org/debian trixie/main amd64 libcc1-0 amd64 14.2.0-19 [42.8 kB]
+#18 6.811 Get:25 http://deb.debian.org/debian trixie/main amd64 libgomp1 amd64 14.2.0-19 [137 kB]
+#18 6.811 Get:26 http://deb.debian.org/debian trixie/main amd64 libitm1 amd64 14.2.0-19 [26.0 kB]
+#18 6.812 Get:27 http://deb.debian.org/debian trixie/main amd64 libatomic1 amd64 14.2.0-19 [9308 B]
+#18 6.813 Get:28 http://deb.debian.org/debian trixie/main amd64 libasan8 amd64 14.2.0-19 [2725 kB]
+#18 6.829 Get:29 http://deb.debian.org/debian trixie/main amd64 liblsan0 amd64 14.2.0-19 [1204 kB]
+#18 6.843 Get:30 http://deb.debian.org/debian trixie/main amd64 libtsan2 amd64 14.2.0-19 [2460 kB]
+#18 6.863 Get:31 http://deb.debian.org/debian trixie/main amd64 libubsan1 amd64 14.2.0-19 [1074 kB]
+#18 6.874 Get:32 http://deb.debian.org/debian trixie/main amd64 libhwasan0 amd64 14.2.0-19 [1488 kB]
+#18 6.891 Get:33 http://deb.debian.org/debian trixie/main amd64 libquadmath0 amd64 14.2.0-19 [145 kB]
+#18 6.892 Get:34 http://deb.debian.org/debian trixie/main amd64 libgcc-14-dev amd64 14.2.0-19 [2672 kB]
+#18 6.910 Get:35 http://deb.debian.org/debian trixie/main amd64 gcc-14-x86-64-linux-gnu amd64 14.2.0-19 [21.4 MB]
+#18 7.089 Get:36 http://deb.debian.org/debian trixie/main amd64 gcc-14 amd64 14.2.0-19 [540 kB]
+#18 7.094 Get:37 http://deb.debian.org/debian trixie/main amd64 gcc-x86-64-linux-gnu amd64 4:14.2.0-1 [1436 B]
+#18 7.094 Get:38 http://deb.debian.org/debian trixie/main amd64 gcc amd64 4:14.2.0-1 [5136 B]
+#18 7.094 Get:39 http://deb.debian.org/debian trixie/main amd64 libcom-err2 amd64 1.47.2-3+b7 [25.0 kB]
+#18 7.095 Get:40 http://deb.debian.org/debian trixie/main amd64 libkrb5support0 amd64 1.21.3-5 [33.0 kB]
+#18 7.096 Get:41 http://deb.debian.org/debian trixie/main amd64 libk5crypto3 amd64 1.21.3-5 [81.5 kB]
+#18 7.096 Get:42 http://deb.debian.org/debian trixie/main amd64 libkeyutils1 amd64 1.6.3-6 [9456 B]
+#18 7.097 Get:43 http://deb.debian.org/debian trixie/main amd64 libkrb5-3 amd64 1.21.3-5 [326 kB]
+#18 7.101 Get:44 http://deb.debian.org/debian trixie/main amd64 libgssapi-krb5-2 amd64 1.21.3-5 [138 kB]
+#18 7.102 Get:45 http://deb.debian.org/debian trixie/main amd64 libsasl2-modules-db amd64 2.1.28+dfsg1-9 [19.8 kB]
+#18 7.217 Get:46 http://deb.debian.org/debian trixie/main amd64 libsasl2-2 amd64 2.1.28+dfsg1-9 [57.5 kB]
+#18 7.220 Get:47 http://deb.debian.org/debian trixie/main amd64 libldap2 amd64 2.6.10+dfsg-1 [194 kB]
+#18 7.221 Get:48 http://deb.debian.org/debian trixie/main amd64 libpq5 amd64 17.7-0+deb13u1 [228 kB]
+#18 7.223 Get:49 http://deb.debian.org/debian-security trixie-security/main amd64 libssl-dev amd64 3.5.4-1~deb13u2 [2958 kB]
+#18 7.246 Get:50 http://deb.debian.org/debian trixie/main amd64 libpq-dev amd64 17.7-0+deb13u1 [151 kB]
+#18 7.247 Get:51 http://deb.debian.org/debian-security trixie-security/main amd64 openssl amd64 3.5.4-1~deb13u2 [1495 kB]
+#18 7.267 Get:52 http://deb.debian.org/debian trixie/main amd64 postgresql-client-common all 278 [47.1 kB]
+#18 7.267 Get:53 http://deb.debian.org/debian trixie/main amd64 postgresql-client-17 amd64 17.7-0+deb13u1 [2045 kB]
+#18 7.291 Get:54 http://deb.debian.org/debian trixie/main amd64 postgresql-client all 17+278 [14.0 kB]
+#18 7.543 debconf: unable to initialize frontend: Dialog
+#18 7.543 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#18 7.543 debconf: falling back to frontend: Readline
+#18 7.544 debconf: unable to initialize frontend: Readline
+#18 7.544 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC entries checked: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.40.1 /usr/local/share/perl/5.40.1 /usr/lib/x86_64-linux-gnu/perl5/5.40 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl-base /usr/lib/x86_64-linux-gnu/perl/5.40 /usr/share/perl/5.40 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 8, <STDIN> line 54.)
+#18 7.544 debconf: falling back to frontend: Teletype
+#18 7.550 debconf: unable to initialize frontend: Teletype
+#18 7.550 debconf: (This frontend requires a controlling tty.)
+#18 7.550 debconf: falling back to frontend: Noninteractive
+#18 ...
+
+#19 [backend stage-1 2/8] RUN apt-get update && apt-get install -y --no-install-recommends     postgresql-client     libpq5     libcairo2     libpango-1.0-0     libpangoft2-1.0-0     libgobject-2.0-0     libgdk-pixbuf-2.0-0     libgirepository-1.0-1     libffi8     shared-mime-info     fontconfig     fonts-dejavu-core     && rm -rf /var/lib/apt/lists/*
+#19 0.695 Hit:1 http://deb.debian.org/debian trixie InRelease
+#19 0.695 Get:2 http://deb.debian.org/debian trixie-updates InRelease [47.3 kB]
+#19 0.695 Get:3 http://deb.debian.org/debian-security trixie-security InRelease [43.4 kB]
+#19 0.695 Get:4 http://deb.debian.org/debian trixie/main amd64 Packages [9670 kB]
+#19 0.900 Get:5 http://deb.debian.org/debian trixie-updates/main amd64 Packages [5412 B]
+#19 0.900 Get:6 http://deb.debian.org/debian-security trixie-security/main amd64 Packages [98.2 kB]
+#19 2.401 Fetched 9865 kB in 2s (5065 kB/s)
+#19 2.401 Reading package lists...
+#19 3.777 Reading package lists...
+#19 5.244 Building dependency tree...
+#19 5.617 Reading state information...
+#19 6.277 libffi8 is already the newest version (3.4.8-2).
+#19 6.277 The following additional packages will be installed:
+#19 6.279   fontconfig-config fonts-dejavu-mono libatomic1 libbrotli1 libcom-err2
+#19 6.279   libdatrie1 libdeflate0 libexpat1 libfontconfig1 libfreetype6 libfribidi0
+#19 6.279   libgdbm-compat4t64 libgdk-pixbuf2.0-common libgraphite2-3 libgssapi-krb5-2
+#19 6.279   libharfbuzz0b libjbig0 libjpeg62-turbo libk5crypto3 libkeyutils1 libkrb5-3
+#19 6.279   libkrb5support0 libldap2 liblerc4 libperl5.40 libpixman-1-0 libpng16-16t64
+#19 6.279   libsasl2-2 libsasl2-modules-db libsharpyuv0 libthai-data libthai0 libtiff6
+#19 6.279   libwebp7 libx11-6 libx11-data libxau6 libxcb-render0 libxcb-shm0 libxcb1
+#19 6.279   libxdmcp6 libxext6 libxml2 libxrender1 perl perl-modules-5.40
+#19 6.280   postgresql-client-17 postgresql-client-common sensible-utils
+#19 6.282 Suggested packages:
+#19 6.282   low-memory-monitor krb5-doc krb5-user perl-doc libterm-readline-gnu-perl
+#19 6.282   | libterm-readline-perl-perl make libtap-harness-archive-perl postgresql-17
+#19 6.282   postgresql-doc-17
+#19 6.282 Recommended packages:
+#19 6.282   libgdk-pixbuf2.0-bin libglib2.0-data xdg-user-dirs krb5-locales
+#19 6.282   libldap-common libsasl2-modules
+#19 6.666 The following NEW packages will be installed:
+#19 6.666   fontconfig fontconfig-config fonts-dejavu-core fonts-dejavu-mono libatomic1
+#19 6.666   libbrotli1 libcairo2 libcom-err2 libdatrie1 libdeflate0 libexpat1
+#19 6.666   libfontconfig1 libfreetype6 libfribidi0 libgdbm-compat4t64
+#19 6.666   libgdk-pixbuf-2.0-0 libgdk-pixbuf2.0-common libgirepository-1.0-1
+#19 6.667   libglib2.0-0t64 libgraphite2-3 libgssapi-krb5-2 libharfbuzz0b libjbig0
+#19 6.667   libjpeg62-turbo libk5crypto3 libkeyutils1 libkrb5-3 libkrb5support0 libldap2
+#19 6.667   liblerc4 libpango-1.0-0 libpangoft2-1.0-0 libperl5.40 libpixman-1-0
+#19 6.667   libpng16-16t64 libpq5 libsasl2-2 libsasl2-modules-db libsharpyuv0
+#19 6.667   libthai-data libthai0 libtiff6 libwebp7 libx11-6 libx11-data libxau6
+#19 6.667   libxcb-render0 libxcb-shm0 libxcb1 libxdmcp6 libxext6 libxml2 libxrender1
+#19 6.667   perl perl-modules-5.40 postgresql-client postgresql-client-17
+#19 6.668   postgresql-client-common sensible-utils shared-mime-info
+#19 6.723 0 upgraded, 60 newly installed, 0 to remove and 3 not upgraded.
+#19 6.723 Need to get 22.9 MB of archives.
+#19 6.723 After this operation, 103 MB of additional disk space will be used.
+#19 6.723 Get:1 http://deb.debian.org/debian trixie/main amd64 libexpat1 amd64 2.7.1-2 [108 kB]
+#19 6.750 Get:2 http://deb.debian.org/debian trixie/main amd64 sensible-utils all 0.0.25 [25.0 kB]
+#19 6.751 Get:3 http://deb.debian.org/debian trixie/main amd64 perl-modules-5.40 all 5.40.1-6 [3019 kB]
+#19 6.804 Get:4 http://deb.debian.org/debian trixie/main amd64 libgdbm-compat4t64 amd64 1.24-2 [50.3 kB]
+#19 6.805 Get:5 http://deb.debian.org/debian trixie/main amd64 libperl5.40 amd64 5.40.1-6 [4341 kB]
+#19 6.833 Get:6 http://deb.debian.org/debian trixie/main amd64 perl amd64 5.40.1-6 [267 kB]
+#19 6.835 Get:7 http://deb.debian.org/debian trixie/main amd64 libbrotli1 amd64 1.1.0-2+b7 [307 kB]
+#19 6.841 Get:8 http://deb.debian.org/debian trixie/main amd64 libpng16-16t64 amd64 1.6.48-1+deb13u1 [283 kB]
+#19 6.841 Get:9 http://deb.debian.org/debian trixie/main amd64 libfreetype6 amd64 2.13.3+dfsg-1 [452 kB]
+#19 6.846 Get:10 http://deb.debian.org/debian trixie/main amd64 fonts-dejavu-mono all 2.37-8 [489 kB]
+#19 6.849 Get:11 http://deb.debian.org/debian trixie/main amd64 fonts-dejavu-core all 2.37-8 [840 kB]
+#19 6.857 Get:12 http://deb.debian.org/debian trixie/main amd64 fontconfig-config amd64 2.15.0-2.3 [318 kB]
+#19 6.859 Get:13 http://deb.debian.org/debian trixie/main amd64 libfontconfig1 amd64 2.15.0-2.3 [392 kB]
+#19 6.863 Get:14 http://deb.debian.org/debian trixie/main amd64 fontconfig amd64 2.15.0-2.3 [463 kB]
+#19 6.866 Get:15 http://deb.debian.org/debian trixie/main amd64 libatomic1 amd64 14.2.0-19 [9308 B]
+#19 6.867 Get:16 http://deb.debian.org/debian trixie/main amd64 libpixman-1-0 amd64 0.44.0-3 [248 kB]
+#19 6.869 Get:17 http://deb.debian.org/debian trixie/main amd64 libxau6 amd64 1:1.0.11-1 [20.4 kB]
+#19 6.869 Get:18 http://deb.debian.org/debian trixie/main amd64 libxdmcp6 amd64 1:1.1.5-1 [27.8 kB]
+#19 6.871 Get:19 http://deb.debian.org/debian trixie/main amd64 libxcb1 amd64 1.17.0-2+b1 [144 kB]
+#19 6.872 Get:20 http://deb.debian.org/debian trixie/main amd64 libx11-data all 2:1.8.12-1 [343 kB]
+#19 6.881 Get:21 http://deb.debian.org/debian trixie/main amd64 libx11-6 amd64 2:1.8.12-1 [815 kB]
+#19 6.902 Get:22 http://deb.debian.org/debian trixie/main amd64 libxcb-render0 amd64 1.17.0-2+b1 [115 kB]
+#19 6.903 Get:23 http://deb.debian.org/debian trixie/main amd64 libxcb-shm0 amd64 1.17.0-2+b1 [105 kB]
+#19 6.905 Get:24 http://deb.debian.org/debian trixie/main amd64 libxext6 amd64 2:1.3.4-1+b3 [50.4 kB]
+#19 6.905 Get:25 http://deb.debian.org/debian trixie/main amd64 libxrender1 amd64 1:0.9.12-1 [27.9 kB]
+#19 6.906 Get:26 http://deb.debian.org/debian trixie/main amd64 libcairo2 amd64 1.18.4-1+b1 [538 kB]
+#19 6.910 Get:27 http://deb.debian.org/debian trixie/main amd64 libcom-err2 amd64 1.47.2-3+b7 [25.0 kB]
+#19 6.910 Get:28 http://deb.debian.org/debian trixie/main amd64 libdatrie1 amd64 0.2.13-3+b1 [38.1 kB]
+#19 6.911 Get:29 http://deb.debian.org/debian trixie/main amd64 libdeflate0 amd64 1.23-2 [47.3 kB]
+#19 6.912 Get:30 http://deb.debian.org/debian trixie/main amd64 libfribidi0 amd64 1.0.16-1 [26.5 kB]
+#19 6.916 Get:31 http://deb.debian.org/debian trixie/main amd64 libgdk-pixbuf2.0-common all 2.42.12+dfsg-4 [311 kB]
+#19 6.927 Get:32 http://deb.debian.org/debian trixie/main amd64 libglib2.0-0t64 amd64 2.84.4-3~deb13u2 [1518 kB]
+#19 6.939 Get:33 http://deb.debian.org/debian trixie/main amd64 libxml2 amd64 2.12.7+dfsg+really2.9.14-2.1+deb13u2 [698 kB]
+#19 6.946 Get:34 http://deb.debian.org/debian trixie/main amd64 shared-mime-info amd64 2.4-5+b2 [760 kB]
+#19 6.953 Get:35 http://deb.debian.org/debian trixie/main amd64 libjpeg62-turbo amd64 1:2.1.5-4 [168 kB]
+#19 6.954 Get:36 http://deb.debian.org/debian trixie/main amd64 libjbig0 amd64 2.1-6.1+b2 [32.1 kB]
+#19 6.955 Get:37 http://deb.debian.org/debian trixie/main amd64 liblerc4 amd64 4.0.0+ds-5 [183 kB]
+#19 6.957 Get:38 http://deb.debian.org/debian trixie/main amd64 libsharpyuv0 amd64 1.5.0-0.1 [116 kB]
+#19 6.959 Get:39 http://deb.debian.org/debian trixie/main amd64 libwebp7 amd64 1.5.0-0.1 [318 kB]
+#19 6.962 Get:40 http://deb.debian.org/debian trixie/main amd64 libtiff6 amd64 4.7.0-3+deb13u1 [346 kB]
+#19 6.966 Get:41 http://deb.debian.org/debian trixie/main amd64 libgdk-pixbuf-2.0-0 amd64 2.42.12+dfsg-4 [141 kB]
+#19 6.967 Get:42 http://deb.debian.org/debian trixie/main amd64 libgirepository-1.0-1 amd64 1.84.0-1 [116 kB]
+#19 6.969 Get:43 http://deb.debian.org/debian trixie/main amd64 libgraphite2-3 amd64 1.3.14-2+b1 [75.4 kB]
+#19 6.978 Get:44 http://deb.debian.org/debian trixie/main amd64 libkrb5support0 amd64 1.21.3-5 [33.0 kB]
+#19 6.978 Get:45 http://deb.debian.org/debian trixie/main amd64 libk5crypto3 amd64 1.21.3-5 [81.5 kB]
+#19 6.979 Get:46 http://deb.debian.org/debian trixie/main amd64 libkeyutils1 amd64 1.6.3-6 [9456 B]
+#19 6.979 Get:47 http://deb.debian.org/debian trixie/main amd64 libkrb5-3 amd64 1.21.3-5 [326 kB]
+#19 6.983 Get:48 http://deb.debian.org/debian trixie/main amd64 libgssapi-krb5-2 amd64 1.21.3-5 [138 kB]
+#19 6.985 Get:49 http://deb.debian.org/debian trixie/main amd64 libharfbuzz0b amd64 10.2.0-1+b1 [479 kB]
+#19 6.994 Get:50 http://deb.debian.org/debian trixie/main amd64 libsasl2-modules-db amd64 2.1.28+dfsg1-9 [19.8 kB]
+#19 6.994 Get:51 http://deb.debian.org/debian trixie/main amd64 libsasl2-2 amd64 2.1.28+dfsg1-9 [57.5 kB]
+#19 6.994 Get:52 http://deb.debian.org/debian trixie/main amd64 libldap2 amd64 2.6.10+dfsg-1 [194 kB]
+#19 6.994 Get:53 http://deb.debian.org/debian trixie/main amd64 libthai-data all 0.1.29-2 [168 kB]
+#19 7.006 Get:54 http://deb.debian.org/debian trixie/main amd64 libthai0 amd64 0.1.29-2+b1 [49.4 kB]
+#19 7.012 Get:55 http://deb.debian.org/debian trixie/main amd64 libpango-1.0-0 amd64 1.56.3-1 [226 kB]
+#19 7.087 Get:56 http://deb.debian.org/debian trixie/main amd64 libpangoft2-1.0-0 amd64 1.56.3-1 [55.6 kB]
+#19 7.087 Get:57 http://deb.debian.org/debian trixie/main amd64 libpq5 amd64 17.7-0+deb13u1 [228 kB]
+#19 7.088 Get:58 http://deb.debian.org/debian trixie/main amd64 postgresql-client-common all 278 [47.1 kB]
+#19 7.089 Get:59 http://deb.debian.org/debian trixie/main amd64 postgresql-client-17 amd64 17.7-0+deb13u1 [2045 kB]
+#19 7.103 Get:60 http://deb.debian.org/debian trixie/main amd64 postgresql-client all 17+278 [14.0 kB]
+#19 7.543 debconf: unable to initialize frontend: Dialog
+#19 7.543 debconf: (TERM is not set, so the dialog frontend is not usable.)
+#19 7.543 debconf: falling back to frontend: Readline
+#19 7.544 debconf: unable to initialize frontend: Readline
+#19 7.544 debconf: (Can't locate Term/ReadLine.pm in @INC (you may need to install the Term::ReadLine module) (@INC entries checked: /etc/perl /usr/local/lib/x86_64-linux-gnu/perl/5.40.1 /usr/local/share/perl/5.40.1 /usr/lib/x86_64-linux-gnu/perl5/5.40 /usr/share/perl5 /usr/lib/x86_64-linux-gnu/perl-base /usr/lib/x86_64-linux-gnu/perl/5.40 /usr/share/perl/5.40 /usr/local/lib/site_perl) at /usr/share/perl5/Debconf/FrontEnd/Readline.pm line 8, <STDIN> line 60.)
+#19 7.544 debconf: falling back to frontend: Teletype
+#19 7.551 debconf: unable to initialize frontend: Teletype
+#19 7.551 debconf: (This frontend requires a controlling tty.)
+#19 7.551 debconf: falling back to frontend: Noninteractive
+#19 9.172 Preconfiguring packages ...
+#19 9.280 Fetched 22.9 MB in 0s (55.0 MB/s)
+#19 9.320 Selecting previously unselected package libexpat1:amd64.
+#19 9.320 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 5645 files and directories currently installed.)
+#19 9.360 Preparing to unpack .../00-libexpat1_2.7.1-2_amd64.deb ...
+#19 9.366 Unpacking libexpat1:amd64 (2.7.1-2) ...
+#19 9.405 Selecting previously unselected package sensible-utils.
+#19 9.407 Preparing to unpack .../01-sensible-utils_0.0.25_all.deb ...
+#19 9.409 Unpacking sensible-utils (0.0.25) ...
+#19 9.440 Selecting previously unselected package perl-modules-5.40.
+#19 9.441 Preparing to unpack .../02-perl-modules-5.40_5.40.1-6_all.deb ...
+#19 9.445 Unpacking perl-modules-5.40 (5.40.1-6) ...
+#19 ...
+
+#18 [backend builder 2/5] RUN apt-get update && apt-get install -y --no-install-recommends     gcc     postgresql-client     libpq-dev     && rm -rf /var/lib/apt/lists/*
+#18 9.444 Fetched 70.2 MB in 1s (87.2 MB/s)
+#18 9.612 (Reading database ... (Reading database ... 5%(Reading database ... 10%(Reading database ... 15%(Reading database ... 20%(Reading database ... 25%(Reading database ... 30%(Reading database ... 35%(Reading database ... 40%(Reading database ... 45%(Reading database ... 50%(Reading database ... 55%(Reading database ... 60%(Reading database ... 65%(Reading database ... 70%(Reading database ... 75%(Reading database ... 80%(Reading database ... 85%(Reading database ... 90%(Reading database ... 95%(Reading database ... 100%(Reading database ... 5645 files and directories currently installed.)
+#18 9.621 Preparing to unpack .../openssl-provider-legacy_3.5.4-1~deb13u2_amd64.deb ...
+#18 9.678 Unpacking openssl-provider-legacy (3.5.4-1~deb13u2) over (3.5.4-1~deb13u1) ...
+
