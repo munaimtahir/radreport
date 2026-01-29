@@ -203,8 +203,11 @@ pgsims.alshifalab.pk, pgsims.pmc.edu.pk {
 rims.alshifalab.pk {
 	encode gzip zstd
 
-	# API routes to backend
-	handle /api/* {
+	# API, Admin and Media routes to backend
+	@backend_paths {
+		path /api/* /admin/* /media/*
+	}
+	handle @backend_paths {
 		reverse_proxy 127.0.0.1:8015 {
 			header_up Host {host}
 			header_up X-Real-IP {remote}
@@ -293,4 +296,22 @@ portal.alshifalab.pk {
 # IP redirect for PGSIMS
 34.16.82.13 {
 	redir https://pgsims.alshifalab.pk{uri} permanent
+}
+
+sos.alshifalab.pk {
+    encode gzip zstd
+    route {
+        reverse_proxy /api/* /admin/* /media/* 127.0.0.1:8017 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+        }
+        reverse_proxy * 127.0.0.1:8083 {
+            header_up Host {host}
+            header_up X-Real-IP {remote}
+            header_up X-Forwarded-For {remote}
+            header_up X-Forwarded-Proto {scheme}
+        }
+    }
 }
