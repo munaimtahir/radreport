@@ -198,6 +198,7 @@ function Shell() {
                     transition: theme.transitions.fast,
                   }}
                 >
+                >
                   Consultants
                 </Link>
 
@@ -215,21 +216,6 @@ function Shell() {
                   }}
                 >
                   Consultant Settlements
-                </Link>
-                <Link
-                  to="/receipt-settings"
-                  style={{
-                    padding: "10px 12px",
-                    textDecoration: "none",
-                    color: isActiveRoute("/receipt-settings") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/receipt-settings") ? theme.colors.brandBlueSoft : "transparent",
-                    borderRadius: theme.radius.base,
-                    fontSize: 14,
-                    fontWeight: isActiveRoute("/receipt-settings") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                    transition: theme.transitions.fast,
-                  }}
-                >
-                  Receipt Settings
                 </Link>
               </div>
             )}

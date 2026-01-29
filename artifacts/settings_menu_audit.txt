@@ -1,0 +1,44 @@
+# Settings menu capability audit
+
+## App.tsx settings menu entries
+10:import ConsultantsPage from "../views/ConsultantsPage";
+186:                  SETTINGS
+201:                  Consultants
+217:                  Consultant Settlements
+220:                  to="/receipt-settings"
+224:                    color: isActiveRoute("/receipt-settings") ? theme.colors.brandBlue : theme.colors.textSecondary,
+225:                    backgroundColor: isActiveRoute("/receipt-settings") ? theme.colors.brandBlueSoft : "transparent",
+228:                    fontWeight: isActiveRoute("/receipt-settings") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+304:              to="/receipt-settings"
+308:                color: isActiveRoute("/receipt-settings") ? "#0B5ED7" : "#555",
+309:                backgroundColor: isActiveRoute("/receipt-settings") ? "#f0f7ff" : "transparent",
+312:                fontWeight: isActiveRoute("/receipt-settings") ? 500 : 400,
+374:                element={canAdmin ? <ConsultantsPage /> : <AccessDenied />}
+378:              <Route path="/receipt-settings" element={<ReceiptSettings />} />
+
+## Receipt settings UI (header/footer/logo/banner)
+10:  header_text: string;
+11:  footer_text?: string;
+25:    header_text: "Consultant Place Clinic",
+26:    footer_text: "Adjacent Excel Labs, Near Arman Pan Shop Faisalabad Road Jaranwala\nFor information/Appointment: Tel: 041 4313 777 | WhatsApp: 03279640897",
+68:          header_text: settings.header_text,
+69:          footer_text: settings.footer_text,
+162:      <PageHeader title="Receipt Branding Settings" />
+168:        <h2 style={{ marginTop: 0 }}>Header & Footer Text</h2>
+173:            value={settings.header_text}
+174:            onChange={(e) => setSettings({ ...settings, header_text: e.target.value })}
+182:            value={settings.footer_text || ""}
+183:            onChange={(e) => setSettings({ ...settings, footer_text: e.target.value })}
+194:        <h2 style={{ marginTop: 0 }}>Logo Image</h2>
+221:        <h2 style={{ marginTop: 0 }}>Header Image (Banner)</h2>
+224:            <p>Current Header Image:</p>
+233:          <label style={{ display: "block", marginBottom: 8 }}>Upload Header Image</label>
+
+## Services API (backend CRUD endpoints)
+17:class ServiceViewSet(viewsets.ModelViewSet):
+46:    def import_csv(self, request):
+140:    def most_used(self, request):
+
+## Report template/profile linkage (Django admin)
+33:class ReportProfileAdmin(admin.ModelAdmin):
+39:class ServiceReportProfileAdmin(admin.ModelAdmin):

@@ -1,0 +1,34 @@
+frontend/src/ui/App.tsx:8:import ReceiptSettings from "../views/ReceiptSettings";
+frontend/src/ui/App.tsx:300:              Receipt Settings
+frontend/src/ui/App.tsx:363:              <Route path="/receipt-settings" element={<ReceiptSettings />} />
+frontend/src/views/ConsultantsPage.tsx:443:                                    <Button variant="secondary" onClick={() => handleEdit(c)}>Edit & Settings</Button>
+frontend/src/views/ReceiptSettings.tsx:9:interface ReceiptSettings {
+frontend/src/views/ReceiptSettings.tsx:19:export default function ReceiptSettings() {
+frontend/src/views/ReceiptSettings.tsx:24:  const [settings, setSettings] = useState<ReceiptSettings>({
+frontend/src/views/ReceiptSettings.tsx:33:      loadSettings();
+frontend/src/views/ReceiptSettings.tsx:37:  const loadSettings = async () => {
+frontend/src/views/ReceiptSettings.tsx:41:      setSettings(data);
+frontend/src/views/ReceiptSettings.tsx:110:      setSettings(data);
+frontend/src/views/ReceiptSettings.tsx:147:      setSettings(data);
+frontend/src/views/ReceiptSettings.tsx:162:      <PageHeader title="Receipt Branding Settings" />
+frontend/src/views/ReceiptSettings.tsx:174:            onChange={(e) => setSettings({ ...settings, header_text: e.target.value })}
+frontend/src/views/ReceiptSettings.tsx:183:            onChange={(e) => setSettings({ ...settings, footer_text: e.target.value })}
+frontend/src/ui/App.tsx:152:                to="/reporting/worklist"
+frontend/src/ui/App.tsx:156:                  color: isActiveRoute("/reporting/worklist") ? theme.colors.brandBlue : theme.colors.textSecondary,
+frontend/src/ui/App.tsx:157:                  backgroundColor: isActiveRoute("/reporting/worklist") ? theme.colors.brandBlueSoft : "transparent",
+frontend/src/ui/App.tsx:160:                  fontWeight: isActiveRoute("/reporting/worklist") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+frontend/src/ui/App.tsx:368:              <Route path="/reporting/worklist" element={<ReportingWorklistPage />} />
+frontend/src/ui/App.tsx:369:              <Route path="/reporting/worklist/:service_visit_item_id/report" element={<ReportingPage />} />
+frontend/src/views/ReportingPage.tsx:369:                    <Button variant="secondary" onClick={() => navigate("/reporting/worklist")}>Worklist</Button>
+frontend/src/views/ReportingWorklistPage.tsx:237:                                                    onClick={() => navigate(`/reporting/worklist/${item.id}/report`)}
+frontend/src/ui/api.ts:11:  // But we can check if the caller passed a special flag or if we just detect it?
+frontend/src/ui/App.tsx:28:  const isSuperuser = user?.is_superuser || false;
+frontend/src/ui/App.tsx:29:  const canRegister = isSuperuser || groups.includes("registration");
+frontend/src/ui/App.tsx:30:  const canPerform = isSuperuser || groups.includes("performance");
+frontend/src/ui/App.tsx:31:  const canVerify = isSuperuser || groups.includes("verification");
+frontend/src/ui/App.tsx:32:  const canAdmin = isSuperuser;
+frontend/src/ui/App.tsx:33:  const canWorkflow = isSuperuser || canRegister || canPerform || canVerify;
+frontend/src/ui/auth.tsx:10:    is_superuser: boolean;
+frontend/src/views/ReportingPage.tsx:30:    const { token, user } = useAuth(); // Assume user object has groups/permissions
+frontend/src/views/Dashboard.tsx:83:  const isAdmin = user?.is_superuser || (user?.groups || []).some((g: string) => g.toLowerCase() === "admin");
+frontend/src/views/AccessDenied.tsx:20:          You do not have permission to access this page. Please contact an administrator if you believe this is an error.
