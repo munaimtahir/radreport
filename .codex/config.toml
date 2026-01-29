@@ -1,0 +1,6 @@
+[project]
+language = "python"
+
+[commands]
+setup = "bash scripts/setup"
+test = "bash scripts/test"
