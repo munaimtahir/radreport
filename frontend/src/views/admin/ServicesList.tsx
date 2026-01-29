@@ -27,7 +27,7 @@ export default function ServicesList() {
             setLoading(true);
             // Assuming pagination or simple list. existing ServiceViewSet supports search.
             const query = search ? `?search=${search}` : "";
-            const data = await apiGet(`/catalog/services/${query}`, token);
+            const data = await apiGet(`/services/${query}`, token);
             setServices(Array.isArray(data) ? data : data.results || []);
         } catch (e: any) {
             setError(e.message || "Failed to load services");
@@ -42,7 +42,7 @@ export default function ServicesList() {
             // Usually we deactivate instead of delete
             // But apiDelete calls DELETE method. ServiceViewSet default might verify usage.
             // Let's assume standard delete for now, user can check backend.
-            await apiDelete(`/catalog/services/${id}/`, token);
+            await apiDelete(`/services/${id}/`, token);
             loadData();
         } catch (e: any) {
             alert(e.message || "Failed to delete");
