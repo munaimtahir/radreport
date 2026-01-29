@@ -41,7 +41,7 @@ export default function ServicesList() {
         loadData();
     }, [loadData]);
 
-    const handleDelete = async (id: string) => {
+    const handleDeactivate = async (id: string) => {
         if (!window.confirm("Are you sure you want to deactivate this service?")) return;
         try {
             // Deactivate instead of delete
@@ -93,7 +93,7 @@ export default function ServicesList() {
                                     <Button variant="secondary" onClick={() => navigate(`/admin/services/${s.id}`)} style={{ marginRight: 8 }}>
                                         Edit
                                     </Button>
-                                    <Button variant="secondary" onClick={() => handleDelete(s.id)} style={{ color: theme.colors.danger }}>
+                                    <Button variant="secondary" onClick={() => handleDeactivate(s.id)} style={{ color: theme.colors.danger }}>
                                         Del
                                     </Button>
                                 </td>

@@ -16,11 +16,23 @@ interface Profile {
 }
 
 interface Parameter {
-    parameter_id: string;
+    parameter_id?: string;
+    id?: string;
+    profile?: string;
     section: string;
     name: string;
-    type: string;
+    type?: string;
     parameter_type?: string;
+    unit?: string;
+    normal_value?: string;
+    order?: number;
+    is_required?: boolean;
+    options?: any[];
+    slug?: string;
+    sentence_template?: string;
+    narrative_role?: string;
+    omit_if_values?: string;
+    join_label?: string;
 }
 
 export default function TemplateEditor() {
@@ -98,7 +110,7 @@ export default function TemplateEditor() {
         }
     };
 
-    const openParamModal = (param?: any) => {
+    const openParamModal = (param?: Parameter) => {
         if (param) {
             setCurrentParam({ ...param });
         } else {
@@ -116,7 +128,7 @@ export default function TemplateEditor() {
         setShowParamModal(true);
     };
 
-    const handleSaveParam = async (paramData: any) => {
+    const handleSaveParam = async (paramData: Parameter) => {
         try {
             if (paramData.id) {
                 await apiPut(`/reporting/parameters/${paramData.id}/`, token, paramData);
@@ -205,15 +217,15 @@ export default function TemplateEditor() {
                             </tr>
                         </thead>
                         <tbody>
-                            {parameters.map((p: any) => (
-                                <tr key={p.id} style={{ borderBottom: `1px solid ${theme.colors.borderLight}` }}>
+                            {parameters.map((p: Parameter) => (
+                                <tr key={p.parameter_id || p.id} style={{ borderBottom: `1px solid ${theme.colors.borderLight}` }}>
                                     <td style={{ padding: 8 }}>{p.order}</td>
                                     <td style={{ padding: 8 }}>{p.section}</td>
                                     <td style={{ padding: 8 }}>{p.name}</td>
                                     <td style={{ padding: 8 }}>{p.type || p.parameter_type}</td>
                                     <td style={{ padding: 8, textAlign: "right" }}>
                                         <Button variant="secondary" onClick={() => openParamModal(p)} style={{ marginRight: 8, fontSize: 12, padding: "4px 8px" }}>Edit</Button>
-                                        <Button variant="secondary" onClick={() => handleDeleteParam(p.parameter_id)} style={{ color: theme.colors.danger, fontSize: 12, padding: "4px 8px" }}>Del</Button>
+                                        <Button variant="secondary" onClick={() => handleDeleteParam(p.parameter_id || p.id!)} style={{ color: theme.colors.danger, fontSize: 12, padding: "4px 8px" }}>Del</Button>
                                     </td>
                                 </tr>
                             ))}
