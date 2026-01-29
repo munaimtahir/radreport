@@ -1,9 +1,14 @@
 from rest_framework import serializers
 from .models import (
     ReportProfile, ReportParameter, ReportParameterOption, 
-    ReportInstance, ReportValue
+    ReportInstance, ReportValue, ServiceReportProfile
 )
 from apps.workflow.models import ServiceVisitItem
+
+class ServiceReportProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceReportProfile
+        fields = ["id", "service", "profile", "enforce_single_profile", "is_default"]
 
 class ReportParameterOptionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -13,12 +18,14 @@ class ReportParameterOptionSerializer(serializers.ModelSerializer):
 class ReportParameterSerializer(serializers.ModelSerializer):
     options = ReportParameterOptionSerializer(many=True, read_only=True)
     parameter_id = serializers.UUIDField(source="id", read_only=True)
+    type = serializers.CharField(source="parameter_type", read_only=True)
 
     class Meta:
         model = ReportParameter
         fields = [
-            "id", "parameter_id", "section", "name", "parameter_type", 
-            "unit", "normal_value", "order", "is_required", "options"
+            "id", "parameter_id", "profile", "section", "name", "parameter_type", "type",
+            "unit", "normal_value", "order", "is_required", "options",
+            "slug", "sentence_template", "narrative_role", "omit_if_values", "join_label"
         ]
 
 class ReportProfileSerializer(serializers.ModelSerializer):

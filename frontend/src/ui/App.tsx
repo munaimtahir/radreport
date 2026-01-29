@@ -13,6 +13,10 @@ import PatientsWorkflow from "../views/PatientsWorkflow";
 import AccessDenied from "../views/AccessDenied";
 import ReportingPage from "../views/ReportingPage";
 import ReportingWorklistPage from "../views/ReportingWorklistPage";
+import TemplatesList from "../views/admin/TemplatesList";
+import TemplateEditor from "../views/admin/TemplateEditor";
+import ServicesList from "../views/admin/ServicesList";
+import ServiceEditor from "../views/admin/ServiceEditor";
 
 
 import ModuleDisabled from "../views/ModuleDisabled";
@@ -216,6 +220,51 @@ function Shell() {
                 >
                   Consultant Settlements
                 </Link>
+                <Link
+                  to="/receipt-settings"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/receipt-settings") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/receipt-settings") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/receipt-settings") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
+                  }}
+                >
+                  Receipt Settings
+                </Link>
+                <Link
+                  to="/admin/services"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/admin/services") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/admin/services") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/admin/services") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
+                  }}
+                >
+                  Services
+                </Link>
+                <Link
+                  to="/admin/templates"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/admin/templates") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/admin/templates") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/admin/templates") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
+                  }}
+                >
+                  Templates
+                </Link>
               </div>
             )}
             {/* PHASE C: Legacy routes hidden from navigation - accessible via direct URL for admin only */}
@@ -358,6 +407,12 @@ function Shell() {
                 path="/admin/consultants"
                 element={canAdmin ? <ConsultantsPage /> : <AccessDenied />}
               />
+
+              <Route path="/admin/templates" element={canAdmin ? <TemplatesList /> : <AccessDenied />} />
+              <Route path="/admin/templates/:id" element={canAdmin ? <TemplateEditor /> : <AccessDenied />} />
+              <Route path="/admin/services" element={canAdmin ? <ServicesList /> : <AccessDenied />} />
+              <Route path="/admin/services/:id" element={canAdmin ? <ServiceEditor /> : <AccessDenied />} />
+
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />
               <Route path="/receipt-settings" element={<ReceiptSettings />} />

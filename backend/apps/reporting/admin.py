@@ -1,4 +1,5 @@
 from django.contrib import admin
+from apps.admin_utils import HiddenFromAdminIndexModelAdmin
 from .models import (
     ReportProfile, ReportParameter, ReportParameterOption, 
     ServiceReportProfile, ReportInstance, ReportValue,
@@ -11,7 +12,7 @@ class ReportParameterOptionInline(admin.TabularInline):
     extra = 1
 
 @admin.register(ReportParameter)
-class ReportParameterAdmin(admin.ModelAdmin):
+class ReportParameterAdmin(HiddenFromAdminIndexModelAdmin):
     list_display = ("profile", "section", "name", "parameter_type", "order")
     list_filter = ("profile", "parameter_type")
     inlines = [ReportParameterOptionInline]
@@ -54,13 +55,13 @@ class ReportInstanceAdmin(admin.ModelAdmin):
     inlines = [ReportValueInline]
 
 @admin.register(ReportActionLog)
-class ReportActionLogAdmin(admin.ModelAdmin):
+class ReportActionLogAdmin(HiddenFromAdminIndexModelAdmin):
     list_display = ("report", "action", "actor", "created_at")
     list_filter = ("action", "actor", "created_at")
     search_fields = ("report__id", "actor__username")
 
 @admin.register(ReportPublishSnapshot)
-class ReportPublishSnapshotAdmin(admin.ModelAdmin):
+class ReportPublishSnapshotAdmin(HiddenFromAdminIndexModelAdmin):
     list_display = ("report", "version", "published_at", "published_by", "sha256")
     list_filter = ("published_at", "published_by", "version")
     search_fields = ("report__id", "sha256", "published_by__username")
@@ -77,9 +78,8 @@ class ReportingOrganizationConfigAdmin(admin.ModelAdmin):
         return True
 
 @admin.register(ReportParameterLibraryItem)
-class ReportParameterLibraryItemAdmin(admin.ModelAdmin):
+class ReportParameterLibraryItemAdmin(HiddenFromAdminIndexModelAdmin):
     list_display = ("slug", "name", "modality", "parameter_type")
     search_fields = ("slug", "name")
     list_filter = ("modality", "parameter_type")
-
 

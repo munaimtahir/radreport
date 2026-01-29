@@ -49,3 +49,8 @@ backend/reports/
 # Environment files
 .env
 .env.*
+
+# Artifacts and Logs
+artifacts/
+**/*.log
+**/*.pdf
