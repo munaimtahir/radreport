@@ -1,4 +1,5 @@
 from django.contrib import admin
+from apps.admin_utils import HiddenFromAdminIndexModelAdmin
 from .models import (
     ServiceCatalog, ServiceVisit, ServiceVisitItem, Invoice, Payment,
     OPDVitals, OPDConsult, StatusAuditLog, ReceiptSnapshot
@@ -7,7 +8,7 @@ from .models import (
 
 
 @admin.register(ServiceCatalog)
-class ServiceCatalogAdmin(admin.ModelAdmin):
+class ServiceCatalogAdmin(HiddenFromAdminIndexModelAdmin):
     """
     DEPRECATED: Use catalog.Service instead.
     This model is kept for migration compatibility only.
@@ -51,7 +52,7 @@ class PaymentAdmin(admin.ModelAdmin):
 
 
 @admin.register(ReceiptSnapshot)
-class ReceiptSnapshotAdmin(admin.ModelAdmin):
+class ReceiptSnapshotAdmin(HiddenFromAdminIndexModelAdmin):
     list_display = ["service_visit", "receipt_number", "issued_at", "total_paid", "payment_method"]
     search_fields = ["service_visit__visit_id", "receipt_number", "patient_name"]
     readonly_fields = ["created_at"]
@@ -73,7 +74,7 @@ class OPDConsultAdmin(admin.ModelAdmin):
 
 
 @admin.register(StatusAuditLog)
-class StatusAuditLogAdmin(admin.ModelAdmin):
+class StatusAuditLogAdmin(HiddenFromAdminIndexModelAdmin):
     list_display = ["service_visit", "from_status", "to_status", "changed_by", "changed_at"]
     list_filter = ["from_status", "to_status", "changed_at"]
     search_fields = ["service_visit__visit_id"]
