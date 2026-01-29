@@ -49,7 +49,7 @@ COPY . /app/
 # Ensure entrypoint script is executable
 RUN chmod +x /app/scripts/entrypoint.sh
 
-# Create necessary directories (static directory comes from COPY)
+# Create necessary directories (static directory is included in source code from COPY above)
 RUN mkdir -p /app/media /app/staticfiles
 
 # Create non-root user for security
