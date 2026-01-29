@@ -49,3 +49,43 @@ backend/reports/
 # Environment files
 .env
 .env.*
+
+# =============================================================================
+# Generated artifacts and logs (prevent repo bloat)
+# =============================================================================
+# All files in artifacts/ directory are generated during builds/tests/deployments
+# and should never be committed to version control
+artifacts/**
+
+# Log files from any directory
+**/*.log
+
+# PDF files (generated reports, receipts, etc.)
+# Note: If specific PDFs need versioning (e.g., documentation), whitelist them
+**/*.pdf
+
+# Temporary files
+**/*.tmp
+**/*.temp
+**/tmp/**
+**/temp/**
+
+# Backup files
+**/*.bak
+**/*.backup
+**/*.swp
+**/*.swo
+*~
+
+# OS-specific files
+**/.DS_Store
+**/Thumbs.db
+**/.Spotlight-V100
+**/.Trashes
+
+# Text dumps and audit outputs (generated during debugging/deployment)
+error_log.txt
+updated_config.txt
+*_audit.txt
+*_dump.txt
+*_extract.txt
