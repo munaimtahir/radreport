@@ -8,9 +8,13 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
 from apps.workflow.models import ServiceVisitItem, ServiceVisit
-from .models import ServiceReportProfile, ReportInstance, ReportValue, ReportProfile, ReportParameter
+from .models import (
+    ServiceReportProfile, ReportInstance, ReportValue,
+    ReportProfile, ReportParameter, ReportParameterOption
+)
 from .serializers import (
-    ReportProfileSerializer, ReportInstanceSerializer, ReportValueSerializer, ReportSaveSerializer
+    ReportProfileSerializer, ReportInstanceSerializer, ReportValueSerializer, ReportSaveSerializer,
+    ReportParameterSerializer, ServiceReportProfileSerializer
 )
 from .services.narrative_v1 import generate_report_narrative
 from .pdf_engine.report_pdf import generate_report_pdf
@@ -20,6 +24,64 @@ import json
 from django.core.files.base import ContentFile
 from .services.narrative_v1 import generate_report_narrative
 from .pdf_engine.report_pdf import generate_report_pdf
+
+class ReportProfileViewSet(viewsets.ModelViewSet):
+    queryset = ReportProfile.objects.all()
+    serializer_class = ReportProfileSerializer
+    permission_classes = [IsAuthenticated]
+    search_fields = ["code", "name", "modality"]
+    filterset_fields = ["modality", "is_active"]
+
+class ReportParameterViewSet(viewsets.ModelViewSet):
+    queryset = ReportParameter.objects.all()
+    serializer_class = ReportParameterSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["profile", "section"]
+    ordering_fields = ["order"]
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        self._handle_options(instance)
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        self._handle_options(instance)
+
+    def _handle_options(self, instance):
+        options_data = self.request.data.get("options")
+        if options_data is not None and isinstance(options_data, list):
+            # Replace options logic: delete existing and create new?
+            # Or smart update? For simplicity, delete and recreate since IDs might be temp
+            # But we should preserve IDs if possible?
+            # The frontend sends "id" if existing.
+
+            existing_ids = [opt.get("id") for opt in options_data if opt.get("id")]
+            # Delete those not in list
+            instance.options.exclude(id__in=existing_ids).delete()
+
+            for opt in options_data:
+                oid = opt.get("id")
+                label = opt.get("label", "")
+                value = opt.get("value", "")
+                order = opt.get("order", 0)
+
+                if oid:
+                    ReportParameterOption.objects.filter(id=oid).update(
+                        label=label, value=value, order=order
+                    )
+                else:
+                    ReportParameterOption.objects.create(
+                        parameter=instance,
+                        label=label,
+                        value=value,
+                        order=order
+                    )
+
+class ServiceReportProfileViewSet(viewsets.ModelViewSet):
+    queryset = ServiceReportProfile.objects.all()
+    serializer_class = ServiceReportProfileSerializer
+    permission_classes = [IsAuthenticated]
+    filterset_fields = ["service", "profile"]
 
 class ReportWorkItemViewSet(viewsets.ViewSet):
     """
