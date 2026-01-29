@@ -1,0 +1,121 @@
+                  padding: "10px 12px",
+                  textDecoration: "none",
+                  color: isActiveRoute("/registration") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                  backgroundColor: isActiveRoute("/registration") ? theme.colors.brandBlueSoft : "transparent",
+                  borderRadius: theme.radius.base,
+                  fontSize: 14,
+                  fontWeight: isActiveRoute("/registration") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                  transition: theme.transitions.fast,
+                }}
+              >
+                Registration
+              </Link>
+            )}
+            {canWorkflow && (
+              <Link
+                to="/patients/workflow"
+                style={{
+                  padding: "10px 12px",
+                  textDecoration: "none",
+                  color: isActiveRoute("/patients/workflow") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                  backgroundColor: isActiveRoute("/patients/workflow") ? theme.colors.brandBlueSoft : "transparent",
+                  borderRadius: theme.radius.base,
+                  fontSize: 14,
+                  fontWeight: isActiveRoute("/patients/workflow") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                  transition: theme.transitions.fast,
+                }}
+              >
+                Patient workflow
+              </Link>
+            )}
+            {(canPerform || canVerify) && (
+              <Link
+                to="/reporting/worklist"
+                style={{
+                  padding: "10px 12px",
+                  textDecoration: "none",
+                  color: isActiveRoute("/reporting/worklist") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                  backgroundColor: isActiveRoute("/reporting/worklist") ? theme.colors.brandBlueSoft : "transparent",
+                  borderRadius: theme.radius.base,
+                  fontSize: 14,
+                  fontWeight: isActiveRoute("/reporting/worklist") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                  transition: theme.transitions.fast,
+                }}
+              >
+                Reporting worklist
+              </Link>
+            )}
+
+
+            {canAdmin && (
+              <div style={{
+                marginTop: 12,
+                paddingTop: 12,
+                borderTop: `1px solid ${theme.colors.border}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: 4
+              }}>
+                <div style={{
+                  fontSize: 11,
+                  color: theme.colors.textTertiary,
+                  fontWeight: theme.typography.fontWeight.semibold,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  marginBottom: 8
+                }}>
+                  SETTINGS
+                </div>
+                <Link
+                  to="/admin/consultants"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/admin/consultants") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/admin/consultants") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/admin/consultants") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
+                  }}
+                >
+                  Consultants
+                </Link>
+
+                <Link
+                  to="/admin/consultant-settlements"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/admin/consultant-settlements") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/admin/consultant-settlements") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/admin/consultant-settlements") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
+                  }}
+                >
+                  Consultant Settlements
+                </Link>
+                <Link
+                  to="/receipt-settings"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/receipt-settings") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/receipt-settings") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/receipt-settings") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
+                  }}
+                >
+                  Receipt Settings
+                </Link>
+              </div>
+            )}
+            {/* PHASE C: Legacy routes hidden from navigation - accessible via direct URL for admin only */}
+            {/* Uncomment below to show legacy routes (admin-only in production) */}
+            {/*
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e0e0e0" }}>
+              <div style={{ fontSize: 11, color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
