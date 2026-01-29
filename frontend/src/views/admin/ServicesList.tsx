@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
-import { apiGet, apiDelete } from "../../ui/api";
+import { apiGet, apiDelete, apiPatch } from "../../ui/api";
 import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
@@ -12,12 +12,11 @@ export default function ServicesList() {
     const [services, setServices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
 
     useEffect(() => {
         loadData();
-    }, [token, page, search]);
+    }, [token, search]);
 
     const loadData = async () => {
         if (!token) return;
@@ -25,7 +24,7 @@ export default function ServicesList() {
             setLoading(true);
             // Assuming pagination or simple list. existing ServiceViewSet supports search.
             const query = search ? `?search=${search}` : "";
-            const data = await apiGet(`/catalog/services/${query}`, token);
+            const data = await apiGet(`/services/${query}`, token);
             setServices(Array.isArray(data) ? data : data.results || []);
         } catch (e: any) {
             setError(e.message || "Failed to load services");
@@ -37,13 +36,11 @@ export default function ServicesList() {
     const handleDelete = async (id: string) => {
         if (!window.confirm("Are you sure you want to deactivate this service?")) return;
         try {
-            // Usually we deactivate instead of delete
-            // But apiDelete calls DELETE method. ServiceViewSet default might verify usage.
-            // Let's assume standard delete for now, user can check backend.
-            await apiDelete(`/catalog/services/${id}/`, token);
+            // Deactivate instead of delete
+            await apiPatch(`/services/${id}/`, token, { is_active: false });
             loadData();
         } catch (e: any) {
-            alert(e.message || "Failed to delete");
+            setError(e.message || "Failed to deactivate");
         }
     };
 

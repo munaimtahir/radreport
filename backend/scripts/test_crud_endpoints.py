@@ -73,7 +73,7 @@ def test_crud():
                  {"label": "Opt 3", "value": "3", "order": 0}
              ]
         }
-        response = client.put(f'/api/reporting/parameters/{param_id}/', update_data, format='json')
+        response = client.patch(f'/api/reporting/parameters/{param_id}/', update_data, format='json')
         if response.status_code == 200:
              print("PASS: Update Parameter")
              param.refresh_from_db()

@@ -102,15 +102,15 @@ export default function TemplateEditor() {
 
     const handleSaveParam = async (paramData: any) => {
         try {
-            if (paramData.id && !String(paramData.id).startsWith("new_")) {
+            if (paramData.id) {
                 await apiPut(`/reporting/parameters/${paramData.id}/`, token, paramData);
             } else {
-                await apiPost("/reporting/parameters/", token, { ...paramData, profile: id });
+                await apiPost("/reporting/parameters/", token, paramData);
             }
             setShowParamModal(false);
             loadData();
         } catch (e: any) {
-            alert("Failed to save parameter: " + e.message);
+            setError("Failed to save parameter: " + e.message);
         }
     };
 
@@ -197,7 +197,7 @@ export default function TemplateEditor() {
                                     <td style={{ padding: 8 }}>{p.type || p.parameter_type}</td>
                                     <td style={{ padding: 8, textAlign: "right" }}>
                                         <Button variant="secondary" onClick={() => openParamModal(p)} style={{ marginRight: 8, fontSize: 12, padding: "4px 8px" }}>Edit</Button>
-                                        <Button variant="secondary" onClick={() => handleDeleteParam(p.parameter_id || p.id)} style={{ color: theme.colors.danger, fontSize: 12, padding: "4px 8px" }}>Del</Button>
+                                        <Button variant="secondary" onClick={() => handleDeleteParam(p.parameter_id)} style={{ color: theme.colors.danger, fontSize: 12, padding: "4px 8px" }}>Del</Button>
                                     </td>
                                 </tr>
                             ))}

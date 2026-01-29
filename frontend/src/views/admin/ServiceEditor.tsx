@@ -41,17 +41,19 @@ export default function ServiceEditor() {
     }, [id, token]);
 
     const loadModalities = async () => {
-        // Need ModalityViewSet. Assuming /catalog/modalities/
+        // Need ModalityViewSet. Assuming /modalities/
         try {
-            const data = await apiGet("/catalog/modalities/", token);
+            const data = await apiGet("/modalities/", token);
             setModalities(Array.isArray(data) ? data : data.results || []);
-        } catch (e) {}
+        } catch (e) {
+            console.error("Failed to load modalities:", e);
+        }
     };
 
     const loadData = async () => {
         setLoading(true);
         try {
-            const data = await apiGet(`/catalog/services/${id}/`, token);
+            const data = await apiGet(`/services/${id}/`, token);
             // Transform data if needed. Modality might be object.
             const s = { ...data };
             if (s.modality && typeof s.modality === 'object') {
@@ -72,11 +74,11 @@ export default function ServiceEditor() {
         try {
             let res;
             if (isNew) {
-                res = await apiPost("/catalog/services/", token, service);
+                res = await apiPost("/services/", token, service);
                 navigate(`/admin/services/${res.id}`, { replace: true });
                 setSuccess("Service created");
             } else {
-                res = await apiPut(`/catalog/services/${id}/`, token, service);
+                res = await apiPut(`/services/${id}/`, token, service);
                 setSuccess("Service updated");
             }
         } catch (e: any) {
