@@ -50,14 +50,7 @@ export default function ServiceEditor() {
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadModalities();
-        if (!isNew && token) {
-            loadData();
-        }
-    }, [id, token]);
-
-    const loadModalities = async () => {
+    const loadModalities = useCallback(async () => {
         try {
             const data = await apiGet("/modalities/", token);
             setModalities(Array.isArray(data) ? data : data.results || []);

@@ -13,10 +13,12 @@ import PatientsWorkflow from "../views/PatientsWorkflow";
 import AccessDenied from "../views/AccessDenied";
 import ReportingPage from "../views/ReportingPage";
 import ReportingWorklistPage from "../views/ReportingWorklistPage";
-import TemplatesList from "../views/settings/TemplatesList";
-import TemplateEditor from "../views/settings/TemplateEditor";
-import ServicesList from "../views/settings/ServicesList";
-import ServiceEditor from "../views/settings/ServiceEditor";
+import TemplatesList from "../views/admin/TemplatesList";
+import TemplateEditor from "../views/admin/TemplateEditor";
+import ServicesList from "../views/admin/ServicesList";
+import ServiceEditor from "../views/admin/ServiceEditor";
+import ParametersList from "../views/admin/ParametersList";
+import ServiceTemplateLinksList from "../views/admin/ServiceTemplateLinksList";
 
 
 import ModuleDisabled from "../views/ModuleDisabled";
@@ -236,19 +238,19 @@ function Shell() {
                   Receipt Settings
                 </Link>
                 <Link
-                  to="/settings/services"
+                  to="/settings/parameters"
                   style={{
                     padding: "10px 12px",
                     textDecoration: "none",
-                    color: isActiveRoute("/settings/services") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/settings/services") ? theme.colors.brandBlueSoft : "transparent",
+                    color: isActiveRoute("/settings/parameters") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/settings/parameters") ? theme.colors.brandBlueSoft : "transparent",
                     borderRadius: theme.radius.base,
                     fontSize: 14,
-                    fontWeight: isActiveRoute("/settings/services") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    fontWeight: isActiveRoute("/settings/parameters") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
                     transition: theme.transitions.fast,
                   }}
                 >
-                  Services
+                  Parameters
                 </Link>
                 <Link
                   to="/settings/templates"
@@ -264,6 +266,36 @@ function Shell() {
                   }}
                 >
                   Templates
+                </Link>
+                <Link
+                  to="/settings/services"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/settings/services") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/settings/services") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/settings/services") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
+                  }}
+                >
+                  Services
+                </Link>
+                <Link
+                  to="/settings/service-template-links"
+                  style={{
+                    padding: "10px 12px",
+                    textDecoration: "none",
+                    color: isActiveRoute("/settings/service-template-links") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/settings/service-template-links") ? theme.colors.brandBlueSoft : "transparent",
+                    borderRadius: theme.radius.base,
+                    fontSize: 14,
+                    fontWeight: isActiveRoute("/settings/service-template-links") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    transition: theme.transitions.fast,
+                  }}
+                >
+                  Service-Template Links
                 </Link>
               </div>
             )}
@@ -408,10 +440,12 @@ function Shell() {
                 element={canAdmin ? <ConsultantsPage /> : <AccessDenied />}
               />
 
+              <Route path="/settings/parameters" element={canAdmin ? <ParametersList /> : <AccessDenied />} />
               <Route path="/settings/templates" element={canAdmin ? <TemplatesList /> : <AccessDenied />} />
               <Route path="/settings/templates/:id" element={canAdmin ? <TemplateEditor /> : <AccessDenied />} />
               <Route path="/settings/services" element={canAdmin ? <ServicesList /> : <AccessDenied />} />
               <Route path="/settings/services/:id" element={canAdmin ? <ServiceEditor /> : <AccessDenied />} />
+              <Route path="/settings/service-template-links" element={canAdmin ? <ServiceTemplateLinksList /> : <AccessDenied />} />
 
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />
