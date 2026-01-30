@@ -1,29 +1,38 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { apiGet, apiPost, apiPut, apiDelete } from "../../ui/api";
 import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
+import ErrorAlert from "../../ui/components/ErrorAlert";
+
+interface Profile {
+    id: string;
+    code: string;
+    name: string;
+}
+
+interface ServiceReportProfileLink {
+    id: string;
+    service: string;
+    profile: string;
+}
 
 export default function ServiceLinkage({ serviceId, token }: { serviceId: string, token: string | null }) {
-    const [profiles, setProfiles] = useState<any[]>([]);
-    const [currentLink, setCurrentLink] = useState<any>(null);
+    const [profiles, setProfiles] = useState<Profile[]>([]);
+    const [currentLink, setCurrentLink] = useState<ServiceReportProfileLink | null>(null);
     const [selectedProfileId, setSelectedProfileId] = useState("");
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        loadProfiles();
-        loadCurrentLink();
-    }, [serviceId]);
-
-    const loadProfiles = async () => {
+    const loadProfiles = useCallback(async () => {
         try {
             const data = await apiGet("/reporting/profiles/", token);
             setProfiles(Array.isArray(data) ? data : data.results || []);
         } catch (e) {
             console.error(e);
         }
-    };
+    }, [token]);
 
-    const loadCurrentLink = async () => {
+    const loadCurrentLink = useCallback(async () => {
         try {
             // Need a way to filter by service.
             // Assuming ServiceReportProfileViewSet supports filtering by service
@@ -39,10 +48,16 @@ export default function ServiceLinkage({ serviceId, token }: { serviceId: string
         } catch (e) {
             console.error(e);
         }
-    };
+    }, [serviceId, token]);
+
+    useEffect(() => {
+        loadProfiles();
+        loadCurrentLink();
+    }, [loadProfiles, loadCurrentLink]);
 
     const handleSaveLink = async () => {
         setLoading(true);
+        setError(null);
         try {
             if (currentLink) {
                 // Update or Delete?
@@ -69,7 +84,7 @@ export default function ServiceLinkage({ serviceId, token }: { serviceId: string
                 }
             }
         } catch (e: any) {
-            alert("Failed to save linkage: " + e.message);
+            setError("Failed to save linkage: " + e.message);
         } finally {
             setLoading(false);
         }
@@ -81,7 +96,7 @@ export default function ServiceLinkage({ serviceId, token }: { serviceId: string
             <p style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
                 Select the report template to be used when reporting on this service.
             </p>
-
+            {error && <ErrorAlert message={error} />}
             <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
                 <select
                     value={selectedProfileId}

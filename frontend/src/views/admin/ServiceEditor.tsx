@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
 import { apiGet, apiPost, apiPut } from "../../ui/api";
@@ -8,13 +8,30 @@ import ErrorAlert from "../../ui/components/ErrorAlert";
 import SuccessAlert from "../../ui/components/SuccessAlert";
 import ServiceLinkage from "./ServiceLinkage";
 
+interface Modality {
+    id: string;
+    code: string;
+    name: string;
+}
+
+interface Service {
+    code: string;
+    name: string;
+    category: string;
+    modality: string;
+    price: number;
+    tat_value: number;
+    tat_unit: string;
+    is_active: boolean;
+}
+
 export default function ServiceEditor() {
     const { id } = useParams<{ id: string }>();
     const isNew = !id || id === "new";
     const { token } = useAuth();
     const navigate = useNavigate();
 
-    const [service, setService] = useState<any>({
+    const [service, setService] = useState<Service>({
         code: "",
         name: "",
         category: "Radiology",
@@ -27,7 +44,7 @@ export default function ServiceEditor() {
         is_active: true
     });
 
-    const [modalities, setModalities] = useState<any[]>([]);
+    const [modalities, setModalities] = useState<Modality[]>([]);
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -44,10 +61,12 @@ export default function ServiceEditor() {
         try {
             const data = await apiGet("/modalities/", token);
             setModalities(Array.isArray(data) ? data : data.results || []);
-        } catch (e) {}
-    };
+        } catch (e) {
+            console.error("Failed to load modalities:", e);
+        }
+    }, [token]);
 
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         setLoading(true);
         try {
             const data = await apiGet(`/services/${id}/`, token);
@@ -62,7 +81,14 @@ export default function ServiceEditor() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, token]);
+
+    useEffect(() => {
+        loadModalities();
+        if (!isNew && token) {
+            loadData();
+        }
+    }, [loadModalities, loadData, isNew, token]);
 
     const handleSave = async () => {
         setSaving(true);

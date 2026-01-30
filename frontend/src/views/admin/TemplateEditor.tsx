@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
 import { apiGet, apiPost, apiPut, apiDelete } from "../../ui/api";
@@ -7,20 +7,48 @@ import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
 import SuccessAlert from "../../ui/components/SuccessAlert";
 
+interface Profile {
+    code: string;
+    name: string;
+    modality: string;
+    enable_narrative: boolean;
+    narrative_mode: string;
+}
+
+interface Parameter {
+    parameter_id?: string;
+    id?: string;
+    profile?: string;
+    section: string;
+    name: string;
+    type?: string;
+    parameter_type?: string;
+    unit?: string;
+    normal_value?: string;
+    order?: number;
+    is_required?: boolean;
+    options?: any[];
+    slug?: string;
+    sentence_template?: string;
+    narrative_role?: string;
+    omit_if_values?: string;
+    join_label?: string;
+}
+
 export default function TemplateEditor() {
     const { id } = useParams<{ id: string }>();
     const isNew = !id || id === "new";
     const { token } = useAuth();
     const navigate = useNavigate();
 
-    const [profile, setProfile] = useState<any>({
+    const [profile, setProfile] = useState<Profile>({
         code: "",
         name: "",
         modality: "",
         enable_narrative: true,
         narrative_mode: "rule_based"
     });
-    const [parameters, setParameters] = useState<any[]>([]);
+    const [parameters, setParameters] = useState<Parameter[]>([]);
 
     const [loading, setLoading] = useState(false);
     const [saving, setSaving] = useState(false);
@@ -29,15 +57,9 @@ export default function TemplateEditor() {
 
     // Parameter Modal
     const [showParamModal, setShowParamModal] = useState(false);
-    const [currentParam, setCurrentParam] = useState<any>(null); // null = new
+    const [currentParam, setCurrentParam] = useState<Parameter | null>(null); // null = new
 
-    useEffect(() => {
-        if (!isNew && token) {
-            loadData();
-        }
-    }, [id, token]);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         setLoading(true);
         try {
             const data = await apiGet(`/reporting/profiles/${id}/`, token);
@@ -48,7 +70,13 @@ export default function TemplateEditor() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [id, token]);
+
+    useEffect(() => {
+        if (!isNew && token) {
+            loadData();
+        }
+    }, [loadData, isNew, token]);
 
     const handleSaveProfile = async () => {
         setSaving(true);
@@ -82,7 +110,7 @@ export default function TemplateEditor() {
         }
     };
 
-    const openParamModal = (param?: any) => {
+    const openParamModal = (param?: Parameter) => {
         if (param) {
             setCurrentParam({ ...param });
         } else {
@@ -100,17 +128,17 @@ export default function TemplateEditor() {
         setShowParamModal(true);
     };
 
-    const handleSaveParam = async (paramData: any) => {
+    const handleSaveParam = async (paramData: Parameter) => {
         try {
-            if (paramData.id && !String(paramData.id).startsWith("new_")) {
+            if (paramData.id) {
                 await apiPut(`/reporting/parameters/${paramData.id}/`, token, paramData);
             } else {
-                await apiPost("/reporting/parameters/", token, { ...paramData, profile: id });
+                await apiPost("/reporting/parameters/", token, paramData);
             }
             setShowParamModal(false);
             loadData();
         } catch (e: any) {
-            alert("Failed to save parameter: " + e.message);
+            setError("Failed to save parameter: " + e.message);
         }
     };
 
@@ -189,15 +217,15 @@ export default function TemplateEditor() {
                             </tr>
                         </thead>
                         <tbody>
-                            {parameters.map((p: any) => (
-                                <tr key={p.id} style={{ borderBottom: `1px solid ${theme.colors.borderLight}` }}>
+                            {parameters.map((p: Parameter) => (
+                                <tr key={p.parameter_id || p.id} style={{ borderBottom: `1px solid ${theme.colors.borderLight}` }}>
                                     <td style={{ padding: 8 }}>{p.order}</td>
                                     <td style={{ padding: 8 }}>{p.section}</td>
                                     <td style={{ padding: 8 }}>{p.name}</td>
                                     <td style={{ padding: 8 }}>{p.type || p.parameter_type}</td>
                                     <td style={{ padding: 8, textAlign: "right" }}>
                                         <Button variant="secondary" onClick={() => openParamModal(p)} style={{ marginRight: 8, fontSize: 12, padding: "4px 8px" }}>Edit</Button>
-                                        <Button variant="secondary" onClick={() => handleDeleteParam(p.parameter_id || p.id)} style={{ color: theme.colors.danger, fontSize: 12, padding: "4px 8px" }}>Del</Button>
+                                        <Button variant="secondary" onClick={() => handleDeleteParam(p.parameter_id || p.id!)} style={{ color: theme.colors.danger, fontSize: 12, padding: "4px 8px" }}>Del</Button>
                                     </td>
                                 </tr>
                             ))}

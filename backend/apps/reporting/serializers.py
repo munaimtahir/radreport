@@ -23,7 +23,7 @@ class ReportParameterSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReportParameter
         fields = [
-            "id", "parameter_id", "profile", "section", "name", "parameter_type", "type",
+            "parameter_id", "profile", "section", "name", "type",
             "unit", "normal_value", "order", "is_required", "options",
             "slug", "sentence_template", "narrative_role", "omit_if_values", "join_label"
         ]

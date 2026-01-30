@@ -415,7 +415,7 @@ function Shell() {
 
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />
-              <Route path="/receipt-settings" element={<ReceiptSettings />} />
+              <Route path="/receipt-settings" element={canAdmin ? <ReceiptSettings /> : <AccessDenied />} />
 
               {/* Legacy endpoints disabled in Phase 2 */}
               <Route path="/studies" element={<Navigate to="/" replace />} />

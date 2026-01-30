@@ -6,10 +6,18 @@ import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
 
+interface Service {
+    id: string;
+    code: string;
+    name: string;
+    category: string;
+    price: number;
+}
+
 export default function ServicesList() {
     const { token } = useAuth();
     const navigate = useNavigate();
-    const [services, setServices] = useState<any[]>([]);
+    const [services, setServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [importStatus, setImportStatus] = useState<string | null>(null);
@@ -17,11 +25,7 @@ export default function ServicesList() {
     const [search, setSearch] = useState("");
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-    useEffect(() => {
-        loadData();
-    }, [token, page, search]);
-
-    const loadData = async () => {
+    const loadData = useCallback(async () => {
         if (!token) return;
         try {
             setLoading(true);
@@ -34,9 +38,13 @@ export default function ServicesList() {
         } finally {
             setLoading(false);
         }
-    };
+    }, [token, search]);
 
-    const handleDelete = async (id: string) => {
+    useEffect(() => {
+        loadData();
+    }, [loadData]);
+
+    const handleDeactivate = async (id: string) => {
         if (!window.confirm("Are you sure you want to deactivate this service?")) return;
         try {
             // Usually we deactivate instead of delete
@@ -45,7 +53,7 @@ export default function ServicesList() {
             await apiDelete(`/services/${id}/`, token);
             loadData();
         } catch (e: any) {
-            alert(e.message || "Failed to delete");
+            setError(e.message || "Failed to deactivate");
         }
     };
 
@@ -148,7 +156,7 @@ export default function ServicesList() {
                                     <Button variant="secondary" onClick={() => navigate(`/admin/services/${s.id}`)} style={{ marginRight: 8 }}>
                                         Edit
                                     </Button>
-                                    <Button variant="secondary" onClick={() => handleDelete(s.id)} style={{ color: theme.colors.danger }}>
+                                    <Button variant="secondary" onClick={() => handleDeactivate(s.id)} style={{ color: theme.colors.danger }}>
                                         Del
                                     </Button>
                                 </td>
