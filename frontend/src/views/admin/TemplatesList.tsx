@@ -122,7 +122,7 @@ export default function TemplatesList() {
                     <Button variant="secondary" onClick={handleImportClick}>
                         Import CSV
                     </Button>
-                    <Button variant="primary" onClick={() => navigate("/admin/templates/new")}>
+                    <Button variant="primary" onClick={() => navigate("/settings/templates/new")}>
                         Create Template
                     </Button>
                 </div>
@@ -149,7 +149,7 @@ export default function TemplatesList() {
                                 <td style={{ padding: 12 }}>{p.name}</td>
                                 <td style={{ padding: 12 }}>{p.modality}</td>
                                 <td style={{ padding: 12, textAlign: "right" }}>
-                                    <Button variant="secondary" onClick={() => navigate(`/admin/templates/${p.id}`)} style={{ marginRight: 8 }}>
+                                    <Button variant="secondary" onClick={() => navigate(`/settings/templates/${p.id}`)} style={{ marginRight: 8 }}>
                                         Edit
                                     </Button>
                                     <Button variant="secondary" onClick={() => handleDelete(p.id)} style={{ color: theme.colors.danger }}>

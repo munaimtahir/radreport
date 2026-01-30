@@ -124,7 +124,7 @@ export default function ServicesList() {
                     <Button variant="secondary" onClick={handleImportClick}>
                         Import CSV
                     </Button>
-                    <Button variant="primary" onClick={() => navigate("/admin/services/new")}>
+                    <Button variant="primary" onClick={() => navigate("/settings/services/new")}>
                         Create Service
                     </Button>
                 </div>
@@ -153,7 +153,7 @@ export default function ServicesList() {
                                 <td style={{ padding: 12 }}>{s.category}</td>
                                 <td style={{ padding: 12, textAlign: "right" }}>{s.price}</td>
                                 <td style={{ padding: 12, textAlign: "right" }}>
-                                    <Button variant="secondary" onClick={() => navigate(`/admin/services/${s.id}`)} style={{ marginRight: 8 }}>
+                                    <Button variant="secondary" onClick={() => navigate(`/settings/services/${s.id}`)} style={{ marginRight: 8 }}>
                                         Edit
                                     </Button>
                                     <Button variant="secondary" onClick={() => handleDeactivate(s.id)} style={{ color: theme.colors.danger }}>
