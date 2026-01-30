@@ -563,9 +563,9 @@ class ServiceReportProfileViewSet(viewsets.ModelViewSet):
     def import_csv(self, request):
         file = request.FILES.get("file")
         if not file:
-            return Response({"error": "CSV file required"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "CSV file required"}, status=status.HTTP_400_BAD_REQUEST)
         if not file.name.endswith(".csv"):
-            return Response({"error": "File must be a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"detail": "File must be a CSV"}, status=status.HTTP_400_BAD_REQUEST)
 
         decoded_file = file.read().decode("utf-8")
         reader = csv.DictReader(io.StringIO(decoded_file))
