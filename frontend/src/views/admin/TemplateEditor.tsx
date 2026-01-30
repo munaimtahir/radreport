@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
-import { apiGet, apiPost, apiPut, apiDelete } from "../../ui/api";
+import { apiGet, apiPost, apiPut, apiDelete, apiUpload, API_BASE } from "../../ui/api";
 import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
@@ -54,6 +54,7 @@ export default function TemplateEditor() {
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<string | null>(null);
+    const importInputRef = useRef<HTMLInputElement | null>(null);
 
     // Parameter Modal
     const [showParamModal, setShowParamModal] = useState(false);
@@ -142,6 +143,57 @@ export default function TemplateEditor() {
         }
     };
 
+    const handleExportCsv = async () => {
+        if (!token || !id) return;
+        setError(null);
+        try {
+            const response = await fetch(`${API_BASE}/reporting/profiles/${id}/parameters-csv/`, {
+                method: "GET",
+                headers: { "Authorization": `Bearer ${token}` }
+            });
+            if (!response.ok) {
+                const text = await response.text();
+                throw new Error(text || "Failed to export CSV");
+            }
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement("a");
+            const disposition = response.headers.get("Content-Disposition") || "";
+            const match = disposition.match(/filename="?([^"]+)"?/);
+            const filename = match?.[1] || `${profile.code || "report"}_parameters.csv`;
+            link.href = url;
+            link.download = filename;
+            link.click();
+            window.URL.revokeObjectURL(url);
+        } catch (e: any) {
+            setError(e.message);
+        }
+    };
+
+    const handleImportCsv = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !id) return;
+        setError(null);
+        setSuccess(null);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const result = await apiUpload(`/reporting/profiles/${id}/parameters-csv/`, token, formData);
+            setSuccess(`Imported CSV. Added ${result.fields_created} and updated ${result.fields_updated} parameters.`);
+            loadData();
+        } catch (e: any) {
+            setError(e.message);
+        } finally {
+            if (importInputRef.current) {
+                importInputRef.current.value = "";
+            }
+        }
+    };
+
+    const triggerImport = () => {
+        importInputRef.current?.click();
+    };
+
     if (loading) return <div>Loading...</div>;
 
     return (
@@ -203,8 +255,19 @@ export default function TemplateEditor() {
                 <div style={{ backgroundColor: "white", padding: 20, borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}` }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
                         <h3 style={{ margin: 0 }}>Parameters</h3>
-                        <Button variant="primary" onClick={() => openParamModal()}>Add Parameter</Button>
+                        <div style={{ display: "flex", gap: 8 }}>
+                            <Button variant="secondary" onClick={handleExportCsv}>Export CSV</Button>
+                            <Button variant="secondary" onClick={triggerImport}>Import CSV</Button>
+                            <Button variant="primary" onClick={() => openParamModal()}>Add Parameter</Button>
+                        </div>
                     </div>
+                    <input
+                        ref={importInputRef}
+                        type="file"
+                        accept=".csv"
+                        style={{ display: "none" }}
+                        onChange={handleImportCsv}
+                    />
 
                     <table style={{ width: "100%", borderCollapse: "collapse" }}>
                         <thead>
