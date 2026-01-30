@@ -1,5 +1,12 @@
 // Use relative path in production, or env variable if set
-export const API_BASE: string = (import.meta as any).env.VITE_API_BASE || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
+const RAW_API_BASE: string =
+  (import.meta as any).env.VITE_API_BASE ||
+  ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
+
+export const API_BASE: string = (() => {
+  const trimmed = RAW_API_BASE.replace(/\/$/, "");
+  return trimmed.endsWith("/api") ? trimmed : `${trimmed}/api`;
+})();
 
 async function apiRequest(path: string, token: string | null, options: RequestInit = {}) {
   const headers: Record<string, string> = {
@@ -93,11 +100,7 @@ export async function getPatientTimeline(
 }
 
 export async function login(username: string, password: string) {
-  // Use relative path for production
-  const isProd = (import.meta as any).env.PROD;
-  const loginUrl = isProd
-    ? "/api/auth/token/"
-    : `${API_BASE.replace("/api", "")}/api/auth/token/`;
+  const loginUrl = `${API_BASE}/auth/token/`;
   const r = await fetch(loginUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
