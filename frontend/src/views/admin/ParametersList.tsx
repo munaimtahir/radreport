@@ -47,7 +47,7 @@ export default function ParametersList() {
     } catch (e: any) {
       setError(e.message || "Failed to load templates");
     }
-  }, [token, selectedProfileId]);
+  }, [token]);
 
   const loadParameters = useCallback(async () => {
     if (!token || !selectedProfileId) return;
