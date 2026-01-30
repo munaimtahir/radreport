@@ -165,7 +165,24 @@ export default function ServiceTemplateLinksList() {
       setStatus(`Import complete. Created ${result.created}, updated ${result.updated}.`);
       loadData();
     } catch (e: any) {
-      setError(e.message || "Import failed");
+      // Handle partial success responses that include created/updated counts and errors.
+      const data = (e && (e.data ?? e)) as any;
+      const hasCounts =
+        data &&
+        (typeof data.created === "number" || typeof data.updated === "number");
+      if (hasCounts) {
+        const created = typeof data.created === "number" ? data.created : 0;
+        const updated = typeof data.updated === "number" ? data.updated : 0;
+        setStatus(`Import completed with errors. Created ${created}, updated ${updated}.`);
+        const errors = Array.isArray(data.errors) ? data.errors : [];
+        const errorMessage =
+          errors.length > 0
+            ? `Some rows failed to import:\n${errors.join("\n")}`
+            : e?.message || "Import completed with some errors.";
+        setError(errorMessage);
+      } else {
+        setError(e?.message || "Import failed");
+      }
     } finally {
       event.target.value = "";
     }
