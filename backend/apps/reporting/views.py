@@ -567,7 +567,7 @@ class ServiceReportProfileViewSet(viewsets.ModelViewSet):
         if not file.name.endswith(".csv"):
             return Response({"detail": "File must be a CSV"}, status=status.HTTP_400_BAD_REQUEST)
 
-        decoded_file = file.read().decode("utf-8")
+        decoded_file = file.read().decode("utf-8-sig")
         reader = csv.DictReader(io.StringIO(decoded_file))
         created = 0
         updated = 0
