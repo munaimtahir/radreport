@@ -12,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 
+from apps.catalog.models import Service
 from apps.workflow.models import ServiceVisitItem, ServiceVisit
 from .models import (
     ServiceReportProfile, ReportInstance, ReportValue,
@@ -500,6 +501,177 @@ class ServiceReportProfileViewSet(viewsets.ModelViewSet):
     serializer_class = ServiceReportProfileSerializer
     permission_classes = [IsAuthenticated, permissions.IsAdminUser]
     filterset_fields = ["service", "profile"]
+    csv_fieldnames = [
+        "service_id", "service_code", "service_name",
+        "profile_id", "profile_code", "profile_name",
+        "enforce_single_profile", "is_default"
+    ]
+
+    def _parse_bool(self, value, default=None):
+        if value is None:
+            return default
+        raw = str(value).strip().lower()
+        if raw == "":
+            return default
+        if raw in {"true", "1", "yes", "y"}:
+            return True
+        if raw in {"false", "0", "no", "n"}:
+            return False
+        return default
+
+    @action(detail=False, methods=["get"], url_path="template-csv")
+    def template_csv(self, request):
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=self.csv_fieldnames)
+        writer.writeheader()
+        writer.writerow({
+            "service_id": "",
+            "service_code": "XR-CHEST",
+            "service_name": "Chest X-Ray",
+            "profile_id": "",
+            "profile_code": "XR_CHEST",
+            "profile_name": "X-Ray Chest",
+            "enforce_single_profile": "true",
+            "is_default": "true",
+        })
+        response = HttpResponse(output.getvalue(), content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="service_template_links_template.csv"'
+        return response
+
+    @action(detail=False, methods=["get"], url_path="export-csv")
+    def export_csv(self, request):
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=self.csv_fieldnames)
+        writer.writeheader()
+        links = self.get_queryset().select_related("service", "profile")
+        for link in links:
+            writer.writerow({
+                "service_id": link.service_id,
+                "service_code": link.service.code or "",
+                "service_name": link.service.name,
+                "profile_id": link.profile_id,
+                "profile_code": link.profile.code,
+                "profile_name": link.profile.name,
+                "enforce_single_profile": str(link.enforce_single_profile).lower(),
+                "is_default": str(link.is_default).lower(),
+            })
+        response = HttpResponse(output.getvalue(), content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="service_template_links_export.csv"'
+        return response
+
+    @action(detail=False, methods=["post"], url_path="import-csv")
+    def import_csv(self, request):
+        file = request.FILES.get("file")
+        if not file:
+            return Response({"detail": "CSV file required"}, status=status.HTTP_400_BAD_REQUEST)
+        if not file.name.endswith(".csv"):
+            return Response({"detail": "File must be a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+
+        decoded_file = file.read().decode("utf-8-sig")
+        reader = csv.DictReader(io.StringIO(decoded_file))
+        created = 0
+        updated = 0
+        errors = []
+
+        # Materialize all rows so we can bulk-load related objects and avoid N+1 queries.
+        rows = list(reader)
+
+        # Collect all unique service/profile identifiers referenced in the CSV.
+        service_ids = set()
+        service_codes = set()
+        profile_ids = set()
+        profile_codes = set()
+
+        for row in rows:
+            service_id_raw = (row.get("service_id") or "").strip()
+            service_code_raw = (row.get("service_code") or "").strip()
+            profile_id_raw = (row.get("profile_id") or "").strip()
+            profile_code_raw = (row.get("profile_code") or "").strip()
+
+            if service_id_raw:
+                service_ids.add(service_id_raw)
+            if service_code_raw:
+                service_codes.add(service_code_raw)
+            if profile_id_raw:
+                profile_ids.add(profile_id_raw)
+            if profile_code_raw:
+                profile_codes.add(profile_code_raw)
+
+        # Bulk-load all referenced services and profiles into dictionaries for fast lookup.
+        services_by_id = {
+            str(service.id): service
+            for service in Service.objects.filter(id__in=service_ids)
+        } if service_ids else {}
+
+        services_by_code = {
+            service.code: service
+            for service in Service.objects.filter(code__in=service_codes)
+        } if service_codes else {}
+
+        profiles_by_id = {
+            str(profile.id): profile
+            for profile in ReportProfile.objects.filter(id__in=profile_ids)
+        } if profile_ids else {}
+
+        profiles_by_code = {
+            profile.code: profile
+            for profile in ReportProfile.objects.filter(code__in=profile_codes)
+        } if profile_codes else {}
+
+        for idx, row in enumerate(rows, start=2):
+            service = None
+            profile = None
+
+            service_id = (row.get("service_id") or "").strip()
+            service_code = (row.get("service_code") or "").strip()
+            if service_id:
+                service = services_by_id.get(service_id)
+            if not service and service_code:
+                service = services_by_code.get(service_code)
+
+            profile_id = (row.get("profile_id") or "").strip()
+            profile_code = (row.get("profile_code") or "").strip()
+            if profile_id:
+                profile = profiles_by_id.get(profile_id)
+            if not profile and profile_code:
+                profile = profiles_by_code.get(profile_code)
+
+            if not service or not profile:
+                errors.append({
+                    "row": idx,
+                    "service_id": service_id,
+                    "service_code": service_code,
+                    "profile_id": profile_id,
+                    "profile_code": profile_code,
+                    "error": "Service or profile not found"
+                })
+                continue
+
+            enforce_single_profile = self._parse_bool(
+                row.get("enforce_single_profile"), default=True
+            )
+            is_default = self._parse_bool(row.get("is_default"), default=True)
+
+            link, was_created = ServiceReportProfile.objects.update_or_create(
+                service=service,
+                profile=profile,
+                defaults={
+                    "enforce_single_profile": enforce_single_profile,
+                    "is_default": is_default,
+                },
+            )
+            if was_created:
+                created += 1
+            else:
+                updated += 1
+
+        if errors:
+            return Response(
+                {"created": created, "updated": updated, "errors": errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return Response({"created": created, "updated": updated})
 
 class ReportWorkItemViewSet(viewsets.ViewSet):
     """
