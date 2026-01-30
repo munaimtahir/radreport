@@ -93,6 +93,9 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Include static directory for custom static files (branding, CSS, etc.)
+# This directory is part of the source code and contains project-specific static files
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
