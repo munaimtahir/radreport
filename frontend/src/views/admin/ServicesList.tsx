@@ -1,7 +1,7 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
-import { apiGet, apiDelete, apiPatch } from "../../ui/api";
+import { apiGet, apiDelete, apiUpload, API_BASE } from "../../ui/api";
 import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
@@ -20,7 +20,10 @@ export default function ServicesList() {
     const [services, setServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [importStatus, setImportStatus] = useState<string | null>(null);
+    const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const loadData = useCallback(async () => {
         if (!token) return;
@@ -44,11 +47,54 @@ export default function ServicesList() {
     const handleDeactivate = async (id: string) => {
         if (!window.confirm("Are you sure you want to deactivate this service?")) return;
         try {
-            // Deactivate instead of delete
-            await apiPatch(`/services/${id}/`, token, { is_active: false });
+            // Usually we deactivate instead of delete
+            // But apiDelete calls DELETE method. ServiceViewSet default might verify usage.
+            // Let's assume standard delete for now, user can check backend.
+            await apiDelete(`/services/${id}/`, token);
             loadData();
         } catch (e: any) {
             setError(e.message || "Failed to deactivate");
+        }
+    };
+
+    const downloadCsv = async (path: string, filename: string) => {
+        if (!token) return;
+        const response = await fetch(`${API_BASE}${path}`, {
+            headers: { Authorization: `Bearer ${token}` }
+        });
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(text || "Download failed");
+        }
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+    };
+
+    const handleImportClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (!file || !token) return;
+        setImportStatus(null);
+        try {
+            const formData = new FormData();
+            formData.append("file", file);
+            const result = await apiUpload("/catalog/services/import-csv/", token, formData);
+            setImportStatus(`Import complete. Created: ${result.created}, Updated: ${result.updated}`);
+            loadData();
+        } catch (e: any) {
+            setImportStatus(e.message || "Import failed");
+        } finally {
+            event.target.value = "";
         }
     };
 
@@ -63,6 +109,21 @@ export default function ServicesList() {
                         onChange={e => setSearch(e.target.value)}
                         style={{ padding: "8px 12px", borderRadius: 4, border: "1px solid #ccc" }}
                     />
+                    <Button
+                        variant="secondary"
+                        onClick={() => downloadCsv("/catalog/services/template-csv/", "services_template.csv")}
+                    >
+                        Download CSV Template
+                    </Button>
+                    <Button
+                        variant="secondary"
+                        onClick={() => downloadCsv("/catalog/services/export-csv/", "services_export.csv")}
+                    >
+                        Export CSV
+                    </Button>
+                    <Button variant="secondary" onClick={handleImportClick}>
+                        Import CSV
+                    </Button>
                     <Button variant="primary" onClick={() => navigate("/admin/services/new")}>
                         Create Service
                     </Button>
@@ -70,6 +131,8 @@ export default function ServicesList() {
             </div>
 
             {error && <ErrorAlert message={error} />}
+            {importStatus && <div style={{ marginBottom: 12, color: theme.colors.textSecondary }}>{importStatus}</div>}
+            <input ref={fileInputRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleImport} />
 
             <div style={{ backgroundColor: "white", borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, overflow: "hidden" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>

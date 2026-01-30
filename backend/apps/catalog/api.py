@@ -3,6 +3,7 @@ import io
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from django.http import HttpResponse
 from django.db import transaction
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
@@ -42,7 +43,6 @@ class ServiceViewSet(viewsets.ModelViewSet):
         instance.save()
     
     @action(detail=False, methods=["post"], url_path="import-csv")
-
     def import_csv(self, request):
         """Import services from CSV file"""
         if "file" not in request.FILES:
@@ -79,6 +79,11 @@ class ServiceViewSet(viewsets.ModelViewSet):
                         tat_value = int(row["tat_value"].strip())
                         tat_unit = row["tat_unit"].strip().lower()
                         is_active = row["active"].strip().lower() in ["true", "1", "yes"]
+
+                        if category not in dict(Service.CATEGORY_CHOICES):
+                            raise ValueError(f"Invalid category '{category}'")
+                        if tat_unit not in dict(Service.TAT_UNIT_CHOICES):
+                            raise ValueError(f"Invalid tat_unit '{tat_unit}'")
                         
                         # Get or create modality
                         modality, _ = Modality.objects.get_or_create(
@@ -135,6 +140,55 @@ class ServiceViewSet(viewsets.ModelViewSet):
             
         except Exception as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=["get"], url_path="export-csv")
+    def export_csv(self, request):
+        """Export services to CSV."""
+        include_inactive = request.query_params.get("include_inactive") == "true"
+        services = Service.objects.select_related("modality")
+        if not include_inactive:
+            services = services.filter(is_active=True)
+
+        fieldnames = ["code", "name", "category", "modality", "charges", "tat_value", "tat_unit", "active"]
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        for service in services.order_by("name"):
+            writer.writerow({
+                "code": service.code or "",
+                "name": service.name,
+                "category": service.category,
+                "modality": service.modality.code if service.modality else "",
+                "charges": service.charges,
+                "tat_value": service.tat_value,
+                "tat_unit": service.tat_unit,
+                "active": "true" if service.is_active else "false",
+            })
+
+        response = HttpResponse(output.getvalue(), content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="services_export.csv"'
+        return response
+
+    @action(detail=False, methods=["get"], url_path="template-csv")
+    def template_csv(self, request):
+        """Download CSV template for services import."""
+        fieldnames = ["code", "name", "category", "modality", "charges", "tat_value", "tat_unit", "active"]
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerow({
+            "code": "SRV-001",
+            "name": "Example Service",
+            "category": "Radiology",
+            "modality": "USG",
+            "charges": "0",
+            "tat_value": "1",
+            "tat_unit": "hours",
+            "active": "true",
+        })
+        response = HttpResponse(output.getvalue(), content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="services_template.csv"'
+        return response
     
     @action(detail=False, methods=["get"], url_path="most-used")
     def most_used(self, request):
