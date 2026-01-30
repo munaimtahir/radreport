@@ -13,10 +13,10 @@ import PatientsWorkflow from "../views/PatientsWorkflow";
 import AccessDenied from "../views/AccessDenied";
 import ReportingPage from "../views/ReportingPage";
 import ReportingWorklistPage from "../views/ReportingWorklistPage";
-import TemplatesList from "../views/admin/TemplatesList";
-import TemplateEditor from "../views/admin/TemplateEditor";
-import ServicesList from "../views/admin/ServicesList";
-import ServiceEditor from "../views/admin/ServiceEditor";
+import TemplatesList from "../views/settings/TemplatesList";
+import TemplateEditor from "../views/settings/TemplateEditor";
+import ServicesList from "../views/settings/ServicesList";
+import ServiceEditor from "../views/settings/ServiceEditor";
 
 
 import ModuleDisabled from "../views/ModuleDisabled";
@@ -190,15 +190,15 @@ function Shell() {
                   SETTINGS
                 </div>
                 <Link
-                  to="/admin/consultants"
+                  to="/settings/consultants"
                   style={{
                     padding: "10px 12px",
                     textDecoration: "none",
-                    color: isActiveRoute("/admin/consultants") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/admin/consultants") ? theme.colors.brandBlueSoft : "transparent",
+                    color: isActiveRoute("/settings/consultants") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/settings/consultants") ? theme.colors.brandBlueSoft : "transparent",
                     borderRadius: theme.radius.base,
                     fontSize: 14,
-                    fontWeight: isActiveRoute("/admin/consultants") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    fontWeight: isActiveRoute("/settings/consultants") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
                     transition: theme.transitions.fast,
                   }}
                 >
@@ -206,15 +206,15 @@ function Shell() {
                 </Link>
 
                 <Link
-                  to="/admin/consultant-settlements"
+                  to="/settings/consultant-settlements"
                   style={{
                     padding: "10px 12px",
                     textDecoration: "none",
-                    color: isActiveRoute("/admin/consultant-settlements") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/admin/consultant-settlements") ? theme.colors.brandBlueSoft : "transparent",
+                    color: isActiveRoute("/settings/consultant-settlements") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/settings/consultant-settlements") ? theme.colors.brandBlueSoft : "transparent",
                     borderRadius: theme.radius.base,
                     fontSize: 14,
-                    fontWeight: isActiveRoute("/admin/consultant-settlements") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    fontWeight: isActiveRoute("/settings/consultant-settlements") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
                     transition: theme.transitions.fast,
                   }}
                 >
@@ -236,30 +236,30 @@ function Shell() {
                   Receipt Settings
                 </Link>
                 <Link
-                  to="/admin/services"
+                  to="/settings/services"
                   style={{
                     padding: "10px 12px",
                     textDecoration: "none",
-                    color: isActiveRoute("/admin/services") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/admin/services") ? theme.colors.brandBlueSoft : "transparent",
+                    color: isActiveRoute("/settings/services") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/settings/services") ? theme.colors.brandBlueSoft : "transparent",
                     borderRadius: theme.radius.base,
                     fontSize: 14,
-                    fontWeight: isActiveRoute("/admin/services") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    fontWeight: isActiveRoute("/settings/services") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
                     transition: theme.transitions.fast,
                   }}
                 >
                   Services
                 </Link>
                 <Link
-                  to="/admin/templates"
+                  to="/settings/templates"
                   style={{
                     padding: "10px 12px",
                     textDecoration: "none",
-                    color: isActiveRoute("/admin/templates") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/admin/templates") ? theme.colors.brandBlueSoft : "transparent",
+                    color: isActiveRoute("/settings/templates") ? theme.colors.brandBlue : theme.colors.textSecondary,
+                    backgroundColor: isActiveRoute("/settings/templates") ? theme.colors.brandBlueSoft : "transparent",
                     borderRadius: theme.radius.base,
                     fontSize: 14,
-                    fontWeight: isActiveRoute("/admin/templates") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
+                    fontWeight: isActiveRoute("/settings/templates") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
                     transition: theme.transitions.fast,
                   }}
                 >
@@ -400,18 +400,18 @@ function Shell() {
               />
 
               <Route
-                path="/admin/consultant-settlements"
+                path="/settings/consultant-settlements"
                 element={canAdmin ? <ConsultantSettlementsPage /> : <AccessDenied />}
               />
               <Route
-                path="/admin/consultants"
+                path="/settings/consultants"
                 element={canAdmin ? <ConsultantsPage /> : <AccessDenied />}
               />
 
-              <Route path="/admin/templates" element={canAdmin ? <TemplatesList /> : <AccessDenied />} />
-              <Route path="/admin/templates/:id" element={canAdmin ? <TemplateEditor /> : <AccessDenied />} />
-              <Route path="/admin/services" element={canAdmin ? <ServicesList /> : <AccessDenied />} />
-              <Route path="/admin/services/:id" element={canAdmin ? <ServiceEditor /> : <AccessDenied />} />
+              <Route path="/settings/templates" element={canAdmin ? <TemplatesList /> : <AccessDenied />} />
+              <Route path="/settings/templates/:id" element={canAdmin ? <TemplateEditor /> : <AccessDenied />} />
+              <Route path="/settings/services" element={canAdmin ? <ServicesList /> : <AccessDenied />} />
+              <Route path="/settings/services/:id" element={canAdmin ? <ServiceEditor /> : <AccessDenied />} />
 
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />

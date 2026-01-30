@@ -98,7 +98,7 @@ export default function ServiceEditor() {
             let res;
             if (isNew) {
                 res = await apiPost("/services/", token, service);
-                navigate(`/admin/services/${res.id}`, { replace: true });
+                navigate(`/settings/services/${res.id}`, { replace: true });
                 setSuccess("Service created");
             } else {
                 res = await apiPut(`/services/${id}/`, token, service);
@@ -117,7 +117,7 @@ export default function ServiceEditor() {
         <div style={{ padding: 20, maxWidth: 800, margin: "0 auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <h1 style={{ fontSize: 24, margin: 0 }}>{isNew ? "New Service" : `Edit Service: ${service.code}`}</h1>
-                <Button variant="secondary" onClick={() => navigate("/admin/services")}>Back to List</Button>
+                <Button variant="secondary" onClick={() => navigate("/settings/services")}>Back to List</Button>
             </div>
 
             {error && <ErrorAlert message={error} />}

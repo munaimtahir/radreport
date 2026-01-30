@@ -87,7 +87,7 @@ export default function TemplateEditor() {
             let res;
             if (isNew) {
                 res = await apiPost("/reporting/profiles/", token, profile);
-                navigate(`/admin/templates/${res.id}`, { replace: true });
+                navigate(`/settings/templates/${res.id}`, { replace: true });
                 setSuccess("Profile created");
             } else {
                 res = await apiPut(`/reporting/profiles/${id}/`, token, profile);
@@ -200,7 +200,7 @@ export default function TemplateEditor() {
         <div style={{ padding: 20, maxWidth: 1000, margin: "0 auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <h1 style={{ fontSize: 24, margin: 0 }}>{isNew ? "New Template" : `Edit Template: ${profile.code}`}</h1>
-                <Button variant="secondary" onClick={() => navigate("/admin/templates")}>Back to List</Button>
+                <Button variant="secondary" onClick={() => navigate("/settings/templates")}>Back to List</Button>
             </div>
 
             {error && <ErrorAlert message={error} />}
