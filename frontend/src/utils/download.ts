@@ -23,6 +23,10 @@ export const downloadFile = async (urlPath: string, filename: string, token: str
     link.remove();
     window.URL.revokeObjectURL(url);
   } catch (e: any) {
-    throw new Error(e.message || "Download failed");
+    // Re-throw original error if it exists, otherwise create a new one
+    if (e instanceof Error) {
+      throw e;
+    }
+    throw new Error(e?.message || "Download failed");
   }
 };

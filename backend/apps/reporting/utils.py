@@ -17,6 +17,9 @@ def parse_bool(value, default=None):
     """
     if value is None:
         return default
+    # Handle boolean input directly
+    if isinstance(value, bool):
+        return value
     raw = str(value).strip().lower()
     if raw == "":
         return default

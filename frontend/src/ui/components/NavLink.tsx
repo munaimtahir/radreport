@@ -13,7 +13,7 @@ export default function NavLink({ to, children }: NavLinkProps) {
   // Determine if the link is active
   const isActive = to === "/" 
     ? location.pathname === "/" 
-    : location.pathname.startsWith(to);
+    : location.pathname === to || location.pathname.startsWith(to + "/");
 
   return (
     <Link
