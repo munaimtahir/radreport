@@ -33,18 +33,45 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, permissions.IsAdminUser]
     search_fields = ["code", "name", "modality"]
     filterset_fields = ["modality", "is_active"]
+    csv_fieldnames = [
+        "profile_code", "profile_name", "modality",
+        "section", "field_name", "field_slug", "field_type",
+        "unit", "normal_value", "is_required", "order",
+        "options", "sentence_template", "narrative_role",
+        "omit_if_values_json", "join_label"
+    ]
+
+    def _format_options(self, options):
+        opts = []
+        for option in options:
+            label = option.get("label") if isinstance(option, dict) else option.label
+            value = option.get("value") if isinstance(option, dict) else option.value
+            if label == value:
+                opts.append(value)
+            else:
+                opts.append(f"{label}:{value}")
+        return ", ".join(opts)
+
+    def _parse_options(self, options_raw):
+        if not options_raw:
+            return []
+        delimiter = "|" if "|" in options_raw else ","
+        options_list = []
+        for opt in options_raw.split(delimiter):
+            opt = opt.strip()
+            if not opt:
+                continue
+            if ":" in opt:
+                lbl, val = opt.split(":", 1)
+                options_list.append({"label": lbl.strip(), "value": val.strip()})
+            else:
+                options_list.append({"label": opt, "value": opt})
+        return options_list
 
     @action(detail=False, methods=["get"], url_path="template-csv")
     def template_csv(self, request):
-        fieldnames = [
-            "profile_code", "profile_name", "modality",
-            "section", "field_name", "field_slug", "field_type",
-            "unit", "normal_value", "is_required", "order",
-            "options", "sentence_template", "narrative_role",
-            "omit_if_values_json", "join_label"
-        ]
         output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer = csv.DictWriter(output, fieldnames=self.csv_fieldnames)
         writer.writeheader()
         writer.writerow({
             "profile_code": "USG_KUB",
@@ -70,15 +97,8 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="export-csv")
     def export_csv(self, request):
-        fieldnames = [
-            "profile_code", "profile_name", "modality",
-            "section", "field_name", "field_slug", "field_type",
-            "unit", "normal_value", "is_required", "order",
-            "options", "sentence_template", "narrative_role",
-            "omit_if_values_json", "join_label"
-        ]
         output = io.StringIO()
-        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer = csv.DictWriter(output, fieldnames=self.csv_fieldnames)
         writer.writeheader()
 
         profiles = ReportProfile.objects.all().prefetch_related("parameters", "parameters__options", "library_links", "library_links__library_item")
@@ -87,15 +107,7 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
             if links.exists():
                 for link in links:
                     item = link.library_item
-                    options_str = ""
-                    if item.default_options_json:
-                        opts = []
-                        for option in item.default_options_json:
-                            if option.get("label") == option.get("value"):
-                                opts.append(option.get("value"))
-                            else:
-                                opts.append(f"{option.get('label')}:{option.get('value')}")
-                        options_str = "|".join(opts)
+                    options_str = self._format_options(item.default_options_json or [])
                     writer.writerow({
                         "profile_code": profile.code,
                         "profile_name": profile.name,
@@ -117,16 +129,8 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
             else:
                 params = profile.parameters.prefetch_related("options").order_by("order")
                 for param in params:
-                    options_str = ""
                     options = param.options.all().order_by("order")
-                    if options.exists():
-                        opts = []
-                        for option in options:
-                            if option.label == option.value:
-                                opts.append(option.value)
-                            else:
-                                opts.append(f"{option.label}:{option.value}")
-                        options_str = "|".join(opts)
+                    options_str = self._format_options(options)
                     writer.writerow({
                         "profile_code": profile.code,
                         "profile_name": profile.name,
@@ -149,6 +153,135 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
         response = HttpResponse(output.getvalue(), content_type="text/csv")
         response["Content-Disposition"] = 'attachment; filename="report_templates_export.csv"'
         return response
+
+    @action(detail=True, methods=["get", "post"], url_path="parameters-csv")
+    def parameters_csv(self, request, pk=None):
+        profile = self.get_object()
+        if request.method == "GET":
+            output = io.StringIO()
+            writer = csv.DictWriter(output, fieldnames=self.csv_fieldnames)
+            writer.writeheader()
+            params = profile.parameters.prefetch_related("options").order_by("order")
+            for param in params:
+                options = param.options.all().order_by("order")
+                writer.writerow({
+                    "profile_code": profile.code,
+                    "profile_name": profile.name,
+                    "modality": profile.modality,
+                    "section": param.section,
+                    "field_name": param.name,
+                    "field_slug": param.slug or slugify(param.name).replace("-", "_"),
+                    "field_type": param.parameter_type,
+                    "unit": param.unit or "",
+                    "normal_value": param.normal_value or "",
+                    "is_required": "true" if param.is_required else "false",
+                    "order": param.order,
+                    "options": self._format_options(options),
+                    "sentence_template": param.sentence_template or "",
+                    "narrative_role": param.narrative_role,
+                    "omit_if_values_json": json.dumps(param.omit_if_values) if param.omit_if_values else "",
+                    "join_label": param.join_label or "",
+                })
+            response = HttpResponse(output.getvalue(), content_type="text/csv")
+            response["Content-Disposition"] = f'attachment; filename="{profile.code}_parameters.csv"'
+            return response
+
+        if "file" not in request.FILES:
+            return Response({"detail": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        file = request.FILES["file"]
+        if not file.name.endswith(".csv"):
+            return Response({"detail": "File must be a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+
+        decoded_file = file.read().decode("utf-8-sig")
+        reader = csv.DictReader(io.StringIO(decoded_file))
+        rows = list(reader)
+
+        required_cols = ["field_slug", "field_type"]
+        errors = []
+        parsed_rows = []
+        param_slugs = {}
+        valid_types = [t[0] for t in ReportParameter.PARAMETER_TYPES]
+
+        for idx, row in enumerate(rows, start=2):
+            try:
+                for col in required_cols:
+                    if not row.get(col):
+                        raise ValueError(f"Missing required column: {col}")
+
+                p_type = row["field_type"]
+                if p_type not in valid_types:
+                    raise ValueError(f"Invalid field_type: {p_type}. Must be one of {valid_types}")
+
+                if p_type in ["dropdown", "checklist"] and not row.get("options"):
+                    raise ValueError(f"Options required for {p_type}")
+
+                omit_json = row.get("omit_if_values_json")
+                if omit_json:
+                    try:
+                        json.loads(omit_json)
+                    except json.JSONDecodeError as exc:
+                        raise ValueError("Invalid JSON in omit_if_values_json") from exc
+
+                slug = row["field_slug"]
+                if slug in param_slugs:
+                    raise ValueError(f"Duplicate slug '{slug}' in file")
+                param_slugs[slug] = True
+
+                parsed_rows.append(row)
+            except Exception as exc:
+                errors.append(f"Row {idx}: {exc}")
+
+        if errors:
+            return Response({"detail": "Validation errors", "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        created_fields = 0
+        updated_fields = 0
+
+        with transaction.atomic():
+            for row in parsed_rows:
+                field_data = {
+                    "section": row.get("section", ""),
+                    "name": row.get("field_name") or row.get("field_slug"),
+                    "parameter_type": row["field_type"],
+                    "unit": row.get("unit") or None,
+                    "normal_value": row.get("normal_value") or None,
+                    "order": int(row["order"]) if row.get("order") else 0,
+                    "is_required": str(row.get("is_required", "")).lower() in ("true", "1", "yes"),
+                    "sentence_template": row.get("sentence_template") or None,
+                    "narrative_role": row.get("narrative_role") or "finding",
+                    "omit_if_values": json.loads(row["omit_if_values_json"]) if row.get("omit_if_values_json") else None,
+                    "join_label": row.get("join_label") or None,
+                }
+                slug = row["field_slug"]
+                options_list = self._parse_options(row.get("options", ""))
+
+                param, created = ReportParameter.objects.update_or_create(
+                    profile=profile,
+                    slug=slug,
+                    defaults=field_data,
+                )
+                if field_data["parameter_type"] in ["dropdown", "checklist"]:
+                    param.options.all().delete()
+                    for i, opt in enumerate(options_list):
+                        ReportParameterOption.objects.create(
+                            parameter=param,
+                            label=opt["label"],
+                            value=opt["value"],
+                            order=i,
+                        )
+                else:
+                    param.options.all().delete()
+
+                if created:
+                    created_fields += 1
+                else:
+                    updated_fields += 1
+
+        return Response({
+            "fields_created": created_fields,
+            "fields_updated": updated_fields,
+        })
 
     @action(detail=False, methods=["post"], url_path="import-csv")
     def import_csv(self, request):
@@ -244,15 +377,7 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
                 }
                 slug = row["field_slug"]
 
-                options_list = []
-                options_raw = row.get("options", "")
-                if options_raw:
-                    for opt in options_raw.split("|"):
-                        if ":" in opt:
-                            lbl, val = opt.split(":", 1)
-                            options_list.append({"label": lbl.strip(), "value": val.strip()})
-                        else:
-                            options_list.append({"label": opt.strip(), "value": opt.strip()})
+                options_list = self._parse_options(row.get("options", ""))
 
                 if use_library:
                     lib_item, created = ReportParameterLibraryItem.objects.update_or_create(
