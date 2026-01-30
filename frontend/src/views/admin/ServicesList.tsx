@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
 import { apiGet, apiDelete, apiUpload, API_BASE } from "../../ui/api";
@@ -30,7 +30,7 @@ export default function ServicesList() {
         try {
             setLoading(true);
             // Assuming pagination or simple list. existing ServiceViewSet supports search.
-            const query = search ? `?search=${search}` : "";
+            const query = search ? `?search=${encodeURIComponent(search)}` : "";
             const data = await apiGet(`/services/${query}`, token);
             setServices(Array.isArray(data) ? data : data.results || []);
         } catch (e: any) {
@@ -88,7 +88,7 @@ export default function ServicesList() {
         try {
             const formData = new FormData();
             formData.append("file", file);
-            const result = await apiUpload("/catalog/services/import-csv/", token, formData);
+            const result = await apiUpload("/services/import-csv/", token, formData);
             setImportStatus(`Import complete. Created: ${result.created}, Updated: ${result.updated}`);
             loadData();
         } catch (e: any) {
@@ -111,13 +111,13 @@ export default function ServicesList() {
                     />
                     <Button
                         variant="secondary"
-                        onClick={() => downloadCsv("/catalog/services/template-csv/", "services_template.csv")}
+                        onClick={() => downloadCsv("/services/template-csv/", "services_template.csv")}
                     >
                         Download CSV Template
                     </Button>
                     <Button
                         variant="secondary"
-                        onClick={() => downloadCsv("/catalog/services/export-csv/", "services_export.csv")}
+                        onClick={() => downloadCsv("/services/export-csv/", "services_export.csv")}
                     >
                         Export CSV
                     </Button>
