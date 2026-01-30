@@ -573,23 +573,68 @@ class ServiceReportProfileViewSet(viewsets.ModelViewSet):
         updated = 0
         errors = []
 
-        for idx, row in enumerate(reader, start=2):
+        # Materialize all rows so we can bulk-load related objects and avoid N+1 queries.
+        rows = list(reader)
+
+        # Collect all unique service/profile identifiers referenced in the CSV.
+        service_ids = set()
+        service_codes = set()
+        profile_ids = set()
+        profile_codes = set()
+
+        for row in rows:
+            service_id_raw = (row.get("service_id") or "").strip()
+            service_code_raw = (row.get("service_code") or "").strip()
+            profile_id_raw = (row.get("profile_id") or "").strip()
+            profile_code_raw = (row.get("profile_code") or "").strip()
+
+            if service_id_raw:
+                service_ids.add(service_id_raw)
+            if service_code_raw:
+                service_codes.add(service_code_raw)
+            if profile_id_raw:
+                profile_ids.add(profile_id_raw)
+            if profile_code_raw:
+                profile_codes.add(profile_code_raw)
+
+        # Bulk-load all referenced services and profiles into dictionaries for fast lookup.
+        services_by_id = {
+            str(service.id): service
+            for service in Service.objects.filter(id__in=service_ids)
+        } if service_ids else {}
+
+        services_by_code = {
+            service.code: service
+            for service in Service.objects.filter(code__in=service_codes)
+        } if service_codes else {}
+
+        profiles_by_id = {
+            str(profile.id): profile
+            for profile in ReportProfile.objects.filter(id__in=profile_ids)
+        } if profile_ids else {}
+
+        profiles_by_code = {
+            profile.code: profile
+            for profile in ReportProfile.objects.filter(code__in=profile_codes)
+        } if profile_codes else {}
+
+        for idx, row in enumerate(rows, start=2):
             service = None
             profile = None
 
             service_id = (row.get("service_id") or "").strip()
             service_code = (row.get("service_code") or "").strip()
             if service_id:
-                service = Service.objects.filter(id=service_id).first()
+                service = services_by_id.get(service_id)
             if not service and service_code:
-                service = Service.objects.filter(code=service_code).first()
+                service = services_by_code.get(service_code)
 
             profile_id = (row.get("profile_id") or "").strip()
             profile_code = (row.get("profile_code") or "").strip()
             if profile_id:
-                profile = ReportProfile.objects.filter(id=profile_id).first()
+                profile = profiles_by_id.get(profile_id)
             if not profile and profile_code:
-                profile = ReportProfile.objects.filter(code=profile_code).first()
+                profile = profiles_by_code.get(profile_code)
 
             if not service or not profile:
                 errors.append({
