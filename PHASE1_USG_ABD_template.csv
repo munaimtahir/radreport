@@ -1,0 +1,9 @@
+profile_code,profile_name,modality,field_slug,field_type,field_name,section,order,is_required,sentence_template,narrative_role,options,unit,normal_value,omit_if_values_json,join_label
+USG_ABD,Ultrasound Abdomen,USG,impression,long_text,Impression,Impressions,100,true,,"impression",,,,,,
+USG_ABD,Ultrasound Abdomen,USG,liver,short_text,Liver,Findings,10,false,"The liver is normal in size and echotexture.","finding",,,,,,
+USG_ABD,Ultrasound Abdomen,USG,gallbladder,short_text,Gallbladder,Findings,20,false,"The gallbladder is well-distended with thin walls.","finding",,,,,,
+USG_ABD,Ultrasound Abdomen,USG,cbd,short_text,CBD,Findings,30,false,"The common bile duct is of normal caliber.","finding",,,,,,
+USG_ABD,Ultrasound Abdomen,USG,pancreas,short_text,Pancreas,Findings,40,false,"The pancreas is normal.","finding",,,,,,
+USG_ABD,Ultrasound Abdomen,USG,spleen,short_text,Spleen,Findings,50,false,"The spleen is of normal size and echotexture.","finding",,,,,,
+USG_ABD,Ultrasound Abdomen,USG,right_kidney,short_text,Right Kidney,Findings,60,false,"The right kidney is of normal size and echotexture.","finding",,,,,,
+USG_ABD,Ultrasound Abdomen,USG,left_kidney,short_text,Left Kidney,Findings,70,false,"The left kidney is of normal size and echotexture.","finding",,,,,,
