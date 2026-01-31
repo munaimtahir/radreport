@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "../../ui/auth";
-import { apiDelete, apiGet, apiPost, apiPut, apiUpload, API_BASE } from "../../ui/api";
+import { apiDelete, apiGet, apiPost, apiPut, apiUpload } from "../../ui/api";
 import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
+import { downloadFile } from "../../utils/download";
 
 interface ServiceSummary {
   id: string;

@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
-import { apiGet, apiUpload, API_BASE } from "../../ui/api";
+import { apiGet, apiUpload } from "../../ui/api";
 import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
+import { downloadFile } from "../../utils/download";
 
 interface ProfileSummary {
   id: string;
@@ -76,22 +77,11 @@ export default function ParametersList() {
     if (!token || !selectedProfileId) return;
     setError(null);
     try {
-      const response = await fetch(`${API_BASE}/reporting/profiles/${selectedProfileId}/parameters-csv/`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(text || "Download failed");
-      }
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = "template_parameters.csv";
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      window.URL.revokeObjectURL(url);
+      await downloadFile(
+        `/reporting/profiles/${selectedProfileId}/parameters-csv/`,
+        "template_parameters.csv",
+        token
+      );
     } catch (e: any) {
       setError(e.message || "Download failed");
     }
