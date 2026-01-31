@@ -1,0 +1,19 @@
+FINDINGS:
+1 Liver:
+- Liver Size: 11cm.
+- Echogenicity: Normal.
+
+2 Gallbladder:
+- Gallstones: Yes.
+- Wall thickness: 3mm.
+
+3 Kidneys:
+- Hydronephrosis: Moderate.
+- Stones: Right.
+
+IMPRESSION:
+Impression: Right renal calculus and cholelithiasis.
+
+LIMITATIONS:
+Limitations: Suboptimal due to bowel gas.
+

@@ -1,0 +1,17 @@
+FINDINGS:
+1 Liver:
+- Echogenicity: Increased.
+
+2 Gallbladder:
+- Gallstones: Yes.
+
+3 Kidneys:
+- Hydronephrosis: Mild.
+- Stones: Right.
+
+IMPRESSION:
+Impression: Fatty liver suspected.
+
+LIMITATIONS:
+Limitations: Limited by bowel gas.
+
