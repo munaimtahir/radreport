@@ -1,0 +1,9 @@
+http://localhost:8080 {
+    # Reverse proxy to the frontend service
+    reverse_proxy frontend:5173
+}
+
+http://api.localhost:8080 {
+    # Reverse proxy to the backend service
+    reverse_proxy backend:8000
+}
