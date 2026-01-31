@@ -26,6 +26,7 @@ from .serializers import (
 from .services.narrative_v1 import generate_report_narrative
 from .pdf_engine.report_pdf import generate_report_pdf
 from .models import ReportPublishSnapshot, ReportActionLog
+from .utils import parse_bool
 from django.core.files.base import ContentFile
 
 class ReportProfileViewSet(viewsets.ModelViewSet):
@@ -248,7 +249,7 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
                     "unit": row.get("unit") or None,
                     "normal_value": row.get("normal_value") or None,
                     "order": int(row["order"]) if row.get("order") else 0,
-                    "is_required": str(row.get("is_required", "")).lower() in ("true", "1", "yes"),
+                    "is_required": parse_bool(row.get("is_required", ""), default=False),
                     "sentence_template": row.get("sentence_template") or None,
                     "narrative_role": row.get("narrative_role") or "finding",
                     "omit_if_values": json.loads(row["omit_if_values_json"]) if row.get("omit_if_values_json") else None,
@@ -293,7 +294,7 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
         if not file.name.endswith(".csv"):
             return Response({"detail": "File must be a CSV"}, status=status.HTTP_400_BAD_REQUEST)
 
-        use_library = str(request.data.get("use_library", "false")).lower() in ("true", "1", "yes")
+        use_library = parse_bool(request.data.get("use_library", "false"), default=False)
         decoded_file = file.read().decode("utf-8-sig")
         reader = csv.DictReader(io.StringIO(decoded_file))
         rows = list(reader)
@@ -370,7 +371,7 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
                     "unit": row.get("unit") or None,
                     "normal_value": row.get("normal_value") or None,
                     "order": int(row["order"]) if row.get("order") else 0,
-                    "is_required": str(row.get("is_required", "")).lower() in ("true", "1", "yes"),
+                    "is_required": parse_bool(row.get("is_required", ""), default=False),
                     "sentence_template": row.get("sentence_template") or None,
                     "narrative_role": row.get("narrative_role") or "finding",
                     "omit_if_values": json.loads(row["omit_if_values_json"]) if row.get("omit_if_values_json") else None,
@@ -507,18 +508,6 @@ class ServiceReportProfileViewSet(viewsets.ModelViewSet):
         "enforce_single_profile", "is_default"
     ]
 
-    def _parse_bool(self, value, default=None):
-        if value is None:
-            return default
-        raw = str(value).strip().lower()
-        if raw == "":
-            return default
-        if raw in {"true", "1", "yes", "y"}:
-            return True
-        if raw in {"false", "0", "no", "n"}:
-            return False
-        return default
-
     @action(detail=False, methods=["get"], url_path="template-csv")
     def template_csv(self, request):
         output = io.StringIO()
@@ -647,10 +636,10 @@ class ServiceReportProfileViewSet(viewsets.ModelViewSet):
                 })
                 continue
 
-            enforce_single_profile = self._parse_bool(
+            enforce_single_profile = parse_bool(
                 row.get("enforce_single_profile"), default=True
             )
-            is_default = self._parse_bool(row.get("is_default"), default=True)
+            is_default = parse_bool(row.get("is_default"), default=True)
 
             link, was_created = ServiceReportProfile.objects.update_or_create(
                 service=service,

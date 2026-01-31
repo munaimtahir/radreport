@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Routes, Route, Navigate, Link, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth, AuthProvider } from "./auth";
 import { apiGet } from "./api";
 import Login from "../views/Login";
@@ -24,6 +24,7 @@ import ServiceTemplateLinksList from "../views/admin/ServiceTemplateLinksList";
 import ModuleDisabled from "../views/ModuleDisabled";
 import Footer from "./components/Footer";
 import { BrandLogo, BrandTitle } from "./components/brand";
+import NavLink from "./components/NavLink";
 import { theme } from "../theme";
 
 function Shell() {
@@ -37,14 +38,6 @@ function Shell() {
   const canVerify = isSuperuser || groups.includes("verification");
   const canAdmin = isSuperuser;
   const canWorkflow = isSuperuser || canRegister || canPerform || canVerify;
-
-  // Helper function to check if a route is active (handles sub-routes)
-  const isActiveRoute = (path: string) => {
-    if (path === "/") {
-      return location.pathname === "/";
-    }
-    return location.pathname === path || location.pathname.startsWith(path + "/");
-  };
 
   if (!token) return <Navigate to="/login" replace />;
   if (isLoading) {
@@ -92,21 +85,9 @@ function Shell() {
             </div>
           </div>
           <nav style={{ display: "flex", flexDirection: "column", gap: 4, flex: 1 }}>
-            <Link
-              to="/"
-              style={{
-                padding: "10px 12px",
-                textDecoration: "none",
-                color: isActiveRoute("/") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                backgroundColor: isActiveRoute("/") ? theme.colors.brandBlueSoft : "transparent",
-                borderRadius: theme.radius.base,
-                fontSize: 14,
-                fontWeight: isActiveRoute("/") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                transition: theme.transitions.fast,
-              }}
-            >
+            <NavLink to="/">
               Dashboard
-            </Link>
+            </NavLink>
             <div style={{ marginTop: 12, paddingTop: 12, borderTop: `1px solid ${theme.colors.border}` }}>
               <div style={{
                 fontSize: 11,
@@ -120,55 +101,19 @@ function Shell() {
               </div>
             </div>
             {canRegister && (
-              <Link
-                to="/registration"
-                style={{
-                  padding: "10px 12px",
-                  textDecoration: "none",
-                  color: isActiveRoute("/registration") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                  backgroundColor: isActiveRoute("/registration") ? theme.colors.brandBlueSoft : "transparent",
-                  borderRadius: theme.radius.base,
-                  fontSize: 14,
-                  fontWeight: isActiveRoute("/registration") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                  transition: theme.transitions.fast,
-                }}
-              >
+              <NavLink to="/registration">
                 Registration
-              </Link>
+              </NavLink>
             )}
             {canWorkflow && (
-              <Link
-                to="/patients/workflow"
-                style={{
-                  padding: "10px 12px",
-                  textDecoration: "none",
-                  color: isActiveRoute("/patients/workflow") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                  backgroundColor: isActiveRoute("/patients/workflow") ? theme.colors.brandBlueSoft : "transparent",
-                  borderRadius: theme.radius.base,
-                  fontSize: 14,
-                  fontWeight: isActiveRoute("/patients/workflow") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                  transition: theme.transitions.fast,
-                }}
-              >
+              <NavLink to="/patients/workflow">
                 Patient workflow
-              </Link>
+              </NavLink>
             )}
             {(canPerform || canVerify) && (
-              <Link
-                to="/reporting/worklist"
-                style={{
-                  padding: "10px 12px",
-                  textDecoration: "none",
-                  color: isActiveRoute("/reporting/worklist") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                  backgroundColor: isActiveRoute("/reporting/worklist") ? theme.colors.brandBlueSoft : "transparent",
-                  borderRadius: theme.radius.base,
-                  fontSize: 14,
-                  fontWeight: isActiveRoute("/reporting/worklist") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                  transition: theme.transitions.fast,
-                }}
-              >
+              <NavLink to="/reporting/worklist">
                 Reporting worklist
-              </Link>
+              </NavLink>
             )}
 
 
@@ -191,112 +136,28 @@ function Shell() {
                 }}>
                   SETTINGS
                 </div>
-                <Link
-                  to="/settings/consultants"
-                  style={{
-                    padding: "10px 12px",
-                    textDecoration: "none",
-                    color: isActiveRoute("/settings/consultants") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/settings/consultants") ? theme.colors.brandBlueSoft : "transparent",
-                    borderRadius: theme.radius.base,
-                    fontSize: 14,
-                    fontWeight: isActiveRoute("/settings/consultants") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                    transition: theme.transitions.fast,
-                  }}
-                >
+                <NavLink to="/settings/consultants">
                   Consultants
-                </Link>
+                </NavLink>
 
-                <Link
-                  to="/settings/consultant-settlements"
-                  style={{
-                    padding: "10px 12px",
-                    textDecoration: "none",
-                    color: isActiveRoute("/settings/consultant-settlements") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/settings/consultant-settlements") ? theme.colors.brandBlueSoft : "transparent",
-                    borderRadius: theme.radius.base,
-                    fontSize: 14,
-                    fontWeight: isActiveRoute("/settings/consultant-settlements") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                    transition: theme.transitions.fast,
-                  }}
-                >
+                <NavLink to="/settings/consultant-settlements">
                   Consultant Settlements
-                </Link>
-                <Link
-                  to="/receipt-settings"
-                  style={{
-                    padding: "10px 12px",
-                    textDecoration: "none",
-                    color: isActiveRoute("/receipt-settings") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/receipt-settings") ? theme.colors.brandBlueSoft : "transparent",
-                    borderRadius: theme.radius.base,
-                    fontSize: 14,
-                    fontWeight: isActiveRoute("/receipt-settings") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                    transition: theme.transitions.fast,
-                  }}
-                >
+                </NavLink>
+                <NavLink to="/receipt-settings">
                   Receipt Settings
-                </Link>
-                <Link
-                  to="/settings/parameters"
-                  style={{
-                    padding: "10px 12px",
-                    textDecoration: "none",
-                    color: isActiveRoute("/settings/parameters") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/settings/parameters") ? theme.colors.brandBlueSoft : "transparent",
-                    borderRadius: theme.radius.base,
-                    fontSize: 14,
-                    fontWeight: isActiveRoute("/settings/parameters") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                    transition: theme.transitions.fast,
-                  }}
-                >
+                </NavLink>
+                <NavLink to="/settings/parameters">
                   Parameters
-                </Link>
-                <Link
-                  to="/settings/templates"
-                  style={{
-                    padding: "10px 12px",
-                    textDecoration: "none",
-                    color: isActiveRoute("/settings/templates") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/settings/templates") ? theme.colors.brandBlueSoft : "transparent",
-                    borderRadius: theme.radius.base,
-                    fontSize: 14,
-                    fontWeight: isActiveRoute("/settings/templates") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                    transition: theme.transitions.fast,
-                  }}
-                >
+                </NavLink>
+                <NavLink to="/settings/templates">
                   Templates
-                </Link>
-                <Link
-                  to="/settings/services"
-                  style={{
-                    padding: "10px 12px",
-                    textDecoration: "none",
-                    color: isActiveRoute("/settings/services") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/settings/services") ? theme.colors.brandBlueSoft : "transparent",
-                    borderRadius: theme.radius.base,
-                    fontSize: 14,
-                    fontWeight: isActiveRoute("/settings/services") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                    transition: theme.transitions.fast,
-                  }}
-                >
+                </NavLink>
+                <NavLink to="/settings/services">
                   Services
-                </Link>
-                <Link
-                  to="/settings/service-template-links"
-                  style={{
-                    padding: "10px 12px",
-                    textDecoration: "none",
-                    color: isActiveRoute("/settings/service-template-links") ? theme.colors.brandBlue : theme.colors.textSecondary,
-                    backgroundColor: isActiveRoute("/settings/service-template-links") ? theme.colors.brandBlueSoft : "transparent",
-                    borderRadius: theme.radius.base,
-                    fontSize: 14,
-                    fontWeight: isActiveRoute("/settings/service-template-links") ? theme.typography.fontWeight.medium : theme.typography.fontWeight.normal,
-                    transition: theme.transitions.fast,
-                  }}
-                >
+                </NavLink>
+                <NavLink to="/settings/service-template-links">
                   Service-Template Links
-                </Link>
+                </NavLink>
               </div>
             )}
             {/* PHASE C: Legacy routes hidden from navigation - accessible via direct URL for admin only */}
@@ -307,79 +168,11 @@ function Shell() {
                 LEGACY (ADMIN ONLY)
               </div>
             </div>
-            <Link
-              to="/intake"
-              style={{
-                padding: "10px 12px",
-                textDecoration: "none",
-                color: isActiveRoute("/intake") ? "#0B5ED7" : "#555",
-                backgroundColor: isActiveRoute("/intake") ? "#f0f7ff" : "transparent",
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: isActiveRoute("/intake") ? 500 : 400,
-                opacity: 0.5,
-              }}
-            >
-              Front Desk Intake (LEGACY)
-            </Link>
-            <Link
-              to="/patients"
-              style={{
-                padding: "10px 12px",
-                textDecoration: "none",
-                color: isActiveRoute("/patients") ? "#0B5ED7" : "#555",
-                backgroundColor: isActiveRoute("/patients") ? "#f0f7ff" : "transparent",
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: isActiveRoute("/patients") ? 500 : 400,
-                opacity: 0.5,
-              }}
-            >
-              Patients (LEGACY)
-            </Link>
-            <Link
-              to="/studies"
-              style={{
-                padding: "10px 12px",
-                textDecoration: "none",
-                color: isActiveRoute("/studies") ? "#0B5ED7" : "#555",
-                backgroundColor: isActiveRoute("/studies") ? "#f0f7ff" : "transparent",
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: isActiveRoute("/studies") ? 500 : 400,
-                opacity: 0.5,
-              }}
-            >
-              Studies (LEGACY)
-            </Link>
-            <Link
-              to="/templates"
-              style={{
-                padding: "10px 12px",
-                textDecoration: "none",
-                color: isActiveRoute("/templates") ? "#0B5ED7" : "#555",
-                backgroundColor: isActiveRoute("/templates") ? "#f0f7ff" : "transparent",
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: isActiveRoute("/templates") ? 500 : 400,
-              }}
-            >
-              Templates
-            </Link>
-            <Link
-              to="/receipt-settings"
-              style={{
-                padding: "10px 12px",
-                textDecoration: "none",
-                color: isActiveRoute("/receipt-settings") ? "#0B5ED7" : "#555",
-                backgroundColor: isActiveRoute("/receipt-settings") ? "#f0f7ff" : "transparent",
-                borderRadius: 6,
-                fontSize: 14,
-                fontWeight: isActiveRoute("/receipt-settings") ? 500 : 400,
-              }}
-            >
-              Receipt Settings
-            </Link>
+            <NavLink to="/intake">Front Desk Intake (LEGACY)</NavLink>
+            <NavLink to="/patients">Patients (LEGACY)</NavLink>
+            <NavLink to="/studies">Studies (LEGACY)</NavLink>
+            <NavLink to="/templates">Templates</NavLink>
+            <NavLink to="/receipt-settings">Receipt Settings</NavLink>
             */}
           </nav>
           <button
