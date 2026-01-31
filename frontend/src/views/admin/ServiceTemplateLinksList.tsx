@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useAuth } from "../../ui/auth";
-import { apiDelete, apiGet, apiPost, apiPut, apiUpload } from "../../ui/api";
+import { apiDelete, apiGet, apiPost, apiPut, API_BASE } from "../../ui/api";
 import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
 import { downloadFile } from "../../utils/download";
+import ImportModal from "../../ui/components/ImportModal";
 
 interface ServiceSummary {
   id: string;
@@ -43,7 +44,7 @@ export default function ServiceTemplateLinksList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isImportModalOpen, setImportModalOpen] = useState(false);
 
   const loadData = useCallback(async () => {
     if (!token) return;
@@ -51,7 +52,7 @@ export default function ServiceTemplateLinksList() {
       setLoading(true);
       const [linksData, servicesData, profilesData] = await Promise.all([
         apiGet("/reporting/service-profiles/", token),
-        apiGet("/services/", token),
+        apiGet("/catalog/services/", token),
         apiGet("/reporting/profiles/", token),
       ]);
       setLinks(Array.isArray(linksData) ? linksData : linksData.results || []);
@@ -125,73 +126,36 @@ export default function ServiceTemplateLinksList() {
     }
   };
 
-  const downloadCsv = async (path: string, filename: string) => {
-    if (!token) return;
-    setError(null);
-    try {
-      await downloadFile(path, filename, token);
-    } catch (e: any) {
-      setError(e.message || "Download failed");
-    }
-  };
-
-  const handleImportClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    setError(null);
-    setStatus(null);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const result = await apiUpload("/reporting/service-profiles/import-csv/", token, formData);
-      setStatus(`Import complete. Created ${result.created}, updated ${result.updated}.`);
-      loadData();
-    } catch (e: any) {
-      // Handle partial success responses that include created/updated counts and errors.
-      const data = (e && (e.data ?? e)) as any;
-      const hasCounts =
-        data &&
-        (typeof data.created === "number" || typeof data.updated === "number");
-      if (hasCounts) {
-        const created = typeof data.created === "number" ? data.created : 0;
-        const updated = typeof data.updated === "number" ? data.updated : 0;
-        setStatus(`Import completed with errors. Created ${created}, updated ${updated}.`);
-        const errors = Array.isArray(data.errors) ? data.errors : [];
-        const errorMessage =
-          errors.length > 0
-            ? `Some rows failed to import:\n${errors.join("\n")}`
-            : e?.message || "Import completed with some errors.";
-        setError(errorMessage);
-      } else {
-        setError(e?.message || "Import failed");
-      }
-    } finally {
-      event.target.value = "";
-    }
+  const handleImportSuccess = () => {
+    setImportModalOpen(false);
+    loadData();
   };
 
   return (
     <div style={{ padding: 20 }}>
+      <ImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImportSuccess={handleImportSuccess}
+        importUrl="/reporting/service-profiles/import-csv/"
+        title="Import Service-Template Links"
+      />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <h1 style={{ fontSize: 24, margin: 0 }}>Service-Template Links</h1>
         <div style={{ display: "flex", gap: 12 }}>
           <Button
             variant="secondary"
-            onClick={() => downloadCsv("/reporting/service-profiles/template-csv/", "service_template_links_template.csv")}
+            onClick={() => downloadFile(`${API_BASE}/reporting/service-profiles/template-csv/`, "service_template_links_template.csv", token)}
           >
             Download CSV Template
           </Button>
           <Button
             variant="secondary"
-            onClick={() => downloadCsv("/reporting/service-profiles/export-csv/", "service_template_links_export.csv")}
+            onClick={() => downloadFile(`${API_BASE}/reporting/service-profiles/export-csv/`, "service_template_links_export.csv", token)}
           >
             Export CSV
           </Button>
-          <Button variant="secondary" onClick={handleImportClick}>
+          <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
             Import CSV
           </Button>
         </div>
@@ -199,8 +163,7 @@ export default function ServiceTemplateLinksList() {
 
       {error && <ErrorAlert message={error} />}
       {status && <div style={{ marginBottom: 12, color: theme.colors.textSecondary }}>{status}</div>}
-      <input ref={fileInputRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleImport} />
-
+      
       <div style={{ backgroundColor: "white", borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, padding: 20, marginBottom: 24 }}>
         <h3 style={{ marginTop: 0 }}>{form.id ? "Edit Link" : "Create Link"}</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -320,3 +283,4 @@ export default function ServiceTemplateLinksList() {
     </div>
   );
 }
+

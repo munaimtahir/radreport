@@ -134,6 +134,39 @@ function Shell() {
                   letterSpacing: "0.5px",
                   marginBottom: 8
                 }}>
+                  CATALOG & TEMPLATES
+                </div>
+                <NavLink to="/settings/templates">
+                  Templates
+                </NavLink>
+                <NavLink to="/settings/parameters">
+                  Parameters
+                </NavLink>
+                <NavLink to="/settings/services">
+                  Services
+                </NavLink>
+                <NavLink to="/settings/service-template-links">
+                  Service-Template Links
+                </NavLink>
+              </div>
+            )}
+            {canAdmin && (
+              <div style={{
+                marginTop: 12,
+                paddingTop: 12,
+                borderTop: `1px solid ${theme.colors.border}`,
+                display: "flex",
+                flexDirection: "column",
+                gap: 4
+              }}>
+                <div style={{
+                  fontSize: 11,
+                  color: theme.colors.textTertiary,
+                  fontWeight: theme.typography.fontWeight.semibold,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.5px",
+                  marginBottom: 8
+                }}>
                   SETTINGS
                 </div>
                 <NavLink to="/settings/consultants">
@@ -145,18 +178,6 @@ function Shell() {
                 </NavLink>
                 <NavLink to="/receipt-settings">
                   Receipt Settings
-                </NavLink>
-                <NavLink to="/settings/parameters">
-                  Parameters
-                </NavLink>
-                <NavLink to="/settings/templates">
-                  Templates
-                </NavLink>
-                <NavLink to="/settings/services">
-                  Services
-                </NavLink>
-                <NavLink to="/settings/service-template-links">
-                  Service-Template Links
                 </NavLink>
               </div>
             )}

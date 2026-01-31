@@ -1,17 +1,12 @@
-// frontend/src/utils/download.ts
-import { API_BASE } from "../ui/api";
+import { API_BASE } from "./api";
 
-export const downloadFile = async (urlPath: string, filename: string, token: string) => {
-  if (!token) {
-    throw new Error("Authentication token is missing.");
-  }
-  try {
-    const response = await fetch(`${API_BASE}${urlPath}`, {
-      headers: { Authorization: `Bearer ${token}` },
+export const downloadFile = async (path: string, filename: string, token: string) => {
+    const response = await fetch(`${API_BASE}${path}`, {
+        headers: { Authorization: `Bearer ${token}` }
     });
     if (!response.ok) {
-      const text = await response.text();
-      throw new Error(text || "Download failed");
+        const text = await response.text();
+        throw new Error(text || "Download failed");
     }
     const blob = await response.blob();
     const url = window.URL.createObjectURL(blob);
@@ -22,11 +17,4 @@ export const downloadFile = async (urlPath: string, filename: string, token: str
     link.click();
     link.remove();
     window.URL.revokeObjectURL(url);
-  } catch (e: any) {
-    // Re-throw original error if it exists, otherwise create a new one
-    if (e instanceof Error) {
-      throw e;
-    }
-    throw new Error(e?.message || "Download failed");
-  }
 };

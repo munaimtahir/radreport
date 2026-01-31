@@ -1,10 +1,12 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
-import { apiGet, apiDelete, apiUpload, API_BASE } from "../../ui/api";
+import { apiGet, apiDelete, API_BASE } from "../../ui/api";
 import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
+import ImportModal from "../../ui/components/ImportModal";
+import { downloadFile } from "../../utils/download";
 
 interface Service {
     id: string;
@@ -20,18 +22,15 @@ export default function ServicesList() {
     const [services, setServices] = useState<Service[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
-    const [importStatus, setImportStatus] = useState<string | null>(null);
-    const [page, setPage] = useState(1);
     const [search, setSearch] = useState("");
-    const fileInputRef = useRef<HTMLInputElement | null>(null);
+    const [isImportModalOpen, setImportModalOpen] = useState(false);
 
     const loadData = useCallback(async () => {
         if (!token) return;
         try {
             setLoading(true);
-            // Assuming pagination or simple list. existing ServiceViewSet supports search.
             const query = search ? `?search=${encodeURIComponent(search)}` : "";
-            const data = await apiGet(`/services/${query}`, token);
+            const data = await apiGet(`/catalog/services/${query}`, token);
             setServices(Array.isArray(data) ? data : data.results || []);
         } catch (e: any) {
             setError(e.message || "Failed to load services");
@@ -47,59 +46,27 @@ export default function ServicesList() {
     const handleDeactivate = async (id: string) => {
         if (!window.confirm("Are you sure you want to deactivate this service?")) return;
         try {
-            // Usually we deactivate instead of delete
-            // But apiDelete calls DELETE method. ServiceViewSet default might verify usage.
-            // Let's assume standard delete for now, user can check backend.
-            await apiDelete(`/services/${id}/`, token);
+            await apiDelete(`/catalog/services/${id}/`, token);
             loadData();
         } catch (e: any) {
             setError(e.message || "Failed to deactivate");
         }
     };
-
-    const downloadCsv = async (path: string, filename: string) => {
-        if (!token) return;
-        const response = await fetch(`${API_BASE}${path}`, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
-        if (!response.ok) {
-            const text = await response.text();
-            throw new Error(text || "Download failed");
-        }
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-        window.URL.revokeObjectURL(url);
-    };
-
-    const handleImportClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (!file || !token) return;
-        setImportStatus(null);
-        try {
-            const formData = new FormData();
-            formData.append("file", file);
-            const result = await apiUpload("/services/import-csv/", token, formData);
-            setImportStatus(`Import complete. Created: ${result.created}, Updated: ${result.updated}`);
-            loadData();
-        } catch (e: any) {
-            setImportStatus(e.message || "Import failed");
-        } finally {
-            event.target.value = "";
-        }
+    
+    const handleImportSuccess = () => {
+        setImportModalOpen(false);
+        loadData();
     };
 
     return (
         <div style={{ padding: 20 }}>
+            <ImportModal
+                isOpen={isImportModalOpen}
+                onClose={() => setImportModalOpen(false)}
+                onImportSuccess={handleImportSuccess}
+                importUrl="/catalog/services/import-csv/"
+                title="Import Services"
+            />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
                 <h1 style={{ fontSize: 24, margin: 0 }}>Services</h1>
                 <div style={{ display: "flex", gap: 12 }}>
@@ -111,17 +78,17 @@ export default function ServicesList() {
                     />
                     <Button
                         variant="secondary"
-                        onClick={() => downloadCsv("/services/template-csv/", "services_template.csv")}
+                        onClick={() => downloadFile(`${API_BASE}/catalog/services/template-csv/`, "services_template.csv", token)}
                     >
                         Download CSV Template
                     </Button>
                     <Button
                         variant="secondary"
-                        onClick={() => downloadCsv("/services/export-csv/", "services_export.csv")}
+                        onClick={() => downloadFile(`${API_BASE}/catalog/services/export-csv/`, "services_export.csv", token)}
                     >
                         Export CSV
                     </Button>
-                    <Button variant="secondary" onClick={handleImportClick}>
+                    <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
                         Import CSV
                     </Button>
                     <Button variant="primary" onClick={() => navigate("/settings/services/new")}>
@@ -131,9 +98,7 @@ export default function ServicesList() {
             </div>
 
             {error && <ErrorAlert message={error} />}
-            {importStatus && <div style={{ marginBottom: 12, color: theme.colors.textSecondary }}>{importStatus}</div>}
-            <input ref={fileInputRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleImport} />
-
+            
             <div style={{ backgroundColor: "white", borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, overflow: "hidden" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>
@@ -175,3 +140,4 @@ export default function ServicesList() {
         </div>
     );
 }
+

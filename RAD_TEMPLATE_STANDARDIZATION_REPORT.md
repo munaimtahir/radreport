@@ -4,6 +4,39 @@ Date: 2026-01-31
 Repo: /home/munaim/Documents/github/radreport
 Scope: Template-only narrative standardization + verification harness + legacy template tracing removal/neutralization
 
+## Admin Catalog & Templates Module
+
+A new Admin UI module has been implemented to manage Report Profiles, Report Parameters, Services, and Service-Template Linkages. This module includes CRUD operations and robust CSV import/export functionalities with dry-run validation.
+
+### Endpoints:
+
+*   **Report Profiles (`reporting-profiles`)**:
+    *   `GET /api/reporting/profiles/template-csv/`: Download CSV template for report profiles.
+    *   `GET /api/reporting/profiles/export-csv/`: Export report profiles to CSV.
+    *   `POST /api/reporting/profiles/import-csv/`: Import report profiles from CSV (supports `?dry_run=true/false`).
+    *   `POST /api/reporting/profiles/{pk}/import-parameters/`: Import parameters for a specific report profile (supports `?dry_run=true/false`).
+*   **Report Parameters (`reporting-parameters`)**:
+    *   `GET /api/reporting/parameters/template-csv/`: Download CSV template for report parameters.
+    *   `GET /api/reporting/parameters/export-csv/`: Export report parameters to CSV.
+    *   `POST /api/reporting/parameters/import-csv/`: Import report parameters from CSV (supports `?dry_run=true/false`).
+*   **Services (`services`)**:
+    *   `GET /api/services/template-csv/`: Download CSV template for services.
+    *   `GET /api/services/export-csv/`: Export services to CSV.
+    *   `POST /api/services/import-csv/`: Import services from CSV (supports `?dry_run=true/false`).
+*   **Service-Template Linkages (`reporting-service-profiles`)**:
+    *   `GET /api/reporting/service-profiles/template-csv/`: Download CSV template for service-template linkages.
+    *   `GET /api/reporting/service-profiles/export-csv/`: Export service-template linkages to CSV.
+    *   `POST /api/reporting/service-profiles/import-csv/`: Import service-template linkages from CSV (supports `?dry_run=true/false`).
+
+### Import Rules:
+
+*   **Profiles**: Upsert by `code`.
+*   **Parameters**: Upsert by (`profile_code`, `slug`).
+*   **Services**: Upsert by `code`.
+*   **Linkage**: Upsert by (`service_code`, `profile_code`).
+*   **Validation**: Rejects unknown `profile_code`/`service_code` during apply. Provides row-level error list and counts (created/updated/skipped/errors).
+*   **Safety**: Uses `transaction.atomic()` for apply operations and includes a `dry_run` option for validation without database writes.
+
 ## Narrative Engine Ground Truth
 - Engine implementation: `backend/apps/reporting/services/narrative_v1.py` (`generate_report_narrative`).
 - Primary call sites:
@@ -96,7 +129,6 @@ Source log: `/tmp/rad_audit/logs/legacy_trace.txt`
 ## Artifact Listing
 ```
 /tmp/rad_audit/diffs/code_changes.patch
-/tmp/rad_audit/diffs/usg_abd_diff.patch
 /tmp/rad_audit/logs/api_case_01.log
 /tmp/rad_audit/logs/api_case_02.log
 /tmp/rad_audit/logs/api_case_03.log

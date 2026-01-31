@@ -35,13 +35,6 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, permissions.IsAdminUser]
     search_fields = ["code", "name", "modality"]
     filterset_fields = ["modality", "is_active"]
-    csv_fieldnames = [
-        "profile_code", "profile_name", "modality",
-        "section", "field_name", "field_slug", "field_type",
-        "unit", "normal_value", "is_required", "order",
-        "options", "sentence_template", "narrative_role",
-        "omit_if_values_json", "join_label"
-    ]
 
     def _format_options(self, options):
         opts = []
@@ -72,17 +65,264 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["get"], url_path="template-csv")
     def template_csv(self, request):
+        fieldnames = ["code", "name", "modality", "is_active"]
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+        writer.writerow({
+            "code": "USG_KUB",
+            "name": "USG KUB",
+            "modality": "USG",
+            "is_active": "true",
+        })
+        response = HttpResponse(output.getvalue(), content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="report_profiles_template.csv"'
+        return response
+
+    @action(detail=False, methods=["get"], url_path="export-csv")
+    def export_csv(self, request):
+        fieldnames = ["code", "name", "modality", "is_active", "enable_narrative", "narrative_mode"]
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+
+        for profile in ReportProfile.objects.all().order_by("code"):
+            writer.writerow({
+                "code": profile.code,
+                "name": profile.name,
+                "modality": profile.modality,
+                "is_active": profile.is_active,
+                "enable_narrative": profile.enable_narrative,
+                "narrative_mode": profile.narrative_mode,
+            })
+
+        response = HttpResponse(output.getvalue(), content_type="text/csv")
+        response["Content-Disposition"] = 'attachment; filename="report_profiles_export.csv"'
+        return response
+
+    def _process_parameters_import(self, profile, rows):
+        errors = []
+        preview = []
+        created_count = 0
+        updated_count = 0
+
+        for idx, row in enumerate(rows, start=2):
+            try:
+                slug = row.get("slug")
+                if not slug:
+                    raise ValueError("slug is required")
+
+                action = "create"
+                if ReportParameter.objects.filter(profile=profile, slug=slug).exists():
+                    action = "update"
+
+                preview.append({
+                    "action": action,
+                    "slug": slug,
+                    "name": row.get("name"),
+                    "section": row.get("section"),
+                    "parameter_type": row.get("parameter_type"),
+                })
+                if action == "create":
+                    created_count += 1
+                else:
+                    updated_count += 1
+            except Exception as e:
+                errors.append({"row": idx, "error": str(e)})
+
+        return {"created": created_count, "updated": updated_count, "errors": errors, "preview": preview}
+
+    @action(detail=True, methods=["post"], url_path="import-parameters")
+    def import_parameters(self, request, pk=None):
+        profile = self.get_object()
+        if "file" not in request.FILES:
+            return Response({"detail": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        file = request.FILES["file"]
+        dry_run = parse_bool(request.query_params.get("dry_run", "true"))
+        
+        decoded_file = file.read().decode("utf-8-sig")
+        reader = csv.DictReader(io.StringIO(decoded_file))
+        rows = list(reader)
+
+        if dry_run:
+            result = self._process_parameters_import(profile, rows)
+            status_code = status.HTTP_400_BAD_REQUEST if result["errors"] else status.HTTP_200_OK
+            return Response(result, status=status_code)
+
+        created_fields = 0
+        updated_fields = 0
+        errors = []
+
+        with transaction.atomic():
+            for row in rows:
+                try:
+                    field_data = {
+                        "section": row.get("section", ""),
+                        "name": row.get("name") or row.get("slug"),
+                        "parameter_type": row["parameter_type"],
+                        "unit": row.get("unit") or None,
+                        "normal_value": row.get("normal_value") or None,
+                        "order": int(row["order"]) if row.get("order") else 0,
+                        "is_required": parse_bool(row.get("is_required", ""), default=False),
+                        "sentence_template": row.get("sentence_template") or None,
+                        "narrative_role": row.get("narrative_role") or "finding",
+                        "omit_if_values": json.loads(row["omit_if_values_json"]) if row.get("omit_if_values_json") else None,
+                        "join_label": row.get("join_label") or None,
+                    }
+                    slug = row["slug"]
+                    options_list = self._parse_options(row.get("options", ""))
+
+                    param, created = ReportParameter.objects.update_or_create(
+                        profile=profile,
+                        slug=slug,
+                        defaults=field_data,
+                    )
+                    if field_data["parameter_type"] in ["dropdown", "checklist"]:
+                        param.options.all().delete()
+                        for i, opt in enumerate(options_list):
+                            ReportParameterOption.objects.create(
+                                parameter=param, label=opt["label"], value=opt["value"], order=i
+                            )
+                    else:
+                        param.options.all().delete()
+
+                    if created:
+                        created_fields += 1
+                    else:
+                        updated_fields += 1
+                except Exception as e:
+                    errors.append({"slug": row.get("slug"), "error": str(e)})
+            
+            if errors:
+                transaction.set_rollback(True)
+                return Response({"created": 0, "updated": 0, "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"fields_created": created_fields, "fields_updated": updated_fields})
+
+    def _process_profile_import(self, rows):
+        created = 0
+        updated = 0
+        errors = []
+        preview = []
+        for idx, row in enumerate(rows, start=2):
+            try:
+                code = row.get("code")
+                if not code:
+                    raise ValueError("code is required")
+                
+                action = "create"
+                if ReportProfile.objects.filter(code=code).exists():
+                    action = "update"
+                
+                preview.append({"action": action, "code": code, "name": row.get("name")})
+                if action == "create":
+                    created += 1
+                else:
+                    updated += 1
+            except Exception as e:
+                errors.append({"row": idx, "error": str(e)})
+        return {"created": created, "updated": updated, "errors": errors, "preview": preview}
+
+    @action(detail=False, methods=["post"], url_path="import-csv")
+    def import_csv(self, request):
+        if "file" not in request.FILES:
+            return Response({"detail": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
+
+        file = request.FILES["file"]
+        dry_run = parse_bool(request.query_params.get("dry_run", "true"))
+        
+        decoded_file = file.read().decode("utf-8-sig")
+        reader = csv.DictReader(io.StringIO(decoded_file))
+        rows = list(reader)
+
+        if dry_run:
+            result = self._process_profile_import(rows)
+            status_code = status.HTTP_400_BAD_REQUEST if result["errors"] else status.HTTP_200_OK
+            return Response(result, status=status_code)
+
+        created_profiles = 0
+        updated_profiles = 0
+        errors = []
+
+        with transaction.atomic():
+            for row in rows:
+                try:
+                    code = row["code"]
+                    defaults = {
+                        "name": row["name"],
+                        "modality": row["modality"],
+                        "is_active": parse_bool(row.get("is_active"), default=True),
+                        "enable_narrative": parse_bool(row.get("enable_narrative"), default=True),
+                        "narrative_mode": row.get("narrative_mode", "rule_based"),
+                    }
+                    _, created = ReportProfile.objects.update_or_create(code=code, defaults=defaults)
+                    if created:
+                        created_profiles += 1
+                    else:
+                        updated_profiles += 1
+                except Exception as e:
+                    errors.append({"code": code, "error": str(e)})
+
+            if errors:
+                transaction.set_rollback(True)
+                return Response({"created": 0, "updated": 0, "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response({"profiles_created": created_profiles, "profiles_updated": updated_profiles})
+
+
+class ReportParameterViewSet(viewsets.ModelViewSet):
+    queryset = ReportParameter.objects.all()
+    serializer_class = ReportParameterSerializer
+    permission_classes = [IsAuthenticated, permissions.IsAdminUser]
+    filterset_fields = ["profile", "section"]
+    ordering_fields = ["order"]
+
+    csv_fieldnames = [
+        "profile_code", "section", "name", "slug", 
+        "parameter_type", "unit", "normal_value", "is_required", "order",
+        "options", "sentence_template", "narrative_role",
+        "omit_if_values_json", "join_label"
+    ]
+
+    def _format_options(self, options):
+        opts = []
+        for option in options:
+            label = option.label
+            value = option.value
+            if label == value:
+                opts.append(value)
+            else:
+                opts.append(f"{label}:{value}")
+        return ", ".join(opts)
+
+    def _parse_options(self, options_raw):
+        if not options_raw:
+            return []
+        delimiter = "|" if "|" in options_raw else ","
+        options_list = []
+        for opt in options_raw.split(delimiter):
+            opt = opt.strip()
+            if not opt:
+                continue
+            if ":" in opt:
+                lbl, val = opt.split(":", 1)
+                options_list.append({"label": lbl.strip(), "value": val.strip()})
+            else:
+                options_list.append({"label": opt, "value": opt})
+        return options_list
+
+    @action(detail=False, methods=["get"], url_path="template-csv")
+    def template_csv(self, request):
         output = io.StringIO()
         writer = csv.DictWriter(output, fieldnames=self.csv_fieldnames)
         writer.writeheader()
         writer.writerow({
             "profile_code": "USG_KUB",
-            "profile_name": "USG KUB",
-            "modality": "USG",
             "section": "Kidneys",
-            "field_name": "Right Kidney Size",
-            "field_slug": "right_kidney_size",
-            "field_type": "number",
+            "name": "Right Kidney Size",
+            "slug": "right_kidney_size",
+            "parameter_type": "number",
             "unit": "mm",
             "normal_value": "100",
             "is_required": "true",
@@ -94,7 +334,7 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
             "join_label": "",
         })
         response = HttpResponse(output.getvalue(), content_type="text/csv")
-        response["Content-Disposition"] = 'attachment; filename="report_template_schema.csv"'
+        response["Content-Disposition"] = 'attachment; filename="report_parameters_template.csv"'
         return response
 
     @action(detail=False, methods=["get"], url_path="export-csv")
@@ -103,359 +343,143 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
         writer = csv.DictWriter(output, fieldnames=self.csv_fieldnames)
         writer.writeheader()
 
-        profiles = ReportProfile.objects.all().prefetch_related("parameters", "parameters__options", "library_links", "library_links__library_item")
-        for profile in profiles.order_by("code"):
-            links = profile.library_links.select_related("library_item").order_by("order")
-            if links.exists():
-                for link in links:
-                    item = link.library_item
-                    options_str = self._format_options(item.default_options_json or [])
-                    writer.writerow({
-                        "profile_code": profile.code,
-                        "profile_name": profile.name,
-                        "modality": profile.modality,
-                        "section": link.section,
-                        "field_name": item.name,
-                        "field_slug": item.slug,
-                        "field_type": item.parameter_type,
-                        "unit": item.unit or "",
-                        "normal_value": item.default_normal_value or "",
-                        "is_required": "true" if link.is_required else "false",
-                        "order": link.order,
-                        "options": options_str,
-                        "sentence_template": item.default_sentence_template or "",
-                        "narrative_role": item.default_narrative_role,
-                        "omit_if_values_json": json.dumps(item.default_omit_if_values) if item.default_omit_if_values else "",
-                        "join_label": item.default_join_label or "",
-                    })
-            else:
-                params = profile.parameters.prefetch_related("options").order_by("order")
-                for param in params:
-                    options = param.options.all().order_by("order")
-                    options_str = self._format_options(options)
-                    writer.writerow({
-                        "profile_code": profile.code,
-                        "profile_name": profile.name,
-                        "modality": profile.modality,
-                        "section": param.section,
-                        "field_name": param.name,
-                        "field_slug": param.slug or slugify(param.name).replace("-", "_"),
-                        "field_type": param.parameter_type,
-                        "unit": param.unit or "",
-                        "normal_value": param.normal_value or "",
-                        "is_required": "true" if param.is_required else "false",
-                        "order": param.order,
-                        "options": options_str,
-                        "sentence_template": param.sentence_template or "",
-                        "narrative_role": param.narrative_role,
-                        "omit_if_values_json": json.dumps(param.omit_if_values) if param.omit_if_values else "",
-                        "join_label": param.join_label or "",
-                    })
+        params = ReportParameter.objects.all().select_related("profile").prefetch_related("options").order_by("profile__code", "order")
+        for param in params:
+            options_str = self._format_options(param.options.all())
+            writer.writerow({
+                "profile_code": param.profile.code,
+                "section": param.section,
+                "name": param.name,
+                "slug": param.slug,
+                "parameter_type": param.parameter_type,
+                "unit": param.unit or "",
+                "normal_value": param.normal_value or "",
+                "is_required": "true" if param.is_required else "false",
+                "order": param.order,
+                "options": options_str,
+                "sentence_template": param.sentence_template or "",
+                "narrative_role": param.narrative_role,
+                "omit_if_values_json": json.dumps(param.omit_if_values) if param.omit_if_values else "",
+                "join_label": param.join_label or "",
+            })
 
         response = HttpResponse(output.getvalue(), content_type="text/csv")
-        response["Content-Disposition"] = 'attachment; filename="report_templates_export.csv"'
+        response["Content-Disposition"] = 'attachment; filename="report_parameters_export.csv"'
         return response
-
-    @action(detail=True, methods=["get", "post"], url_path="parameters-csv")
-    def parameters_csv(self, request, pk=None):
-        profile = self.get_object()
-        if request.method == "GET":
-            output = io.StringIO()
-            writer = csv.DictWriter(output, fieldnames=self.csv_fieldnames)
-            writer.writeheader()
-            params = profile.parameters.prefetch_related("options").order_by("order")
-            for param in params:
-                options = param.options.all().order_by("order")
-                writer.writerow({
-                    "profile_code": profile.code,
-                    "profile_name": profile.name,
-                    "modality": profile.modality,
-                    "section": param.section,
-                    "field_name": param.name,
-                    "field_slug": param.slug or slugify(param.name).replace("-", "_"),
-                    "field_type": param.parameter_type,
-                    "unit": param.unit or "",
-                    "normal_value": param.normal_value or "",
-                    "is_required": "true" if param.is_required else "false",
-                    "order": param.order,
-                    "options": self._format_options(options),
-                    "sentence_template": param.sentence_template or "",
-                    "narrative_role": param.narrative_role,
-                    "omit_if_values_json": json.dumps(param.omit_if_values) if param.omit_if_values else "",
-                    "join_label": param.join_label or "",
-                })
-            response = HttpResponse(output.getvalue(), content_type="text/csv")
-            response["Content-Disposition"] = f'attachment; filename="{profile.code}_parameters.csv"'
-            return response
-
-        if "file" not in request.FILES:
-            return Response({"detail": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
-
-        file = request.FILES["file"]
-        if not file.name.endswith(".csv"):
-            return Response({"detail": "File must be a CSV"}, status=status.HTTP_400_BAD_REQUEST)
-
-        decoded_file = file.read().decode("utf-8-sig")
-        reader = csv.DictReader(io.StringIO(decoded_file))
-        rows = list(reader)
-
-        required_cols = ["field_slug", "field_type"]
+    
+    def _process_parameters_import(self, rows):
         errors = []
-        parsed_rows = []
-        param_slugs = {}
-        valid_types = [t[0] for t in ReportParameter.PARAMETER_TYPES]
+        preview = []
+        created_count = 0
+        updated_count = 0
+        
+        profile_codes = {r.get("profile_code") for r in rows if r.get("profile_code")}
+        profiles = {p.code: p for p in ReportProfile.objects.filter(code__in=profile_codes)}
 
         for idx, row in enumerate(rows, start=2):
             try:
-                for col in required_cols:
-                    if not row.get(col):
-                        raise ValueError(f"Missing required column: {col}")
+                profile_code = row.get("profile_code")
+                slug = row.get("slug")
+                if not profile_code or not slug:
+                    raise ValueError("profile_code and slug are required")
+                
+                profile = profiles.get(profile_code)
+                if not profile:
+                    raise ValueError(f"Profile with code {profile_code} not found")
 
-                p_type = row["field_type"]
-                if p_type not in valid_types:
-                    raise ValueError(f"Invalid field_type: {p_type}. Must be one of {valid_types}")
+                action = "create"
+                if ReportParameter.objects.filter(profile=profile, slug=slug).exists():
+                    action = "update"
 
-                if p_type in ["dropdown", "checklist"] and not row.get("options"):
-                    raise ValueError(f"Options required for {p_type}")
-
-                omit_json = row.get("omit_if_values_json")
-                if omit_json:
-                    try:
-                        json.loads(omit_json)
-                    except json.JSONDecodeError as exc:
-                        raise ValueError("Invalid JSON in omit_if_values_json") from exc
-
-                slug = row["field_slug"]
-                if slug in param_slugs:
-                    raise ValueError(f"Duplicate slug '{slug}' in file")
-                param_slugs[slug] = True
-
-                parsed_rows.append(row)
-            except Exception as exc:
-                errors.append(f"Row {idx}: {exc}")
-
-        if errors:
-            return Response({"detail": "Validation errors", "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
-
-        created_fields = 0
-        updated_fields = 0
-
-        with transaction.atomic():
-            for row in parsed_rows:
-                field_data = {
-                    "section": row.get("section", ""),
-                    "name": row.get("field_name") or row.get("field_slug"),
-                    "parameter_type": row["field_type"],
-                    "unit": row.get("unit") or None,
-                    "normal_value": row.get("normal_value") or None,
-                    "order": int(row["order"]) if row.get("order") else 0,
-                    "is_required": parse_bool(row.get("is_required", ""), default=False),
-                    "sentence_template": row.get("sentence_template") or None,
-                    "narrative_role": row.get("narrative_role") or "finding",
-                    "omit_if_values": json.loads(row["omit_if_values_json"]) if row.get("omit_if_values_json") else None,
-                    "join_label": row.get("join_label") or None,
-                }
-                slug = row["field_slug"]
-                options_list = self._parse_options(row.get("options", ""))
-
-                param, created = ReportParameter.objects.update_or_create(
-                    profile=profile,
-                    slug=slug,
-                    defaults=field_data,
-                )
-                if field_data["parameter_type"] in ["dropdown", "checklist"]:
-                    param.options.all().delete()
-                    for i, opt in enumerate(options_list):
-                        ReportParameterOption.objects.create(
-                            parameter=param,
-                            label=opt["label"],
-                            value=opt["value"],
-                            order=i,
-                        )
+                preview.append({
+                    "action": action,
+                    "profile_code": profile_code,
+                    "slug": slug,
+                    "name": row.get("name"),
+                })
+                if action == "create":
+                    created_count += 1
                 else:
-                    param.options.all().delete()
+                    updated_count += 1
+            except Exception as e:
+                errors.append({"row": idx, "error": str(e)})
 
-                if created:
-                    created_fields += 1
-                else:
-                    updated_fields += 1
-
-        return Response({
-            "fields_created": created_fields,
-            "fields_updated": updated_fields,
-        })
+        return {"created": created_count, "updated": updated_count, "errors": errors, "preview": preview}
 
     @action(detail=False, methods=["post"], url_path="import-csv")
-    def import_csv(self, request):
+    def import_csv(self, request, pk=None):
         if "file" not in request.FILES:
             return Response({"detail": "No file provided"}, status=status.HTTP_400_BAD_REQUEST)
 
         file = request.FILES["file"]
-        if not file.name.endswith(".csv"):
-            return Response({"detail": "File must be a CSV"}, status=status.HTTP_400_BAD_REQUEST)
-
-        use_library = parse_bool(request.data.get("use_library", "false"), default=False)
+        dry_run = parse_bool(request.query_params.get("dry_run", "true"))
+        
         decoded_file = file.read().decode("utf-8-sig")
         reader = csv.DictReader(io.StringIO(decoded_file))
         rows = list(reader)
 
-        required_cols = ["profile_code", "profile_name", "modality", "field_slug", "field_type"]
-        errors = []
-        parsed_rows = []
-        param_slugs_by_profile = {}
-        valid_types = [t[0] for t in ReportParameter.PARAMETER_TYPES]
+        if dry_run:
+            result = self._process_parameters_import(rows)
+            status_code = status.HTTP_400_BAD_REQUEST if result["errors"] else status.HTTP_200_OK
+            return Response(result, status=status_code)
 
-        for idx, row in enumerate(rows, start=2):
-            try:
-                for col in required_cols:
-                    if not row.get(col):
-                        raise ValueError(f"Missing required column: {col}")
-
-                p_type = row["field_type"]
-                if p_type not in valid_types:
-                    raise ValueError(f"Invalid field_type: {p_type}. Must be one of {valid_types}")
-
-                if p_type in ["dropdown", "checklist"] and not row.get("options"):
-                    raise ValueError(f"Options required for {p_type}")
-
-                omit_json = row.get("omit_if_values_json")
-                if omit_json:
-                    try:
-                        json.loads(omit_json)
-                    except json.JSONDecodeError as exc:
-                        raise ValueError("Invalid JSON in omit_if_values_json") from exc
-
-                p_code = row["profile_code"]
-                slug = row["field_slug"]
-                key = (p_code, slug)
-                if key in param_slugs_by_profile:
-                    raise ValueError(f"Duplicate slug '{slug}' for profile '{p_code}' in file")
-                param_slugs_by_profile[key] = True
-
-                parsed_rows.append(row)
-            except Exception as exc:
-                errors.append(f"Row {idx}: {exc}")
-
-        if errors:
-            return Response({"detail": "Validation errors", "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
-
-        created_profiles = 0
-        updated_profiles = 0
         created_fields = 0
         updated_fields = 0
+        errors = []
+        
+        profile_codes = {r.get("profile_code") for r in rows if r.get("profile_code")}
+        profiles = {p.code: p for p in ReportProfile.objects.filter(code__in=profile_codes)}
 
         with transaction.atomic():
-            profiles_map = {}
-            for row in parsed_rows:
-                p_code = row["profile_code"]
-                if p_code not in profiles_map:
-                    profile, created = ReportProfile.objects.update_or_create(
-                        code=p_code,
-                        defaults={
-                            "name": row["profile_name"],
-                            "modality": row["modality"],
-                            "narrative_mode": "rule_based",
-                        }
-                    )
-                    profiles_map[p_code] = profile
-                    if created:
-                        created_profiles += 1
-                    else:
-                        updated_profiles += 1
+            for row in rows:
+                try:
+                    profile_code = row.get("profile_code")
+                    profile = profiles.get(profile_code)
+                    if not profile:
+                        raise ValueError(f"Profile with code {profile_code} not found")
 
-                profile = profiles_map[p_code]
-                field_data = {
-                    "section": row.get("section", ""),
-                    "name": row.get("field_name") or row.get("field_slug"),
-                    "parameter_type": row["field_type"],
-                    "unit": row.get("unit") or None,
-                    "normal_value": row.get("normal_value") or None,
-                    "order": int(row["order"]) if row.get("order") else 0,
-                    "is_required": parse_bool(row.get("is_required", ""), default=False),
-                    "sentence_template": row.get("sentence_template") or None,
-                    "narrative_role": row.get("narrative_role") or "finding",
-                    "omit_if_values": json.loads(row["omit_if_values_json"]) if row.get("omit_if_values_json") else None,
-                    "join_label": row.get("join_label") or None,
-                }
-                slug = row["field_slug"]
+                    field_data = {
+                        "section": row.get("section", ""),
+                        "name": row.get("name") or row.get("slug"),
+                        "parameter_type": row["parameter_type"],
+                        "unit": row.get("unit") or None,
+                        "normal_value": row.get("normal_value") or None,
+                        "order": int(row["order"]) if row.get("order") else 0,
+                        "is_required": parse_bool(row.get("is_required", ""), default=False),
+                        "sentence_template": row.get("sentence_template") or None,
+                        "narrative_role": row.get("narrative_role") or "finding",
+                        "omit_if_values": json.loads(row["omit_if_values_json"]) if row.get("omit_if_values_json") else None,
+                        "join_label": row.get("join_label") or None,
+                    }
+                    slug = row["slug"]
+                    options_list = self._parse_options(row.get("options", ""))
 
-                options_list = self._parse_options(row.get("options", ""))
-
-                if use_library:
-                    lib_item, created = ReportParameterLibraryItem.objects.update_or_create(
-                        slug=slug,
-                        modality=row["modality"],
-                        defaults={
-                            "name": field_data["name"],
-                            "parameter_type": field_data["parameter_type"],
-                            "unit": field_data["unit"],
-                            "default_normal_value": field_data["normal_value"],
-                            "default_sentence_template": field_data["sentence_template"],
-                            "default_omit_if_values": field_data["omit_if_values"],
-                            "default_join_label": field_data["join_label"],
-                            "default_narrative_role": field_data["narrative_role"],
-                            "default_options_json": options_list if options_list else None,
-                        }
-                    )
-                    link, created = ReportProfileParameterLink.objects.update_or_create(
-                        profile=profile,
-                        library_item=lib_item,
-                        defaults={
-                            "section": field_data["section"],
-                            "order": field_data["order"],
-                            "is_required": field_data["is_required"],
-                            "overrides_json": {},
-                        }
-                    )
-                    if created:
-                        created_fields += 1
-                    else:
-                        updated_fields += 1
-                else:
                     param, created = ReportParameter.objects.update_or_create(
                         profile=profile,
                         slug=slug,
-                        defaults={
-                            "name": field_data["name"],
-                            "section": field_data["section"],
-                            "parameter_type": field_data["parameter_type"],
-                            "unit": field_data["unit"],
-                            "normal_value": field_data["normal_value"],
-                            "order": field_data["order"],
-                            "is_required": field_data["is_required"],
-                            "sentence_template": field_data["sentence_template"],
-                            "narrative_role": field_data["narrative_role"],
-                            "omit_if_values": field_data["omit_if_values"],
-                            "join_label": field_data["join_label"],
-                        }
+                        defaults=field_data,
                     )
-                    if options_list:
+                    if field_data["parameter_type"] in ["dropdown", "checklist"]:
                         param.options.all().delete()
                         for i, opt in enumerate(options_list):
                             ReportParameterOption.objects.create(
-                                parameter=param,
-                                label=opt["label"],
-                                value=opt["value"],
-                                order=i,
+                                parameter=param, label=opt["label"], value=opt["value"], order=i
                             )
+                    else:
+                        param.options.all().delete()
+
                     if created:
                         created_fields += 1
                     else:
                         updated_fields += 1
+                except Exception as e:
+                    errors.append({"slug": row.get("slug"), "error": str(e)})
+            
+            if errors:
+                transaction.set_rollback(True)
+                return Response({"created": 0, "updated": 0, "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response({
-            "profiles_created": created_profiles,
-            "profiles_updated": updated_profiles,
-            "fields_created": created_fields,
-            "fields_updated": updated_fields,
-        })
-
-class ReportParameterViewSet(viewsets.ModelViewSet):
-    queryset = ReportParameter.objects.all()
-    serializer_class = ReportParameterSerializer
-    permission_classes = [IsAuthenticated, permissions.IsAdminUser]
-    filterset_fields = ["profile", "section"]
-    ordering_fields = ["order"]
+        return Response({"fields_created": created_fields, "fields_updated": updated_fields})
 
     def perform_create(self, serializer):
         instance = serializer.save()
@@ -548,6 +572,52 @@ class ServiceReportProfileViewSet(viewsets.ModelViewSet):
         response["Content-Disposition"] = 'attachment; filename="service_template_links_export.csv"'
         return response
 
+    def _process_csv_import(self, rows):
+        created = 0
+        updated = 0
+        errors = []
+        preview = []
+
+        service_codes = {r.get("service_code") for r in rows if r.get("service_code")}
+        profile_codes = {r.get("profile_code") for r in rows if r.get("profile_code")}
+
+        services = {s.code: s for s in Service.objects.filter(code__in=service_codes)}
+        profiles = {p.code: p for p in ReportProfile.objects.filter(code__in=profile_codes)}
+
+        for idx, row in enumerate(rows, start=2):
+            service_code = row.get("service_code")
+            profile_code = row.get("profile_code")
+
+            service = services.get(service_code)
+            profile = profiles.get(profile_code)
+
+            if not service or not profile:
+                errors.append({
+                    "row": idx,
+                    "error": "Service or profile not found",
+                    "service_code": service_code,
+                    "profile_code": profile_code,
+                })
+                continue
+
+            action = "create"
+            if ServiceReportProfile.objects.filter(service=service, profile=profile).exists():
+                action = "update"
+            
+            preview.append({
+                "action": action,
+                "service_code": service_code,
+                "profile_code": profile_code,
+                "is_default": parse_bool(row.get("is_default"), default=True),
+            })
+
+            if action == "create":
+                created += 1
+            else:
+                updated += 1
+
+        return {"created": created, "updated": updated, "errors": errors, "preview": preview}
+
     @action(detail=False, methods=["post"], url_path="import-csv")
     def import_csv(self, request):
         file = request.FILES.get("file")
@@ -556,111 +626,58 @@ class ServiceReportProfileViewSet(viewsets.ModelViewSet):
         if not file.name.endswith(".csv"):
             return Response({"detail": "File must be a CSV"}, status=status.HTTP_400_BAD_REQUEST)
 
+        dry_run = parse_bool(request.query_params.get("dry_run", "true"))
         decoded_file = file.read().decode("utf-8-sig")
         reader = csv.DictReader(io.StringIO(decoded_file))
+        rows = list(reader)
+
+        if dry_run:
+            result = self._process_csv_import(rows)
+            status_code = status.HTTP_400_BAD_REQUEST if result["errors"] else status.HTTP_200_OK
+            return Response(result, status=status_code)
+
         created = 0
         updated = 0
         errors = []
+        
+        with transaction.atomic():
+            services_by_code = {s.code: s for s in Service.objects.filter(code__in={r.get("service_code") for r in rows if r.get("service_code")})}
+            profiles_by_code = {p.code: p for p in ReportProfile.objects.filter(code__in={r.get("profile_code") for r in rows if r.get("profile_code")})}
 
-        # Materialize all rows so we can bulk-load related objects and avoid N+1 queries.
-        rows = list(reader)
+            for idx, row in enumerate(rows, start=2):
+                service = services_by_code.get(row.get("service_code"))
+                profile = profiles_by_code.get(row.get("profile_code"))
 
-        # Collect all unique service/profile identifiers referenced in the CSV.
-        service_ids = set()
-        service_codes = set()
-        profile_ids = set()
-        profile_codes = set()
+                if not service or not profile:
+                    errors.append({
+                        "row": idx,
+                        "error": "Service or profile not found",
+                        "service_code": row.get("service_code"),
+                        "profile_code": row.get("profile_code"),
+                    })
+                    continue
 
-        for row in rows:
-            service_id_raw = (row.get("service_id") or "").strip()
-            service_code_raw = (row.get("service_code") or "").strip()
-            profile_id_raw = (row.get("profile_id") or "").strip()
-            profile_code_raw = (row.get("profile_code") or "").strip()
+                enforce_single_profile = parse_bool(row.get("enforce_single_profile"), default=True)
+                is_default = parse_bool(row.get("is_default"), default=True)
 
-            if service_id_raw:
-                service_ids.add(service_id_raw)
-            if service_code_raw:
-                service_codes.add(service_code_raw)
-            if profile_id_raw:
-                profile_ids.add(profile_id_raw)
-            if profile_code_raw:
-                profile_codes.add(profile_code_raw)
+                link, was_created = ServiceReportProfile.objects.update_or_create(
+                    service=service,
+                    profile=profile,
+                    defaults={
+                        "enforce_single_profile": enforce_single_profile,
+                        "is_default": is_default,
+                    },
+                )
+                if was_created:
+                    created += 1
+                else:
+                    updated += 1
+        
+            if errors:
+                transaction.set_rollback(True)
+                return Response({"created": 0, "updated": 0, "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Bulk-load all referenced services and profiles into dictionaries for fast lookup.
-        services_by_id = {
-            str(service.id): service
-            for service in Service.objects.filter(id__in=service_ids)
-        } if service_ids else {}
-
-        services_by_code = {
-            service.code: service
-            for service in Service.objects.filter(code__in=service_codes)
-        } if service_codes else {}
-
-        profiles_by_id = {
-            str(profile.id): profile
-            for profile in ReportProfile.objects.filter(id__in=profile_ids)
-        } if profile_ids else {}
-
-        profiles_by_code = {
-            profile.code: profile
-            for profile in ReportProfile.objects.filter(code__in=profile_codes)
-        } if profile_codes else {}
-
-        for idx, row in enumerate(rows, start=2):
-            service = None
-            profile = None
-
-            service_id = (row.get("service_id") or "").strip()
-            service_code = (row.get("service_code") or "").strip()
-            if service_id:
-                service = services_by_id.get(service_id)
-            if not service and service_code:
-                service = services_by_code.get(service_code)
-
-            profile_id = (row.get("profile_id") or "").strip()
-            profile_code = (row.get("profile_code") or "").strip()
-            if profile_id:
-                profile = profiles_by_id.get(profile_id)
-            if not profile and profile_code:
-                profile = profiles_by_code.get(profile_code)
-
-            if not service or not profile:
-                errors.append({
-                    "row": idx,
-                    "service_id": service_id,
-                    "service_code": service_code,
-                    "profile_id": profile_id,
-                    "profile_code": profile_code,
-                    "error": "Service or profile not found"
-                })
-                continue
-
-            enforce_single_profile = parse_bool(
-                row.get("enforce_single_profile"), default=True
-            )
-            is_default = parse_bool(row.get("is_default"), default=True)
-
-            link, was_created = ServiceReportProfile.objects.update_or_create(
-                service=service,
-                profile=profile,
-                defaults={
-                    "enforce_single_profile": enforce_single_profile,
-                    "is_default": is_default,
-                },
-            )
-            if was_created:
-                created += 1
-            else:
-                updated += 1
-
-        if errors:
-            return Response(
-                {"created": created, "updated": updated, "errors": errors},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        return Response({"created": created, "updated": updated})
+        return Response({"created": created, "updated": updated, "errors": None})
 
 class ReportWorkItemViewSet(viewsets.ViewSet):
     """

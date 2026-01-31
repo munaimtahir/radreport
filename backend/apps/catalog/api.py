@@ -7,6 +7,7 @@ from django.http import HttpResponse
 from django.db import transaction
 from django.db.models import Count
 from django.shortcuts import get_object_or_404
+from apps.reporting.utils import parse_bool
 from .models import Modality, Service
 from .serializers import ModalitySerializer, ServiceSerializer
 class ModalityViewSet(viewsets.ModelViewSet):
@@ -18,7 +19,7 @@ class ModalityViewSet(viewsets.ModelViewSet):
 class ServiceViewSet(viewsets.ModelViewSet):
     queryset = Service.objects.select_related("modality").filter(is_active=True)
     serializer_class = ServiceSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [permissions.IsAdminUser]
     search_fields = ["name", "modality__code", "code"]
     ordering_fields = ["name", "price", "tat_minutes"]
     filterset_fields = ["category", "modality", "is_active"]
@@ -42,6 +43,63 @@ class ServiceViewSet(viewsets.ModelViewSet):
         instance._current_user = self.request.user
         instance.save()
     
+    def _process_csv_import(self, reader, user):
+        created_count = 0
+        updated_count = 0
+        errors = []
+        preview = []
+
+        for row_num, row in enumerate(reader, start=2):
+            try:
+                code = row["code"].strip()
+                if not code:
+                    raise ValueError("code is required")
+
+                name = row["name"].strip()
+                category = row["category"].strip()
+                modality_code = row["modality"].strip().upper()
+                charges = float(row["charges"].strip())
+                tat_value = int(row["tat_value"].strip())
+                tat_unit = row["tat_unit"].strip().lower()
+                is_active = row["active"].strip().lower() in ["true", "1", "yes"]
+
+                if category not in dict(Service.CATEGORY_CHOICES):
+                    raise ValueError(f"Invalid category '{category}'")
+                if tat_unit not in dict(Service.TAT_UNIT_CHOICES):
+                    raise ValueError(f"Invalid tat_unit '{tat_unit}'")
+
+                modality = Modality.objects.filter(code=modality_code).first()
+                if not modality:
+                    modality = Modality(code=modality_code, name=modality_code)
+                    # Not saving, just for preview
+
+                service = Service.objects.filter(code=code).first()
+                action = "update" if service else "create"
+
+                preview.append({
+                    "action": action,
+                    "code": code,
+                    "name": name,
+                    "category": category,
+                    "modality": modality_code,
+                    "is_active": is_active,
+                })
+
+                if action == "create":
+                    created_count += 1
+                else:
+                    updated_count += 1
+
+            except Exception as e:
+                errors.append({"row": row_num, "error": str(e)})
+        
+        return {
+            "created": created_count,
+            "updated": updated_count,
+            "errors": errors,
+            "preview": preview
+        }
+
     @action(detail=False, methods=["post"], url_path="import-csv")
     def import_csv(self, request):
         """Import services from CSV file"""
@@ -51,6 +109,8 @@ class ServiceViewSet(viewsets.ModelViewSet):
         file = request.FILES["file"]
         if not file.name.endswith(".csv"):
             return Response({"detail": "File must be a CSV"}, status=status.HTTP_400_BAD_REQUEST)
+
+        dry_run = parse_bool(request.query_params.get("dry_run", "true"))
         
         try:
             decoded_file = file.read().decode("utf-8")
@@ -63,15 +123,22 @@ class ServiceViewSet(viewsets.ModelViewSet):
                     {"detail": f"CSV must contain columns: {', '.join(required_columns)}"},
                     status=status.HTTP_400_BAD_REQUEST
                 )
+
+            if dry_run:
+                result = self._process_csv_import(list(reader), request.user)
+                status_code = status.HTTP_400_BAD_REQUEST if result["errors"] else status.HTTP_200_OK
+                return Response(result, status=status_code)
             
             created_count = 0
             updated_count = 0
             errors = []
-            
+
             with transaction.atomic():
-                for row_num, row in enumerate(reader, start=2):  # Start at 2 (header is row 1)
+                for row_num, row in enumerate(list(reader), start=2):
                     try:
                         code = row["code"].strip()
+                        if not code:
+                           raise ValueError("code cannot be empty")
                         name = row["name"].strip()
                         category = row["category"].strip()
                         modality_code = row["modality"].strip().upper()
@@ -85,14 +152,12 @@ class ServiceViewSet(viewsets.ModelViewSet):
                         if tat_unit not in dict(Service.TAT_UNIT_CHOICES):
                             raise ValueError(f"Invalid tat_unit '{tat_unit}'")
                         
-                        # Get or create modality
                         modality, _ = Modality.objects.get_or_create(
                             code=modality_code,
                             defaults={"name": modality_code}
                         )
                         
-                        # Get or create service by code
-                        service, created = Service.objects.get_or_create(
+                        service, created = Service.objects.update_or_create(
                             code=code,
                             defaults={
                                 "modality": modality,
@@ -105,37 +170,28 @@ class ServiceViewSet(viewsets.ModelViewSet):
                                 "is_active": is_active,
                             }
                         )
-                        if created:
-                            service._current_user = request.user
-                            service.save()
+                        service._current_user = request.user
+                        service.save()
                         
-                        if not created:
-                            # Update existing service
-                            service._current_user = request.user
-                            service.modality = modality
-                            service.name = name
-                            service.category = category
-                            service.charges = charges
-                            service.price = charges
-                            service.tat_value = tat_value
-                            service.tat_unit = tat_unit
-                            service.is_active = is_active
-                            service.save()
-                            updated_count += 1
-                        else:
+                        if created:
                             created_count += 1
+                        else:
+                            updated_count += 1
                             
                     except Exception as e:
-                        errors.append(f"Row {row_num}: {str(e)}")
+                        errors.append({"row": row_num, "error": str(e)})
+
+            if errors:
+                transaction.set_rollback(True)
+                return Response({
+                    "created": 0, "updated": 0, "errors": errors
+                }, status=status.HTTP_400_BAD_REQUEST)
             
             result = {
                 "created": created_count,
                 "updated": updated_count,
-                "errors": errors if errors else None,
+                "errors": None,
             }
-            
-            if errors:
-                return Response(result, status=status.HTTP_207_MULTI_STATUS)
             return Response(result, status=status.HTTP_200_OK)
             
         except Exception as e:

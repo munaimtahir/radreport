@@ -1,28 +1,27 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
-import { apiGet, apiUpload } from "../../ui/api";
+import { apiGet, API_BASE } from "../../ui/api";
 import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
 import { downloadFile } from "../../utils/download";
+import ImportModal from "../../ui/components/ImportModal";
 
 interface ProfileSummary {
   id: string;
   code: string;
   name: string;
-  modality: string;
 }
 
 interface ParameterItem {
-  id?: string;
-  parameter_id?: string;
+  id: string;
+  profile: string;
   section: string;
   name: string;
-  parameter_type?: string;
-  type?: string;
-  order?: number;
-  is_required?: boolean;
+  parameter_type: string;
+  order: number;
+  is_required: boolean;
 }
 
 export default function ParametersList() {
@@ -33,8 +32,7 @@ export default function ParametersList() {
   const [parameters, setParameters] = useState<ParameterItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-  const importInputRef = useRef<HTMLInputElement | null>(null);
+  const [isImportModalOpen, setImportModalOpen] = useState(false);
 
   const loadProfiles = useCallback(async () => {
     if (!token) return;
@@ -42,20 +40,18 @@ export default function ParametersList() {
       const data = await apiGet("/reporting/profiles/", token);
       const list = Array.isArray(data) ? data : data.results || [];
       setProfiles(list);
-      if (!selectedProfileId && list.length > 0) {
-        setSelectedProfileId(list[0].id);
-      }
     } catch (e: any) {
       setError(e.message || "Failed to load templates");
     }
   }, [token]);
 
   const loadParameters = useCallback(async () => {
-    if (!token || !selectedProfileId) return;
+    if (!token) return;
+    setLoading(true);
     try {
-      setLoading(true);
-      const data = await apiGet(`/reporting/profiles/${selectedProfileId}/`, token);
-      setParameters(data.parameters || []);
+      const url = selectedProfileId ? `/reporting/parameters/?profile=${selectedProfileId}` : "/reporting/parameters/";
+      const data = await apiGet(url, token);
+      setParameters(Array.isArray(data) ? data : data.results || []);
     } catch (e: any) {
       setError(e.message || "Failed to load parameters");
     } finally {
@@ -65,54 +61,25 @@ export default function ParametersList() {
 
   useEffect(() => {
     loadProfiles();
-  }, [loadProfiles]);
+    loadParameters();
+  }, [loadProfiles, loadParameters]);
 
-  useEffect(() => {
-    if (selectedProfileId) {
-      loadParameters();
-    }
-  }, [loadParameters, selectedProfileId]);
-
-  const downloadCsv = async () => {
-    if (!token || !selectedProfileId) return;
-    setError(null);
-    try {
-      await downloadFile(
-        `/reporting/profiles/${selectedProfileId}/parameters-csv/`,
-        "template_parameters.csv",
-        token
-      );
-    } catch (e: any) {
-      setError(e.message || "Download failed");
-    }
-  };
-
-  const triggerImport = () => {
-    importInputRef.current?.click();
-  };
-
-  const handleImport = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !selectedProfileId) return;
-    setStatus(null);
-    setError(null);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const result = await apiUpload(`/reporting/profiles/${selectedProfileId}/parameters-csv/`, token, formData);
-      setStatus(`Import complete. Added ${result.fields_created} and updated ${result.fields_updated} parameters.`);
-      loadParameters();
-    } catch (e: any) {
-      setError(e.message || "Import failed");
-    } finally {
-      event.target.value = "";
-    }
+  const handleImportSuccess = () => {
+    setImportModalOpen(false);
+    loadParameters();
   };
 
   const activeProfile = profiles.find((profile) => profile.id === selectedProfileId);
 
   return (
     <div style={{ padding: 20 }}>
+      <ImportModal
+        isOpen={isImportModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        onImportSuccess={handleImportSuccess}
+        importUrl="/reporting/parameters/import-csv/"
+        title="Import Report Parameters"
+      />
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
         <h1 style={{ fontSize: 24, margin: 0 }}>Parameters</h1>
         <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
@@ -121,17 +88,20 @@ export default function ParametersList() {
             onChange={(event) => setSelectedProfileId(event.target.value)}
             style={{ padding: "8px 12px", borderRadius: 4, border: "1px solid #ccc", minWidth: 220 }}
           >
-            <option value="">Select Template</option>
+            <option value="">All Templates</option>
             {profiles.map((profile) => (
               <option key={profile.id} value={profile.id}>
                 {profile.code} - {profile.name}
               </option>
             ))}
           </select>
-          <Button variant="secondary" onClick={downloadCsv} disabled={!selectedProfileId}>
+          <Button variant="secondary" onClick={() => downloadFile(`${API_BASE}/reporting/parameters/template-csv/`, "parameters_template.csv", token)}>
+            Download Template
+          </Button>
+          <Button variant="secondary" onClick={() => downloadFile(`${API_BASE}/reporting/parameters/export-csv/`, "parameters_export.csv", token)}>
             Export CSV
           </Button>
-          <Button variant="secondary" onClick={triggerImport} disabled={!selectedProfileId}>
+          <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
             Import CSV
           </Button>
           <Button
@@ -145,16 +115,14 @@ export default function ParametersList() {
       </div>
 
       {error && <ErrorAlert message={error} />}
-      {status && <div style={{ marginBottom: 12, color: theme.colors.textSecondary }}>{status}</div>}
-      <input ref={importInputRef} type="file" accept=".csv" style={{ display: "none" }} onChange={handleImport} />
-
+      
       <div style={{ marginBottom: 12, color: theme.colors.textSecondary }}>
         {activeProfile ? (
           <span>
-            Viewing parameters for <strong>{activeProfile.code}</strong> ({activeProfile.modality})
+            Viewing parameters for <strong>{activeProfile.code}</strong>
           </span>
         ) : (
-          "Select a template to view parameters."
+          "Viewing parameters for all templates."
         )}
       </div>
 
@@ -171,18 +139,18 @@ export default function ParametersList() {
           </thead>
           <tbody>
             {parameters.map((param) => (
-              <tr key={param.parameter_id || param.id} style={{ borderBottom: `1px solid ${theme.colors.borderLight}` }}>
+              <tr key={param.id} style={{ borderBottom: `1px solid ${theme.colors.borderLight}` }}>
                 <td style={{ padding: 12 }}>{param.order ?? "-"}</td>
                 <td style={{ padding: 12 }}>{param.section}</td>
                 <td style={{ padding: 12 }}>{param.name}</td>
-                <td style={{ padding: 12 }}>{param.type || param.parameter_type}</td>
+                <td style={{ padding: 12 }}>{param.parameter_type}</td>
                 <td style={{ padding: 12 }}>{param.is_required ? "Yes" : "No"}</td>
               </tr>
             ))}
             {!loading && parameters.length === 0 && (
               <tr>
                 <td colSpan={5} style={{ padding: 20, textAlign: "center", color: theme.colors.textSecondary }}>
-                  No parameters found for this template.
+                  No parameters found.
                 </td>
               </tr>
             )}
@@ -192,3 +160,4 @@ export default function ParametersList() {
     </div>
   );
 }
+

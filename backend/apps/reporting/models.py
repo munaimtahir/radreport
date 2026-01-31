@@ -63,6 +63,7 @@ class ReportParameter(models.Model):
 
     class Meta:
         ordering = ["profile", "order"]
+        unique_together = ("profile", "slug")
 
     def __str__(self):
         return f"{self.profile.code} - {self.name}"
