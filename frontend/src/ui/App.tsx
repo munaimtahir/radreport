@@ -19,6 +19,7 @@ import ServicesList from "../views/admin/ServicesList";
 import ServiceEditor from "../views/admin/ServiceEditor";
 import ParametersList from "../views/admin/ParametersList";
 import ServiceTemplateLinksList from "../views/admin/ServiceTemplateLinksList";
+import BaselinePacks from "../views/admin/BaselinePacks";
 
 
 import ModuleDisabled from "../views/ModuleDisabled";
@@ -148,6 +149,9 @@ function Shell() {
                 <NavLink to="/settings/service-template-links">
                   Service-Template Links
                 </NavLink>
+                <NavLink to="/settings/baseline-packs">
+                  Baseline Packs
+                </NavLink>
               </div>
             )}
             {canAdmin && (
@@ -260,6 +264,7 @@ function Shell() {
               <Route path="/settings/services" element={canAdmin ? <ServicesList /> : <AccessDenied />} />
               <Route path="/settings/services/:id" element={canAdmin ? <ServiceEditor /> : <AccessDenied />} />
               <Route path="/settings/service-template-links" element={canAdmin ? <ServiceTemplateLinksList /> : <AccessDenied />} />
+              <Route path="/settings/baseline-packs" element={canAdmin ? <BaselinePacks /> : <AccessDenied />} />
 
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />

@@ -8,6 +8,19 @@ Scope: Template-only narrative standardization + verification harness + legacy t
 
 A new Admin UI module has been implemented to manage Report Profiles, Report Parameters, Services, and Service-Template Linkages. This module includes CRUD operations and robust CSV import/export functionalities with dry-run validation.
 
+### Baseline Packs (One-Click Seed)
+- Packs live in `baseline_packs/` (USG Abdomen v1, USG KUB v1, USG Pelvis v1) containing `profiles.csv`, `parameters.csv`, `services.csv`, `linkage.csv`, and README per pack.
+- Admin endpoints:
+  - `GET /api/admin/baseline-packs/` – list available packs + metadata.
+  - `GET /api/admin/baseline-packs/{slug}/download/` – ZIP (4 CSVs + README).
+  - `POST /api/admin/baseline-packs/{slug}/seed/?dry_run=true|false` – runs CSV imports in order (profiles → parameters → services → linkage); applies in a transaction; returns counts + row errors. On apply, runs verification.
+  - `POST /api/admin/baseline-packs/{slug}/verify/` – linkage + template completeness + narrative smoke check.
+- Verification checks:
+  - Every service in the pack has an active profile linkage.
+  - Profiles meet minimum parameter count (ABD ≥8, KUB ≥6, Pelvis ≥8).
+  - Narrative smoke: synthetic report instance generates findings containing section headings.
+- Purpose: make a fresh database report-ready in <10 minutes via Admin UI “Baseline Packs” (Catalog & Templates sidebar) or via ZIP download + seed endpoint.
+
 ### Endpoints:
 
 *   **Report Profiles (`reporting-profiles`)**:

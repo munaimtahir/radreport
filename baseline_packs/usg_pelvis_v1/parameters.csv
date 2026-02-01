@@ -1,0 +1,13 @@
+profile_code,section,name,slug,parameter_type,unit,normal_value,is_required,order,options,sentence_template,narrative_role,omit_if_values_json,join_label
+USG_PELVIS,Uterus,Uterus Position,uterus_position,dropdown,,,false,8,Anteverted|Retroverted,Uterus is {value}.,finding,,
+USG_PELVIS,Uterus,Uterus Size,uterus_size,short_text,,,false,10,,{name}: {value}.,finding,,
+USG_PELVIS,Uterus,Myometrium,myometrium,dropdown,,,false,12,Homogeneous|Heterogeneous|Fibroid noted,Myometrium: {value}.,finding,,
+USG_PELVIS,Endometrium,Endometrial Thickness,endometrial_thickness,number,mm,,false,14,,Endometrium measures {value}{unit}.,finding,,
+USG_PELVIS,Cervix,Cervix,cervix,short_text,,,false,16,,{name}: {value}.,finding,,
+USG_PELVIS,Ovaries,Right Ovary,right_ovary,short_text,,,false,20,,Right ovary: {value}.,finding,,
+USG_PELVIS,Ovaries,Left Ovary,left_ovary,short_text,,,false,22,,Left ovary: {value}.,finding,,
+USG_PELVIS,Adnexa,Adnexal Findings,adnexa,checklist,,,false,24,Right adnexal cyst|Left adnexal cyst|Adnexal mass|No adnexal lesion,Adnexal findings: {value}.,finding,"[""No adnexal lesion""]",; 
+USG_PELVIS,Peritoneum,Free Fluid,free_fluid,dropdown,,,false,26,None|Minimal|Mild|Moderate,Free fluid: {value}.,finding,"[""None""]",
+USG_PELVIS,Prostate,Prostate Volume,prostate_volume,number,cc,,false,28,,Prostate volume {value}{unit}.,finding,,
+USG_PELVIS,Impression,Impression,impression,long_text,,,false,200,,{value},impression_hint,,
+USG_PELVIS,Limitations,Limitations,limitations,long_text,,,false,210,,{value},limitation_hint,,
