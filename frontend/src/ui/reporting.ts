@@ -25,6 +25,15 @@ export interface ReportSchema {
     parameters: ReportParameter[];
 }
 
+export interface ReportSchemaV2 {
+    id: string;
+    code?: string;
+    name: string;
+    schema_version: "v2";
+    json_schema: Record<string, any>;
+    ui_schema?: Record<string, any> | null;
+}
+
 export interface ReportValueEntry {
     parameter_id: string;
     value: any;
@@ -33,13 +42,18 @@ export interface ReportValueEntry {
 export interface ReportValuesResponse {
     status: "draft" | "submitted" | "verified";
     is_published?: boolean;
-    values: ReportValueEntry[];
+    values?: ReportValueEntry[];
+    values_json?: Record<string, any>;
+    schema_version?: string;
     last_saved_at?: string;
     narrative_updated_at?: string;
     last_published_at?: string;
 }
 
-export async function getReportSchema(serviceVisitItemId: string, token: string | null): Promise<ReportSchema> {
+export async function getReportSchema(
+    serviceVisitItemId: string,
+    token: string | null
+): Promise<ReportSchema | ReportSchemaV2> {
     return apiGet(`/reporting/workitems/${serviceVisitItemId}/schema/`, token);
 }
 
@@ -47,7 +61,11 @@ export async function getReportValues(serviceVisitItemId: string, token: string 
     return apiGet(`/reporting/workitems/${serviceVisitItemId}/values/`, token);
 }
 
-export async function saveReport(serviceVisitItemId: string, valuesPayload: { values: ReportValueEntry[] }, token: string | null) {
+export async function saveReport(
+    serviceVisitItemId: string,
+    valuesPayload: { values: ReportValueEntry[] } | { schema_version: "v2"; values_json: Record<string, any> },
+    token: string | null
+) {
     return apiPost(`/reporting/workitems/${serviceVisitItemId}/save/`, token, valuesPayload);
 }
 
