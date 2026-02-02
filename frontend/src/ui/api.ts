@@ -31,7 +31,9 @@ async function apiRequest(path: string, token: string | null, options: RequestIn
       const json = JSON.parse(text);
       errorMsg = json.detail || json.message || text;
     } catch { }
-    throw new Error(errorMsg);
+    const error = new Error(errorMsg) as Error & { status?: number };
+    error.status = r.status;
+    throw error;
   }
   if (r.status === 204) return null;
   return r.json();

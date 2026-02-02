@@ -15,6 +15,7 @@ import ReportingPage from "../views/ReportingPage";
 import ReportingWorklistPage from "../views/ReportingWorklistPage";
 import TemplatesList from "../views/admin/TemplatesList";
 import TemplateEditor from "../views/admin/TemplateEditor";
+import TemplatesV2 from "../views/admin/TemplatesV2";
 import ServicesList from "../views/admin/ServicesList";
 import ServiceEditor from "../views/admin/ServiceEditor";
 import ParametersList from "../views/admin/ParametersList";
@@ -146,6 +147,9 @@ function Shell() {
                 <NavLink to="/settings/templates">
                   Templates
                 </NavLink>
+                <NavLink to="/settings/templates-v2">
+                  Templates V2
+                </NavLink>
                 <NavLink to="/settings/parameters">
                   Parameters
                 </NavLink>
@@ -270,6 +274,7 @@ function Shell() {
               <Route path="/settings/parameters" element={canAdmin ? <ParametersList /> : <AccessDenied />} />
               <Route path="/settings/templates" element={canAdmin ? <TemplatesList /> : <AccessDenied />} />
               <Route path="/settings/templates/:id" element={canAdmin ? <TemplateEditor /> : <AccessDenied />} />
+              <Route path="/settings/templates-v2" element={canAdmin ? <TemplatesV2 /> : <AccessDenied />} />
               <Route path="/settings/services" element={canAdmin ? <ServicesList /> : <AccessDenied />} />
               <Route path="/settings/services/:id" element={canAdmin ? <ServiceEditor /> : <AccessDenied />} />
               <Route path="/settings/service-template-links" element={canAdmin ? <ServiceTemplateLinksList /> : <AccessDenied />} />
