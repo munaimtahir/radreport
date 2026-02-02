@@ -2,7 +2,8 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from .views import (
     ReportWorkItemViewSet, ReportProfileViewSet,
-    ReportParameterViewSet, ServiceReportProfileViewSet
+    ReportParameterViewSet, ServiceReportProfileViewSet,
+    ReportParameterLibraryItemViewSet
 )
 from .governance_views import TemplateGovernanceViewSet, TemplateAuditLogViewSet
 
@@ -19,6 +20,7 @@ router.register(r'workitems', ReportWorkItemViewSet, basename='reporting-workite
 router.register(r'profiles', ReportProfileViewSet, basename='reporting-profiles')
 router.register(r'parameters', ReportParameterViewSet, basename='reporting-parameters')
 router.register(r'service-profiles', ServiceReportProfileViewSet, basename='reporting-service-profiles')
+router.register(r'parameter-library', ReportParameterLibraryItemViewSet, basename='reporting-parameter-library')
 
 # Governance endpoints
 router.register(r'governance', TemplateGovernanceViewSet, basename='template-governance')

@@ -7,14 +7,6 @@ logger = logging.getLogger(__name__)
 def generate_report_narrative(report_instance_id: str) -> dict:
     """
     Deterministically generates the narrative text for a ReportInstance.
-    
-    Returns:
-    {
-        "findings_text": "...",
-        "impression_text": "...",
-        "limitations_text": "...",
-        "version": "v1"
-    }
     """
     
     try:
@@ -32,78 +24,98 @@ def generate_report_narrative(report_instance_id: str) -> dict:
             "version": "v1"
         }
 
-    # Fetch parameters and values
-    parameters = profile.parameters.all()
-    # Create a map of param_id -> ReportValue object
-    # Using select_related/prefetch might be better if many values, but simplified here
+    # Fetch both legacy parameters and library links
+    legacy_params = list(profile.parameters.all())
+    library_links = list(profile.library_links.select_related('library_item').all())
+
+    # Fetch values
     values_qs = ReportValue.objects.filter(report=instance)
-    values_map = {v.parameter_id: v for v in values_qs}
+    values_map_legacy = {str(v.parameter_id): v for v in values_qs if v.parameter_id}
+    values_map_links = {str(v.profile_link_id): v for v in values_qs if v.profile_link_id}
+
+    # Normalize all into a common "narrative item" object
+    items = []
+    
+    for p in legacy_params:
+        items.append({
+            "id": str(p.id),
+            "name": p.name,
+            "section": p.section,
+            "order": p.order,
+            "type": p.parameter_type,
+            "unit": p.unit,
+            "sentence_template": p.sentence_template,
+            "narrative_role": p.narrative_role,
+            "omit_if_values": p.omit_if_values,
+            "join_label": p.join_label,
+            "options_qs": p.options, # RelatedManager
+            "raw_value": values_map_legacy.get(str(p.id)).value if values_map_legacy.get(str(p.id)) else None
+        })
+
+    for link in library_links:
+        lib = link.library_item
+        # Merge overrides
+        overrides = link.overrides_json or {}
+        items.append({
+            "id": str(link.id),
+            "name": lib.name,
+            "section": link.section,
+            "order": link.order,
+            "type": lib.parameter_type,
+            "unit": overrides.get("unit", lib.unit),
+            "sentence_template": overrides.get("sentence_template", lib.default_sentence_template),
+            "narrative_role": overrides.get("narrative_role", lib.default_narrative_role),
+            "omit_if_values": overrides.get("omit_if_values", lib.default_omit_if_values),
+            "join_label": overrides.get("join_label", lib.default_join_label),
+            "lib_options": lib.default_options_json,
+            "raw_value": values_map_links.get(str(link.id)).value if values_map_links.get(str(link.id)) else None
+        })
 
     # Containers for output
-    sections_map = {} # section_name -> list of sentences
+    sections_map = {} 
     impression_lines = []
     limitation_lines = []
     
-    # Process parameters in order
-    sorted_params = sorted(parameters, key=lambda p: (p.section, p.order))
+    # Process items in order
+    sorted_items = sorted(items, key=lambda i: (i["section"], i["order"]))
     
     # Keep track of section order as we encounter them
     section_order = []
 
-    for param in sorted_params:
-        role = param.narrative_role
+    for item in sorted_items:
+        role = item["narrative_role"]
         if role == "ignore":
             continue
 
-        val_obj = values_map.get(param.id)
-        raw_val = val_obj.value if val_obj else None
-        
-        # Omission Logic
-        # Default omits: None, "", "na", [], False (if boolean?) - User said "na", "", null, [], false
-        # We need to parse the raw_val to check these conditions properly especially for JSON types if they exist
-        # ReportValue.value is TextField.
+        raw_val = item["raw_value"]
         
         # 1. format the value for display
-        display_val, is_empty_equivalent = _format_value(param, raw_val)
+        display_val, is_empty_equivalent = _format_value_enhanced(item, raw_val)
 
-        # 2. Check explicit omission config
-        omit_list = param.omit_if_values
+        # 2. Check omission
+        omit_list = item["omit_if_values"]
         if omit_list is None:
-             # Default omission rules:
-             # If is_empty_equivalent is true, we omit.
              if is_empty_equivalent:
                  continue
         else:
-            # Explicit omission list
-            # We check if the raw_value (or some normalized form) is in the omit list.
-            # Ideally we match against raw string or parsed json. 
-            # For simplicity, we check if raw_val matches, or if it is "empty" and null is in list, etc.
-            # But the requirement says: "If value is missing OR value in omit_if_values => skip sentence."
-            # "Default omit_if_values should treat: "na", "", null, [], false as omit unless parameter explicitly opts out."
-            
-            # This implies if omit_list IS provided, we ONLY use that list + "missing".
-            # If value is completely missing (None/null database side), it's always skipped unless maybe default provided?
-            # Let's assume if raw_val is None, it is skipped regardless, unless we want to report "Not recorded"? 
-            # Usually strict reporting skips empty fields.
-            
             if raw_val is None:
                 continue
-
-            # Check exact match in list
-            # We might need to cast raw_val to type for comparison? 
-            # e.g. boolean param "false" vs False in JSON.
-            if _is_in_omit_list(raw_val, omit_list, param.parameter_type):
+            if _is_in_omit_list(raw_val, omit_list, item["type"]):
                 continue
 
         # 3. Build sentence
-        sentence = _build_sentence(param, display_val)
+        sentence = _build_sentence_enhanced(item, display_val)
         
+        if not sentence:
+            continue
+
         # 4. Slot into roles
         if role == "finding":
-            if param.section not in sections_map:
-                sections_map[param.section] = []
-                section_order.append(param.section)
-            sections_map[param.section].append(sentence)
+            section = item["section"]
+            if section not in sections_map:
+                sections_map[section] = []
+                section_order.append(section)
+            sections_map[section].append(sentence)
         elif role == "impression_hint":
             impression_lines.append(sentence)
         elif role == "limitation_hint":
@@ -131,14 +143,14 @@ def generate_report_narrative(report_instance_id: str) -> dict:
         "version": "v1"
     }
 
-def _format_value(param, raw_val):
+def _format_value_enhanced(item, raw_val):
     """
     Returns (display_string, is_empty_equivalent)
     """
     if raw_val is None:
         return "", True
     
-    ptype = param.parameter_type
+    ptype = item["type"]
     
     if ptype == "boolean":
         # Expecting "true"/"false" or python bool
@@ -146,74 +158,54 @@ def _format_value(param, raw_val):
         if lower in ("true", "1", "yes"):
             return "Yes", False
         if lower in ("false", "0", "no"):
-            return "No", True # Default rule treats false as omit often, but we handle that in caller. 
-            # Actually, is_empty_equivalent is for DEFAULT omit check. 
-            # Requirement: "Default omit_if_values should treat... false as omit"
-            # So returning True here is correct for default behavior.
-            
+            return "No", True
         return raw_val, False
 
-    if ptype in ("short_text", "long_text"):
+    if ptype in ("short_text", "long_text", "number"):
         s = str(raw_val).strip()
-        if s == "":
-            return "", True
-        if s.lower() == "na":
-            return s, True # Treating "na" as empty for default omit
-        return s, False
-
-    if ptype == "number":
-        # Check for empty string
-        s = str(raw_val).strip()
-        if s == "":
-             return "", True
+        if s == "" or s.lower() == "na":
+            return s, True
         return s, False
 
     if ptype == "dropdown":
-        # Try to find option label
-        # raw_val is the 'value' stored.
-        # We need to look up corresponding Option.label
-        # This is expensive N+1 if we query every time. 
-        # Ideally, we should have pre-fetched options or use the value itself if label missing.
-        # For Optimization: caller could prefetch options. 
-        # Here we will do a quick lookup (cached by Django if prefetched, otherwise hit DB).
-        # To avoid N queries, we can try to rely on the fact that for standard Reports,
-        # usually labels are what we want.
-        # Let's do a lookup.
-        
-        option = param.options.filter(value=raw_val).first()
-        label = option.label if option else raw_val
-        
-        if raw_val == "": return "", True
-        if str(raw_val).lower() == "na": return label, True
-        
+        if raw_val == "" or str(raw_val).lower() == "na":
+            return str(raw_val), True
+            
+        label = raw_val
+        if item.get("options_qs"):
+             opt = item["options_qs"].filter(value=raw_val).first()
+             if opt: label = opt.label
+        elif item.get("lib_options"):
+             for lo in item["lib_options"]:
+                 if str(lo.get("value")) == str(raw_val):
+                     label = lo.get("label", raw_val)
+                     break
         return label, False
 
     if ptype == "checklist":
-        # raw_val is likely JSON list or comma strings. 
-        # Let's assume it handles Python list if ReportValue parsing logic existed, 
-        # but ReportValue.value is TextField.
-        # We assume it's stored as serialized JSON or something standard.
-        # If it's just a comma string, we split. 
-        # Let's assume simple string for now or try to parse JSON.
         import json
         selected_values = []
         try:
             selected_values = json.loads(raw_val)
             if not isinstance(selected_values, list):
-                if selected_values: selected_values = [str(selected_values)]
-                else: selected_values = []
+                selected_values = [str(selected_values)] if selected_values else []
         except:
-            if raw_val: selected_values = [raw_val]
+            selected_values = [raw_val] if raw_val else []
         
         if not selected_values:
             return "", True
             
-        # Map to labels
-        # Bulk fetch options for this param
-        options = {o.value: o.label for o in param.options.all()}
-        labels = [options.get(str(v), str(v)) for v in selected_values]
+        labels = []
+        if item.get("options_qs"):
+            opts_map = {o.value: o.label for o in item["options_qs"].all()}
+            labels = [opts_map.get(str(v), str(v)) for v in selected_values]
+        elif item.get("lib_options"):
+            opts_map = {str(lo.get("value")): lo.get("label") for lo in item["lib_options"]}
+            labels = [opts_map.get(str(v), str(v)) for v in selected_values]
+        else:
+            labels = [str(v) for v in selected_values]
         
-        joiner = param.join_label if param.join_label else ", "
+        joiner = item["join_label"] if item["join_label"] else ", "
         return joiner.join(labels), False
         
     return str(raw_val), False
@@ -232,28 +224,24 @@ def _is_in_omit_list(raw_val, omit_list, ptype):
     # Type specific checks
     if ptype == "boolean":
         lower = str(raw_val).lower()
-        is_true = lower in ("true", "1", "yes")
-        is_false = lower in ("false", "0", "no")
-        
-        if is_false and False in omit_list: return True
-        if is_true and True in omit_list: return True
-        if raw_val == "false" and "false" in omit_list: return True
+        if lower in ("false", "0", "no") and (False in omit_list or "false" in omit_list): return True
+        if lower in ("true", "1", "yes") and (True in omit_list or "true" in omit_list): return True
 
     return False
 
-def _build_sentence(param, display_val):
-    if param.sentence_template:
-        # {name}, {value}, {unit}, {section}
-        unit_str = param.unit if param.unit else ""
-        text = param.sentence_template.format(
-            name=param.name,
+def _build_sentence_enhanced(item, display_val):
+    template = item["sentence_template"]
+    if not template:
+        unit_str = item["unit"] if item["unit"] else ""
+        return f"{item['name']}: {display_val}{unit_str}."
+    
+    try:
+        return template.format(
+            name=item["name"],
             value=display_val,
-            unit=unit_str,
-            section=param.section
+            unit=item["unit"] or "",
+            section=item["section"]
         )
-        return text
-    else:
-        # Default: "{name}: {value}{unit}."
-        unit_str = param.unit if param.unit else ""
-        return f"{param.name}: {display_val}{unit_str}."
-
+    except Exception as e:
+        logger.error(f"Formatting error in template '{template}' for item '{item['name']}': {e}")
+        return f"{item['name']}: {display_val}"

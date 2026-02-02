@@ -1,9 +1,20 @@
 from rest_framework import serializers
 from .models import (
     ReportProfile, ReportParameter, ReportParameterOption, 
-    ReportInstance, ReportValue, ServiceReportProfile, TemplateAuditLog
+    ReportInstance, ReportValue, ServiceReportProfile, TemplateAuditLog,
+    ReportParameterLibraryItem
 )
 from apps.workflow.models import ServiceVisitItem
+
+class ReportParameterLibraryItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReportParameterLibraryItem
+        fields = [
+            'id', 'modality', 'name', 'slug', 'parameter_type', 'unit',
+            'default_normal_value', 'default_sentence_template',
+            'default_omit_if_values', 'default_options_json',
+            'default_join_label', 'default_narrative_role'
+        ]
 
 class ServiceReportProfileSerializer(serializers.ModelSerializer):
     class Meta:

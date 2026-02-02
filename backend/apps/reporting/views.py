@@ -22,8 +22,16 @@ from .models import (
 )
 from .serializers import (
     ReportProfileSerializer, ReportInstanceSerializer, ReportValueSerializer, ReportSaveSerializer,
-    ReportParameterSerializer, ServiceReportProfileSerializer, ProfileListSerializer
+    ReportParameterSerializer, ServiceReportProfileSerializer, ProfileListSerializer,
+    ReportParameterLibraryItemSerializer
 )
+
+class ReportParameterLibraryItemViewSet(viewsets.ModelViewSet):
+    queryset = ReportParameterLibraryItem.objects.all()
+    serializer_class = ReportParameterLibraryItemSerializer
+    permission_classes = [IsAuthenticated, permissions.IsAdminUser]
+    search_fields = ["name", "slug", "modality"]
+    filterset_fields = ["modality"]
 from .services.narrative_v1 import generate_report_narrative
 from .pdf_engine.report_pdf import generate_report_pdf
 from .models import ReportPublishSnapshot, ReportActionLog
@@ -315,6 +323,39 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
         response = HttpResponse(output.getvalue(), content_type="text/csv")
         response["Content-Disposition"] = f'attachment; filename="{profile.code}_parameters.csv"'
         return response
+
+    @action(detail=True, methods=["post"], url_path="reorder-parameters")
+    def reorder_parameters(self, request, pk=None):
+        """
+        Reorders parameters for a profile.
+        Expects a list of {id: <uuid>, order: <int>}
+        Supports both legacy parameters and library links.
+        """
+        profile = self.get_object()
+        new_orders = request.data.get("orders", [])
+        
+        if not isinstance(new_orders, list):
+            return Response({"error": "orders must be a list"}, status=400)
+            
+        with transaction.atomic():
+            for item in new_orders:
+                item_id = item.get("id")
+                order = item.get("order")
+                
+                # Check legacy params first
+                param = profile.parameters.filter(id=item_id).first()
+                if param:
+                    param.order = order
+                    param.save()
+                    continue
+                    
+                # Check library links
+                link = profile.library_links.filter(id=item_id).first()
+                if link:
+                    link.order = order
+                    link.save()
+        
+        return Response({"status": "reordered"})
 
     def _process_profile_import(self, rows):
         created = 0
@@ -1119,6 +1160,83 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
 
         return Response({"status": "returned"})
 
+    def _perform_publish(self, instance, user, notes=""):
+        """
+        Internal helper to execute the publish logic (snapshot, PDF, workflow update).
+        Assumes we are inside a transaction.
+        """
+        # Ensure narrative exists
+        if not instance.findings_text:
+            from .services.narrative_v1 import generate_report_narrative
+            narrative_data = generate_report_narrative(str(instance.id))
+            instance.findings_text = narrative_data["findings_text"]
+            instance.impression_text = narrative_data["impression_text"]
+            instance.limitations_text = narrative_data["limitations_text"]
+            instance.narrative_version = narrative_data["version"]
+            instance.narrative_updated_at = timezone.now()
+            instance.save()
+
+        # Calculate next version
+        last_snapshot = instance.publish_snapshots.order_by("-version").first()
+        version = (last_snapshot.version + 1) if last_snapshot else 1
+
+        # Generate JSON map
+        values_map = {}
+        existing_values = {str(v.parameter_id): v.value for v in instance.values.all() if v.parameter_id}
+        # Also include profile_link values if any
+        for v in instance.values.all():
+            if v.profile_link_id:
+                values_map[str(v.profile_link_id)] = v.value
+
+        # Get all parameters from profile (legacy)
+        for param in instance.profile.parameters.all():
+            p_id = str(param.id)
+            val = existing_values.get(p_id)
+            if val is None:
+                val = param.normal_value
+            values_map[p_id] = val
+
+        # Canonical JSON for hash
+        import json
+        import hashlib
+        canonical_json = json.dumps(values_map, sort_keys=True)
+        narrative_concat = (instance.findings_text or "") + (instance.impression_text or "") + (instance.limitations_text or "")
+        hash_input = canonical_json + narrative_concat
+        sha256_hash = hashlib.sha256(hash_input.encode('utf-8')).hexdigest()
+
+        # Generate PDF
+        from .pdf_engine.report_pdf import generate_report_pdf
+        pdf_bytes = generate_report_pdf(str(instance.id))
+        file_name = f"Report_{instance.service_visit_item.service_visit.visit_id}_v{version}.pdf"
+
+        snapshot = ReportPublishSnapshot(
+            report=instance,
+            version=version,
+            published_by=user,
+            findings_text=instance.findings_text or "",
+            impression_text=instance.impression_text or "",
+            limitations_text=instance.limitations_text or "",
+            values_json=values_map,
+            sha256=sha256_hash,
+            notes=notes
+        )
+        snapshot.pdf_file.save(file_name, ContentFile(pdf_bytes), save=False)
+        snapshot.save()
+
+        # Update workflow status
+        item = instance.service_visit_item
+        item.status = "PUBLISHED"
+        item.published_at = timezone.now()
+        item.save()
+
+        ReportActionLog.objects.create(
+            report=instance,
+            action="publish",
+            actor=user,
+            meta={"version": version, "sha256": sha256_hash, "notes": notes, "auto": True}
+        )
+        return version
+
     @action(detail=True, methods=["post"])
     def verify(self, request, pk=None):
         item = self._get_item(pk)
@@ -1139,6 +1257,7 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         with transaction.atomic():
             # Ensure narrative exists
             if not instance.findings_text:
+                from .services.narrative_v1 import generate_report_narrative
                 narrative_data = generate_report_narrative(str(instance.id))
                 instance.findings_text = narrative_data["findings_text"]
                 instance.impression_text = narrative_data["impression_text"]
@@ -1157,7 +1276,10 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
                 meta={"notes": notes}
             )
             
-        return Response({"status": "verified"})
+            # AUTO PUBLISH
+            version = self._perform_publish(instance, request.user, notes=f"Auto-published on verification. {notes}")
+            
+        return Response({"status": "verified", "published": True, "version": version})
 
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
@@ -1171,80 +1293,13 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         if not (request.user.is_superuser or request.user.groups.filter(name="reporting_verifier").exists()):
             raise exceptions.PermissionDenied("Only verifiers can publish reports.")
 
-        if instance.status != "verified":
+        if instance.status not in ["verified", "published"]:
              return Response({"error": "Only verified reports can be published."}, status=409)
 
         notes = request.data.get("notes", "")
 
         with transaction.atomic():
-            # Ensure narrative exists (should be there from verify, but double check)
-            if not instance.findings_text:
-                narrative_data = generate_report_narrative(str(instance.id))
-                instance.findings_text = narrative_data["findings_text"]
-                instance.impression_text = narrative_data["impression_text"]
-                instance.limitations_text = narrative_data["limitations_text"]
-                instance.narrative_version = narrative_data["version"]
-                instance.narrative_updated_at = timezone.now()
-                instance.save() # Save narrative parts first so PDF gen picks them up? 
-                # generate_report_pdf reads from DB usually, so we need to save instance first or pass data. 
-                # looking at pdf_engine/report_pdf, it takes report_id. So we MUST save instance first.
-            
-            # Calculate next version
-            last_snapshot = instance.publish_snapshots.order_by("-version").first()
-            version = (last_snapshot.version + 1) if last_snapshot else 1
-
-            # Generate JSON map
-            # We want FULL map including defaults? Prompt says: "values_json = FULL map of all parameters in profile (including defaults) keyed by parameter_id"
-            # We'll rely on what's in DB + what's not in DB but in profile?
-            # Ideally we iterate profile parameters
-            values_map = {}
-            # Get all existing values
-            existing_values = {str(v.parameter_id): v.value for v in instance.values.all()}
-            
-            # Get all parameters from profile
-            for param in instance.profile.parameters.all():
-                p_id = str(param.id)
-                val = existing_values.get(p_id)
-                if val is None:
-                    val = param.normal_value # Use default/normal if missing? Prompt says "including defaults". 
-                    # Note: ReportParameter has 'normal_value'.
-                values_map[p_id] = val
-            
-            # Canonical JSON for hash
-            canonical_json = json.dumps(values_map, sort_keys=True)
-            narrative_concat = (instance.findings_text or "") + (instance.impression_text or "") + (instance.limitations_text or "")
-            hash_input = canonical_json + narrative_concat
-            sha256_hash = hashlib.sha256(hash_input.encode('utf-8')).hexdigest()
-
-            # Generate PDF
-            pdf_bytes = generate_report_pdf(str(instance.id))
-            file_name = f"Report_{item.service_visit.visit_id}_v{version}.pdf"
-            
-            snapshot = ReportPublishSnapshot(
-                report=instance,
-                version=version,
-                published_by=request.user,
-                findings_text=instance.findings_text or "",
-                impression_text=instance.impression_text or "",
-                limitations_text=instance.limitations_text or "",
-                values_json=values_map, # This stores dictionary, Django JSONField handles it
-                sha256=sha256_hash,
-                notes=notes
-            )
-            snapshot.pdf_file.save(file_name, ContentFile(pdf_bytes), save=False)
-            snapshot.save()
-
-            # Update workflow status
-            item.status = "PUBLISHED"
-            item.published_at = timezone.now()
-            item.save()
-
-            ReportActionLog.objects.create(
-                report=instance,
-                action="publish",
-                actor=request.user,
-                meta={"version": version, "sha256": sha256_hash, "notes": notes}
-            )
+            version = self._perform_publish(instance, request.user, notes)
 
         return Response({"status": "published", "version": version})
 
