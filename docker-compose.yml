@@ -47,6 +47,7 @@ services:
       # Optional: Gunicorn tuning
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-120}
+      SECURE_PROXY_SSL_HEADER: HTTP_X_FORWARDED_PROTO,https
     volumes:
       # Persist media files
       - media_data:/app/media
