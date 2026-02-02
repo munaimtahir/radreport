@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     ReportProfile, ReportParameter, ReportParameterOption, 
     ReportInstance, ReportValue, ServiceReportProfile, TemplateAuditLog,
-    ReportParameterLibraryItem
+    ReportParameterLibraryItem, ReportTemplateV2, ServiceReportTemplateV2
 )
 from apps.workflow.models import ServiceVisitItem
 
@@ -20,6 +20,65 @@ class ServiceReportProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceReportProfile
         fields = ["id", "service", "profile", "enforce_single_profile", "is_default"]
+
+
+class ReportTemplateV2Serializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReportTemplateV2
+        fields = [
+            "id", "code", "name", "modality", "version", "status",
+            "json_schema", "ui_schema", "narrative_rules", "meta",
+            "created_by", "created_at", "updated_at",
+        ]
+        read_only_fields = ["created_by", "created_at", "updated_at"]
+
+    def validate_json_schema(self, value):
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("json_schema must be a JSON object.")
+        return value
+
+    def validate_ui_schema(self, value):
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("ui_schema must be a JSON object.")
+        return value
+
+    def validate_status(self, value):
+        instance = getattr(self, "instance", None)
+        if not instance:
+            return value
+        current = instance.status
+        if current == value:
+            return value
+        allowed = {
+            "draft": {"active", "archived"},
+            "active": {"archived"},
+            "archived": set(),
+        }
+        if value == "active" and current == "archived":
+            if not self.context.get("allow_reactivate"):
+                raise serializers.ValidationError("Archived templates cannot be reactivated.")
+        elif value not in allowed.get(current, set()):
+            raise serializers.ValidationError(f"Invalid status transition from {current} to {value}.")
+        return value
+
+
+class ServiceReportTemplateV2Serializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceReportTemplateV2
+        fields = [
+            "id", "service", "template", "is_default", "is_active",
+            "created_at", "updated_at",
+        ]
+        read_only_fields = ["created_at", "updated_at"]
+
+    def validate(self, attrs):
+        is_default = attrs.get("is_default", getattr(self.instance, "is_default", False))
+        is_active = attrs.get("is_active", getattr(self.instance, "is_active", True))
+        if is_default and not is_active:
+            raise serializers.ValidationError("Default templates must be active.")
+        return attrs
 
 class ReportParameterOptionSerializer(serializers.ModelSerializer):
     class Meta:

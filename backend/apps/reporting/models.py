@@ -167,6 +167,64 @@ class ServiceReportProfile(models.Model):
     def __str__(self):
         return f"{self.service.name} -> {self.profile.code}"
 
+
+class ReportTemplateV2(models.Model):
+    """
+    JSON-driven report template definition (v2).
+    """
+    STATUS_CHOICES = (
+        ("draft", "Draft"),
+        ("active", "Active"),
+        ("archived", "Archived"),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=80, help_text="Slug-like template code")
+    name = models.CharField(max_length=200)
+    modality = models.CharField(max_length=20, help_text="Modality code, e.g., USG")
+    version = models.PositiveIntegerField(default=1)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    json_schema = models.JSONField()
+    ui_schema = models.JSONField(default=dict, blank=True)
+    narrative_rules = models.JSONField(default=dict, blank=True)
+    meta = models.JSONField(blank=True, null=True)
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_report_templates_v2",
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["code", "version"], name="unique_template_v2_code_version")
+        ]
+
+    def __str__(self):
+        return f"{self.code} v{self.version} - {self.name}"
+
+
+class ServiceReportTemplateV2(models.Model):
+    """
+    Mapping between Catalog Services and ReportTemplateV2 templates.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    service = models.ForeignKey("catalog.Service", on_delete=models.CASCADE, related_name="report_templates_v2")
+    template = models.ForeignKey(ReportTemplateV2, on_delete=models.CASCADE, related_name="service_links")
+    is_default = models.BooleanField(default=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("service", "template")
+
+    def __str__(self):
+        return f"{self.service.name} -> {self.template.code}"
+
 class ReportInstance(models.Model):
     """
     An actual report entered for a specific visit item.
