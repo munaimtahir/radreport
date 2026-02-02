@@ -2,7 +2,7 @@ from rest_framework import serializers
 from .models import (
     ReportProfile, ReportParameter, ReportParameterOption, 
     ReportInstance, ReportValue, ServiceReportProfile, TemplateAuditLog,
-    ReportParameterLibraryItem
+    ReportParameterLibraryItem, ReportInstanceV2
 )
 from apps.workflow.models import ServiceVisitItem
 
@@ -169,6 +169,11 @@ class ReportInstanceSerializer(serializers.ModelSerializer):
     def get_last_published_at(self, obj):
         last_snap = obj.publish_snapshots.order_by("-published_at").first()
         return last_snap.published_at if last_snap else None
+
+class ReportInstanceV2Serializer(serializers.ModelSerializer):
+    class Meta:
+        model = ReportInstanceV2
+        fields = ["values_json"]
 
 class ReportSaveItemSerializer(serializers.Serializer):
     parameter_id = serializers.UUIDField()

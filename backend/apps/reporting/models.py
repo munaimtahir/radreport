@@ -167,6 +167,46 @@ class ServiceReportProfile(models.Model):
     def __str__(self):
         return f"{self.service.name} -> {self.profile.code}"
 
+class ReportTemplateV2(models.Model):
+    """
+    JSON schema-based reporting template (V2).
+    """
+    STATUS_CHOICES = (
+        ("draft", "Draft"),
+        ("active", "Active"),
+        ("archived", "Archived"),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    code = models.CharField(max_length=50, help_text="Unique code, e.g., USG_KUB_V2")
+    name = models.CharField(max_length=150, help_text="Human readable name")
+    modality = models.CharField(max_length=20, help_text="Modality code, e.g., USG")
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    json_schema = models.JSONField(default=dict)
+    ui_schema = models.JSONField(default=dict)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.code} - {self.name}"
+
+class ServiceReportTemplateV2(models.Model):
+    """
+    Mapping between Catalog Services and V2 report templates.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    service = models.ForeignKey("catalog.Service", on_delete=models.CASCADE, related_name="report_templates_v2")
+    template = models.ForeignKey(ReportTemplateV2, on_delete=models.CASCADE, related_name="service_links")
+    is_active = models.BooleanField(default=True)
+    is_default = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ("service", "template")
+
+    def __str__(self):
+        return f"{self.service.name} -> {self.template.code}"
+
 class ReportInstance(models.Model):
     """
     An actual report entered for a specific visit item.
@@ -200,6 +240,39 @@ class ReportInstance(models.Model):
 
     def __str__(self):
         return f"Report {self.id} for {self.service_visit_item.service_visit.visit_id}"
+
+class ReportInstanceV2(models.Model):
+    """
+    JSON schema-based report instance for a work item.
+    """
+    STATUS_CHOICES = (
+        ("draft", "Draft"),
+        ("submitted", "Submitted"),
+        ("verified", "Verified"),
+        ("returned", "Returned"),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    work_item = models.OneToOneField(
+        "workflow.ServiceVisitItem",
+        on_delete=models.CASCADE,
+        related_name="report_instance_v2"
+    )
+    template_v2 = models.ForeignKey(ReportTemplateV2, on_delete=models.PROTECT, related_name="instances")
+    values_json = models.JSONField(default=dict)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
+    created_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_reports_v2"
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Report V2 {self.id} for {self.work_item_id}"
 
 class ReportingOrganizationConfig(models.Model):
     """

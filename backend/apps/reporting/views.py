@@ -18,12 +18,13 @@ from .models import (
     ServiceReportProfile, ReportInstance, ReportValue,
     ReportProfile, ReportParameter, ReportParameterOption,
     ReportParameterLibraryItem, ReportProfileParameterLink,
-    TemplateAuditLog
+    TemplateAuditLog, ReportTemplateV2, ServiceReportTemplateV2,
+    ReportInstanceV2
 )
 from .serializers import (
     ReportProfileSerializer, ReportInstanceSerializer, ReportValueSerializer, ReportSaveSerializer,
     ReportParameterSerializer, ServiceReportProfileSerializer, ProfileListSerializer,
-    ReportParameterLibraryItemSerializer
+    ReportParameterLibraryItemSerializer, ReportInstanceV2Serializer
 )
 
 class ReportParameterLibraryItemViewSet(viewsets.ModelViewSet):
@@ -854,6 +855,15 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             raise exceptions.NotFound("No report profile associated with this service.")
         return srp.profile
 
+    def _get_v2_template(self, item):
+        mapping = (
+            ServiceReportTemplateV2.objects.select_related("template")
+            .filter(service=item.service, is_active=True, template__status="active")
+            .order_by("-is_default", "created_at")
+            .first()
+        )
+        return mapping.template if mapping else None
+
     def _get_instance(self, item):
         try:
             return item.report_instance
@@ -863,23 +873,61 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["get"])
     def schema(self, request, pk=None):
         item = self._get_item(pk)
+        template_v2 = self._get_v2_template(item)
+        if template_v2:
+            return Response({
+                "schema_version": "v2",
+                "template": {
+                    "id": str(template_v2.id),
+                    "code": template_v2.code,
+                    "name": template_v2.name,
+                    "modality": template_v2.modality,
+                    "status": template_v2.status,
+                },
+                "json_schema": template_v2.json_schema,
+                "ui_schema": template_v2.ui_schema,
+            })
+
         profile = self._get_profile(item)
         serializer = ReportProfileSerializer(profile)
-        return Response(serializer.data)
+        data = serializer.data
+        data["schema_version"] = "v1"
+        return Response(data)
 
     @action(detail=True, methods=["get"])
     def values(self, request, pk=None):
         item = self._get_item(pk)
+        template_v2 = self._get_v2_template(item)
+        if template_v2:
+            instance, created = ReportInstanceV2.objects.get_or_create(
+                work_item=item,
+                defaults={
+                    "template_v2": template_v2,
+                    "created_by": request.user,
+                    "status": "draft",
+                },
+            )
+            if not created and instance.template_v2_id != template_v2.id:
+                instance.template_v2 = template_v2
+                instance.save(update_fields=["template_v2", "updated_at"])
+            serializer = ReportInstanceV2Serializer(instance)
+            return Response({
+                "schema_version": "v2",
+                "values_json": serializer.data["values_json"],
+            })
+
         instance = self._get_instance(item)
         
         if not instance:
             return Response({
+                "schema_version": "v1",
                 "status": "draft",
                 "values": []
             })
         
         serializer = ReportValueSerializer(instance.values.all(), many=True)
         return Response({
+            "schema_version": "v1",
             "status": instance.status,
             "is_published": instance.is_published,
             "values": serializer.data
@@ -888,6 +936,33 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"])
     def save(self, request, pk=None):
         item = self._get_item(pk)
+        schema_version = request.data.get("schema_version")
+        if schema_version == "v2":
+            template_v2 = self._get_v2_template(item)
+            if not template_v2:
+                raise exceptions.NotFound("No V2 report template associated with this service.")
+            values_json = request.data.get("values_json")
+            if not isinstance(values_json, dict):
+                raise exceptions.ValidationError("values_json must be an object.")
+
+            instance, created = ReportInstanceV2.objects.get_or_create(
+                work_item=item,
+                defaults={
+                    "template_v2": template_v2,
+                    "values_json": values_json,
+                    "created_by": request.user,
+                    "status": "draft",
+                },
+            )
+            if not created:
+                instance.template_v2 = template_v2
+                instance.values_json = values_json
+                if instance.created_by is None:
+                    instance.created_by = request.user
+                instance.status = "draft"
+                instance.save()
+            return Response({"schema_version": "v2", "saved": True})
+
         profile = self._get_profile(item)
         
         # Check if already submitted/verified (locked)
