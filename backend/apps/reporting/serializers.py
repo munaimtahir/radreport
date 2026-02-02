@@ -54,13 +54,14 @@ class ReportTemplateV2Serializer(serializers.ModelSerializer):
         allowed = {
             "draft": {"active", "archived"},
             "active": {"archived"},
-            "archived": set(),
+            "archived": {"active"},  # Reactivation is a possible transition
         }
-        if value == "active" and current == "archived":
-            if not self.context.get("allow_reactivate"):
-                raise serializers.ValidationError("Archived templates cannot be reactivated.")
-        elif value not in allowed.get(current, set()):
+
+        if value not in allowed.get(current, set()):
             raise serializers.ValidationError(f"Invalid status transition from {current} to {value}.")
+
+        if current == 'archived' and value == 'active' and not self.context.get("allow_reactivate"):
+            raise serializers.ValidationError("Archived templates cannot be reactivated.")
         return value
 
 
