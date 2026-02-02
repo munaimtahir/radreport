@@ -275,6 +275,47 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
 
         return Response({"fields_created": created_fields, "fields_updated": updated_fields})
 
+    @action(detail=True, methods=["get", "post"], url_path="parameters-csv")
+    def parameters_csv(self, request, pk=None):
+        if request.method == "POST":
+            return self.import_parameters(request, pk)
+
+        # GET: Export parameters for this profile
+        profile = self.get_object()
+        fieldnames = [
+            "profile_code", "section", "name", "slug", 
+            "parameter_type", "unit", "normal_value", "is_required", "order",
+            "options", "sentence_template", "narrative_role",
+            "omit_if_values_json", "join_label"
+        ]
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        writer.writeheader()
+
+        params = ReportParameter.objects.filter(profile=profile).prefetch_related("options").order_by("order")
+        for param in params:
+            options_str = self._format_options(param.options.all())
+            writer.writerow({
+                "profile_code": profile.code,
+                "section": param.section,
+                "name": param.name,
+                "slug": param.slug,
+                "parameter_type": param.parameter_type,
+                "unit": param.unit or "",
+                "normal_value": param.normal_value or "",
+                "is_required": "true" if param.is_required else "false",
+                "order": param.order,
+                "options": options_str,
+                "sentence_template": param.sentence_template or "",
+                "narrative_role": param.narrative_role,
+                "omit_if_values_json": json.dumps(param.omit_if_values) if param.omit_if_values else "",
+                "join_label": param.join_label or "",
+            })
+
+        response = HttpResponse(output.getvalue(), content_type="text/csv")
+        response["Content-Disposition"] = f'attachment; filename="{profile.code}_parameters.csv"'
+        return response
+
     def _process_profile_import(self, rows):
         created = 0
         updated = 0
