@@ -82,6 +82,7 @@ def create_receipt_snapshot(service_visit: ServiceVisit, invoice: Invoice) -> Op
         patient_age=str(service_visit.patient.age) if service_visit.patient.age else "",
         patient_gender=service_visit.patient.gender or "",
         cashier_name=_resolve_cashier_name(service_visit),
+        referring_consultant=service_visit.referring_consultant or "",
     )
     return snapshot
 
@@ -121,4 +122,5 @@ def get_receipt_snapshot_data(service_visit: ServiceVisit, invoice: Invoice):
         patient_age=str(service_visit.patient.age) if service_visit.patient.age else "",
         patient_gender=service_visit.patient.gender or "",
         cashier_name=_resolve_cashier_name(service_visit),
+        referring_consultant=service_visit.referring_consultant or "",
     )

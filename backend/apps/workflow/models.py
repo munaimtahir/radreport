@@ -75,6 +75,7 @@ class ServiceVisit(models.Model):
         blank=True,
         related_name="booked_visits",
     )
+    referring_consultant = models.CharField(max_length=150, blank=True, default="", help_text="Text field for referring consultant name")
     
     # Timestamps
     registered_at = models.DateTimeField(auto_now_add=True)
@@ -322,6 +323,7 @@ class ReceiptSnapshot(models.Model):
     patient_age = models.CharField(max_length=20, blank=True, default="")
     patient_gender = models.CharField(max_length=20, blank=True, default="")
     cashier_name = models.CharField(max_length=150, blank=True, default="")
+    referring_consultant = models.CharField(max_length=150, blank=True, default="")
 
     created_at = models.DateTimeField(auto_now_add=True)
 

@@ -810,7 +810,11 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
         "age": str(service_visit.patient.age) if service_visit.patient.age else "",
         "gender": service_visit.patient.gender or "",
         "phone": service_visit.patient.phone or "",
-        "consultant": service_visit.booked_consultant.display_name if service_visit.booked_consultant else "-",
+        "consultant": (
+            f"{service_visit.referring_consultant} | {service_visit.booked_consultant.display_name}"
+            if service_visit.referring_consultant and service_visit.booked_consultant
+            else (service_visit.referring_consultant or (service_visit.booked_consultant.display_name if service_visit.booked_consultant else "-"))
+        ),
         "services": services,
         "total_amount": f"Rs. {invoice.total_amount:.2f}",
         "net_amount": f"Rs. {invoice.net_amount:.2f}",
@@ -854,7 +858,11 @@ def build_receipt_snapshot_pdf(snapshot) -> ContentFile:
         "age": snapshot.patient_age or "",
         "gender": snapshot.patient_gender or "",
         "phone": snapshot.patient_phone or "",
-        "consultant": snapshot.service_visit.booked_consultant.display_name if snapshot.service_visit.booked_consultant else "-",
+        "consultant": (
+            f"{snapshot.referring_consultant} | {snapshot.service_visit.booked_consultant.display_name}"
+            if snapshot.referring_consultant and snapshot.service_visit.booked_consultant
+            else (snapshot.referring_consultant or (snapshot.service_visit.booked_consultant.display_name if snapshot.service_visit.booked_consultant else "-"))
+        ),
         "services": services,
         "total_amount": f"Rs. {total_amount:.2f}",
         "net_amount": f"Rs. {total_amount:.2f}",

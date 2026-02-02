@@ -214,6 +214,7 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
     service_id = serializers.UUIDField(required=False, allow_null=True)
 
     booked_consultant_id = serializers.UUIDField(required=False, allow_null=True)
+    referring_consultant = serializers.CharField(max_length=150, required=False, allow_blank=True)
     
     # Billing fields
     subtotal = serializers.DecimalField(max_digits=10, decimal_places=2, required=True)
@@ -260,6 +261,7 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
                 patient = Patient.objects.create(**patient_data)
             
             # Get services - support both new (service_ids) and legacy (service_id) formats
+            referring_consultant = validated_data.get("referring_consultant", "")
             service_items = validated_data.get("service_items") or []
             service_ids = validated_data.get("service_ids", [])
             legacy_service_id = validated_data.get("service_id")
@@ -287,6 +289,7 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
                 status="REGISTERED",
                 created_by=request.user if request else None,
                 booked_consultant=booked_consultant,
+                referring_consultant=referring_consultant,
             )
             
             # Create ServiceVisitItems with snapshots

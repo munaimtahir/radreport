@@ -201,6 +201,7 @@ export default function RegistrationPage() {
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
   const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [bookedConsultantId, setBookedConsultantId] = useState("");
+  const [referringConsultant, setReferringConsultant] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [activeServiceIndex, setActiveServiceIndex] = useState(-1);
   const [discountPercentage, setDiscountPercentage] = useState("");
@@ -541,6 +542,7 @@ export default function RegistrationPage() {
         patient_id: selectedPatient.id,
         service_ids: selectedServices.map((service) => service.id),
         booked_consultant_id: bookedConsultantId || null,
+        referring_consultant: referringConsultant || "",
         subtotal,
         total_amount: totalAmount,
         discount: discountAmount,
@@ -556,6 +558,8 @@ export default function RegistrationPage() {
       setSelectedServices([]);
       setDiscountPercentage("");
       setAmountPaid("");
+      setReferringConsultant("");
+      setBookedConsultantId("");
 
       if (printReceipt) {
         const API_BASE = (import.meta as any).env.VITE_API_BASE
@@ -778,19 +782,15 @@ export default function RegistrationPage() {
             />
           </div>
           <div>
-            <label style={{ display: "block", marginBottom: 6 }}>Referral / Consultant</label>
-            <select
-              value={bookedConsultantId}
-              onChange={(e) => setBookedConsultantId(e.target.value)}
+            <label style={{ display: "block", marginBottom: 6 }}>Referring Consultant (Name)</label>
+            <input
+              type="text"
+              placeholder="Enter name of referring consultant"
+              value={referringConsultant}
+              onChange={(e) => setReferringConsultant(e.target.value)}
+              onKeyDown={handleEnterAsTab}
               style={{ width: "100%", padding: 8 }}
-            >
-              <option value="">No Consultant Selected</option>
-              {consultants.map(c => (
-                <option key={c.id} value={c.id}>
-                  {c.display_name}
-                </option>
-              ))}
-            </select>
+            />
           </div>
           <div>
             <label style={{ display: "block", marginBottom: 6 }}>Comments</label>
