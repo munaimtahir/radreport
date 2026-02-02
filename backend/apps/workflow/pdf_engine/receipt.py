@@ -36,22 +36,22 @@ BORDER_GREY = HexColor("#E5E7EB")
 
 # Layout dimension constants (in mm)
 HEADER_IMAGE_HEIGHT = 18
-LOGO_HEIGHT = 20
-LOGO_MAX_WIDTH = 50
-PADDING = 6
-COLUMN_GAP = 6
-HEADER_HEIGHT = 5
-ROW_PADDING = 1.5
-LINE_HEIGHT = 3.5
-FOOTER_HEIGHT = 12
-SUMMARY_HEIGHT = 28
+LOGO_HEIGHT = 15  # Reduced from 20
+LOGO_MAX_WIDTH = 40
+PADDING = 5
+COLUMN_GAP = 5
+HEADER_HEIGHT = 4
+ROW_PADDING = 1.2
+LINE_HEIGHT = 3.2
+FOOTER_HEIGHT = 10
+SUMMARY_HEIGHT = 20  # Reduced from 28
 MIN_FONT_SIZE = 8  # Minimum font size before splitting to multiple pages
 MAX_SERVICE_LINES = 2  # Maximum lines to display per service item
 
 # Approximate layout heights for calculating service area (in mm)
-APPROX_HEADER_SECTION_HEIGHT = 80  # Header + logo + patient info + receipt details
-APPROX_FOOTER_SECTION_HEIGHT = 40  # Payment summary + footer
-APPROX_NON_SERVICE_HEIGHT = 120  # Total approximate height used by non-service sections
+APPROX_HEADER_SECTION_HEIGHT = 65  # Reduced from 80
+APPROX_FOOTER_SECTION_HEIGHT = 35  # Reduced from 40
+APPROX_NON_SERVICE_HEIGHT = 100  # Total approximate height used by non-service sections
 
 
 def _wrap_text(text: str, font_name: str, font_size: float, max_width: float) -> List[str]:
@@ -410,10 +410,8 @@ def _draw_receipt_copy(
     canvas.drawString(left_column_x, section_top_y, "Patient Information")
     left_column_y = section_top_y - 4.5 * mm
     patient_rows = [
-        ("Medical Record No:", data["patient_reg_no"] or "-"),
-        ("Name:", data["patient_name"] or "-"),
-        ("Age:", data["age"] or "-"),
-        ("Gender:", data["gender"] or "-"),
+        ("Patient:", f"{data['patient_name']} ({data['age']}/{data['gender']})"),
+        ("MRN / Reg:", f"{data['mrn']} / {data['patient_reg_no']}"),
         ("Phone:", data["phone"] or "-"),
         ("Ref. By:", data.get("consultant", "-")),
     ]
@@ -422,10 +420,10 @@ def _draw_receipt_copy(
         patient_rows,
         left_column_x,
         left_column_y,
-        label_width=30 * mm,
-        value_width=column_width - 30 * mm,
+        label_width=25 * mm,
+        value_width=column_width - 25 * mm,
         font_size=8,
-        line_height=4 * mm,
+        line_height=3.8 * mm,
     )
 
     canvas.setFont("Helvetica-Bold", 9)
@@ -443,10 +441,10 @@ def _draw_receipt_copy(
         meta_rows,
         right_column_x,
         right_column_y,
-        label_width=24 * mm,
-        value_width=column_width - 24 * mm,
+        label_width=20 * mm,
+        value_width=column_width - 20 * mm,
         font_size=8,
-        line_height=4 * mm,
+        line_height=3.8 * mm,
     )
 
     current_y = min(left_column_y, right_column_y) - 2 * mm
@@ -454,7 +452,7 @@ def _draw_receipt_copy(
     canvas.setFont("Helvetica-Bold", 9)
     canvas.setFillColor(CLINIC_BLUE)
     canvas.drawString(left_x, current_y, "Services")
-    current_y -= 4.5 * mm
+    current_y -= 3.5 * mm
 
     service_column_width = content_width * 0.7
     amount_column_width = content_width * 0.3
@@ -522,16 +520,17 @@ def _draw_receipt_copy(
         ("Total Amount:", data["total_amount"], False),
         ("Net Amount:", data["net_amount"], True),
         ("Paid Amount:", data["paid_amount"], False),
+        ("Balance Due:", data.get("balance_amount", "Rs. 0.00"), False),
         ("Payment Method:", data["payment_method"], False),
     ]
     for label, value, highlight in summary_rows:
         canvas.setFont("Helvetica-Bold", 8)
         canvas.setFillColor(LIGHT_GREY)
-        canvas.drawString(left_x + content_width * 0.35, current_y, label)
+        canvas.drawString(left_x + content_width * 0.4, current_y, label)
         canvas.setFont("Helvetica-Bold" if highlight else "Helvetica", 8)
         canvas.setFillColor(ACCENT_ORANGE if highlight else black)
         canvas.drawRightString(right_x, current_y, value)
-        current_y -= 4 * mm
+        current_y -= 3.5 * mm
 
     footer_lines = LOCKED_FOOTER_TEXT.split("\n")
     canvas.setFont("Helvetica", 6.5)
@@ -819,6 +818,7 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
         "total_amount": f"Rs. {invoice.total_amount:.2f}",
         "net_amount": f"Rs. {invoice.net_amount:.2f}",
         "paid_amount": f"Rs. {paid_amount:.2f}",
+        "balance_amount": f"Rs. {invoice.balance_amount:.2f}",
         "payment_method": payment_method,
     }
 
@@ -867,6 +867,7 @@ def build_receipt_snapshot_pdf(snapshot) -> ContentFile:
         "total_amount": f"Rs. {total_amount:.2f}",
         "net_amount": f"Rs. {total_amount:.2f}",
         "paid_amount": f"Rs. {snapshot.total_paid:.2f}",
+        "balance_amount": f"Rs. {snapshot.service_visit.invoice.balance_amount:.2f}" if hasattr(snapshot.service_visit, "invoice") else "Rs. 0.00",
         "payment_method": (snapshot.payment_method or "cash").upper(),
     }
 

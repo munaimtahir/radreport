@@ -21,6 +21,7 @@ import ParametersList from "../views/admin/ParametersList";
 import ServiceTemplateLinksList from "../views/admin/ServiceTemplateLinksList";
 import BaselinePacks from "../views/admin/BaselinePacks";
 import AuditLogsPage from "../views/admin/AuditLogsPage";
+import ReportPrintingWorklist from "../views/ReportPrintingWorklist";
 
 
 import ModuleDisabled from "../views/ModuleDisabled";
@@ -117,7 +118,11 @@ function Shell() {
                 Reporting worklist
               </NavLink>
             )}
-
+            {canWorkflow && (
+              <NavLink to="/reports">
+                Print reports
+              </NavLink>
+            )}
 
             {canAdmin && (
               <div style={{
@@ -280,6 +285,7 @@ function Shell() {
               <Route path="/reports/:reportId/edit" element={<Navigate to="/reports" replace />} />
               <Route path="/reporting/worklist" element={<ReportingWorklistPage />} />
               <Route path="/reporting/worklist/:service_visit_item_id/report" element={<ReportingPage />} />
+              <Route path="/reports" element={<ReportPrintingWorklist />} />
             </Routes>
 
           </div>
