@@ -13,6 +13,13 @@ interface Profile {
     modality: string;
     enable_narrative: boolean;
     narrative_mode: string;
+    // Governance fields
+    version?: number;
+    status?: "draft" | "active" | "archived";
+    is_frozen?: boolean;
+    used_by_reports?: number;
+    can_edit?: boolean;
+    can_delete?: boolean;
 }
 
 interface Parameter {
@@ -196,15 +203,77 @@ export default function TemplateEditor() {
 
     if (loading) return <div>Loading...</div>;
 
+    // Governance checks
+    const isReadOnly = profile.is_frozen || (profile.status === "active" && (profile.used_by_reports || 0) > 0);
+    const governanceReason = profile.is_frozen
+        ? "This template is frozen and cannot be edited."
+        : profile.status === "active" && (profile.used_by_reports || 0) > 0
+            ? `This template is active and used by ${profile.used_by_reports} reports.`
+            : null;
+
     return (
         <div style={{ padding: 20, maxWidth: 1000, margin: "0 auto" }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-                <h1 style={{ fontSize: 24, margin: 0 }}>{isNew ? "New Template" : `Edit Template: ${profile.code}`}</h1>
+                <div>
+                    <h1 style={{ fontSize: 24, margin: 0 }}>
+                        {isNew ? "New Template" : `${isReadOnly ? "View" : "Edit"} Template: ${profile.code}`}
+                        {profile.version && <span style={{ fontSize: 14, color: theme.colors.textSecondary, marginLeft: 8 }}>v{profile.version}</span>}
+                    </h1>
+                    {profile.status && (
+                        <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                            <span style={{
+                                padding: "2px 10px",
+                                borderRadius: 9999,
+                                fontSize: 12,
+                                fontWeight: 600,
+                                backgroundColor: profile.status === "active" ? "#dcfce7" : profile.status === "draft" ? "#fef3c7" : "#f3f4f6",
+                                color: profile.status === "active" ? "#166534" : profile.status === "draft" ? "#92400e" : "#6b7280",
+                            }}>
+                                {profile.status}
+                            </span>
+                            {profile.is_frozen && (
+                                <span style={{
+                                    padding: "2px 10px",
+                                    borderRadius: 9999,
+                                    fontSize: 12,
+                                    fontWeight: 600,
+                                    backgroundColor: "#dbeafe",
+                                    color: "#1d4ed8",
+                                }}>
+                                    🔒 Frozen
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </div>
                 <Button variant="secondary" onClick={() => navigate("/settings/templates")}>Back to List</Button>
             </div>
 
             {error && <ErrorAlert message={error} />}
             {success && <SuccessAlert message={success} />}
+
+            {/* Governance Banner */}
+            {isReadOnly && governanceReason && (
+                <div style={{
+                    padding: 16,
+                    marginBottom: 20,
+                    backgroundColor: "#fef3c7",
+                    border: "1px solid #f59e0b",
+                    borderRadius: theme.radius.md,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 12,
+                }}>
+                    <span style={{ fontSize: 20 }}>⚠️</span>
+                    <div>
+                        <strong style={{ display: "block", marginBottom: 4 }}>Read-Only Mode</strong>
+                        <span style={{ color: "#92400e" }}>{governanceReason}</span>
+                        <span style={{ display: "block", marginTop: 4, fontSize: 13 }}>
+                            To make changes, clone this template to create a new draft version.
+                        </span>
+                    </div>
+                </div>
+            )}
 
             <div style={{ backgroundColor: "white", padding: 20, borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, marginBottom: 20 }}>
                 <h3 style={{ marginTop: 0 }}>Profile Details</h3>
@@ -213,7 +282,7 @@ export default function TemplateEditor() {
                         <label style={{ display: "block", marginBottom: 5 }}>Code</label>
                         <input
                             value={profile.code}
-                            onChange={e => setProfile({...profile, code: e.target.value})}
+                            onChange={e => setProfile({ ...profile, code: e.target.value })}
                             style={{ width: "100%", padding: 8 }}
                         />
                     </div>
@@ -221,7 +290,7 @@ export default function TemplateEditor() {
                         <label style={{ display: "block", marginBottom: 5 }}>Name</label>
                         <input
                             value={profile.name}
-                            onChange={e => setProfile({...profile, name: e.target.value})}
+                            onChange={e => setProfile({ ...profile, name: e.target.value })}
                             style={{ width: "100%", padding: 8 }}
                         />
                     </div>
@@ -229,7 +298,7 @@ export default function TemplateEditor() {
                         <label style={{ display: "block", marginBottom: 5 }}>Modality</label>
                         <input
                             value={profile.modality}
-                            onChange={e => setProfile({...profile, modality: e.target.value})}
+                            onChange={e => setProfile({ ...profile, modality: e.target.value })}
                             style={{ width: "100%", padding: 8 }}
                         />
                     </div>
@@ -237,7 +306,7 @@ export default function TemplateEditor() {
                         <label style={{ display: "block", marginBottom: 5 }}>Narrative Mode</label>
                         <select
                             value={profile.narrative_mode}
-                            onChange={e => setProfile({...profile, narrative_mode: e.target.value})}
+                            onChange={e => setProfile({ ...profile, narrative_mode: e.target.value })}
                             style={{ width: "100%", padding: 8 }}
                         >
                             <option value="rule_based">Rule Based</option>

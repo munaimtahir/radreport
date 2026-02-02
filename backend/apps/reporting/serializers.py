@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from .models import (
     ReportProfile, ReportParameter, ReportParameterOption, 
-    ReportInstance, ReportValue, ServiceReportProfile
+    ReportInstance, ReportValue, ServiceReportProfile, TemplateAuditLog
 )
 from apps.workflow.models import ServiceVisitItem
 
@@ -30,10 +30,43 @@ class ReportParameterSerializer(serializers.ModelSerializer):
 
 class ReportProfileSerializer(serializers.ModelSerializer):
     parameters = serializers.SerializerMethodField()
+    used_by_reports = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
+    activated_by_username = serializers.SerializerMethodField()
+    archived_by_username = serializers.SerializerMethodField()
 
     class Meta:
         model = ReportProfile
-        fields = ["id", "code", "name", "modality", "parameters"]
+        fields = [
+            "id", "code", "name", "modality", "parameters",
+            "version", "status", "is_frozen", "revision_of",
+            "activated_at", "activated_by", "activated_by_username",
+            "archived_at", "archived_by", "archived_by_username",
+            "used_by_reports", "can_edit", "can_delete",
+            "is_active", "created_at", "updated_at"
+        ]
+        read_only_fields = [
+            "version", "revision_of", "activated_at", "activated_by",
+            "archived_at", "archived_by", "used_by_reports", "can_edit", "can_delete"
+        ]
+
+    def get_used_by_reports(self, obj):
+        return obj.used_by_reports_count
+    
+    def get_can_edit(self, obj):
+        can, _ = obj.can_edit()
+        return can
+    
+    def get_can_delete(self, obj):
+        can, _ = obj.can_delete()
+        return can
+    
+    def get_activated_by_username(self, obj):
+        return obj.activated_by.username if obj.activated_by else None
+    
+    def get_archived_by_username(self, obj):
+        return obj.archived_by.username if obj.archived_by else None
 
     def get_parameters(self, obj):
         # 1. Get legacy parameters
@@ -134,3 +167,41 @@ class ReportSaveSerializer(serializers.Serializer):
     Example: { "values": [ { "parameter_id": "<uuid>", "value": <any> } ] }
     """
     values = ReportSaveItemSerializer(many=True)
+
+
+class TemplateAuditLogSerializer(serializers.ModelSerializer):
+    """Serializer for template governance audit logs."""
+    actor_username = serializers.SerializerMethodField()
+    actor_email = serializers.SerializerMethodField()
+
+    class Meta:
+        model = TemplateAuditLog
+        fields = [
+            "id", "actor", "actor_username", "actor_email",
+            "action", "entity_type", "entity_id",
+            "timestamp", "metadata"
+        ]
+        read_only_fields = fields
+
+    def get_actor_username(self, obj):
+        return obj.actor.username if obj.actor else None
+
+    def get_actor_email(self, obj):
+        return obj.actor.email if obj.actor else None
+
+
+class ProfileListSerializer(serializers.ModelSerializer):
+    """Lightweight serializer for profiles list without parameters."""
+    used_by_reports = serializers.SerializerMethodField()
+
+    class Meta:
+        model = ReportProfile
+        fields = [
+            "id", "code", "name", "modality", 
+            "version", "status", "is_frozen",
+            "used_by_reports", "is_active",
+            "created_at", "updated_at"
+        ]
+
+    def get_used_by_reports(self, obj):
+        return obj.used_by_reports_count

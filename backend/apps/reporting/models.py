@@ -6,9 +6,16 @@ from django.utils import timezone
 class ReportProfile(models.Model):
     """
     Defines a reporting template/profile (e.g., USG KUB, CXR PA).
+    Supports versioning and governance for safe template evolution.
     """
+    STATUS_CHOICES = (
+        ("draft", "Draft"),
+        ("active", "Active"),
+        ("archived", "Archived"),
+    )
+    
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-    code = models.CharField(max_length=50, unique=True, help_text="Unique code, e.g., USG_KUB")
+    code = models.CharField(max_length=50, help_text="Unique code, e.g., USG_KUB")
     name = models.CharField(max_length=150, help_text="Human readable name")
     modality = models.CharField(max_length=20, help_text="Modality code, e.g., USG")
     enable_narrative = models.BooleanField(default=True)
@@ -16,9 +23,69 @@ class ReportProfile(models.Model):
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # Governance fields
+    version = models.PositiveIntegerField(default=1, help_text="Version number of this template")
+    revision_of = models.ForeignKey(
+        'self', 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='revisions',
+        help_text="Points to the original profile when cloned"
+    )
+    status = models.CharField(
+        max_length=20, 
+        choices=STATUS_CHOICES, 
+        default="active",
+        help_text="Template status"
+    )
+    is_frozen = models.BooleanField(default=False, help_text="If true, template cannot be edited")
+    activated_at = models.DateTimeField(null=True, blank=True, help_text="When this version was activated")
+    activated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='activated_profiles'
+    )
+    archived_at = models.DateTimeField(null=True, blank=True, help_text="When this version was archived")
+    archived_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='archived_profiles'
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=['code', 'version'], name='unique_code_version')
+        ]
 
     def __str__(self):
-        return f"{self.code} - {self.name}"
+        return f"{self.code} v{self.version} - {self.name}"
+    
+    @property
+    def used_by_reports_count(self):
+        """Count of report instances using this profile."""
+        return self.instances.count()
+    
+    def can_edit(self):
+        """Check if this profile can be edited."""
+        if self.is_frozen:
+            return False, "Template is frozen"
+        if self.status == "active" and self.used_by_reports_count > 0:
+            return False, "Active template with existing reports cannot be edited"
+        return True, None
+    
+    def can_delete(self):
+        """Check if this profile can be deleted."""
+        if self.status == "active":
+            return False, "Active templates cannot be deleted"
+        if self.used_by_reports_count > 0:
+            return False, "Templates with existing reports cannot be deleted"
+        return True, None
 
 class ReportParameter(models.Model):
     """
@@ -274,3 +341,41 @@ class ReportActionLog(models.Model):
 
     def __str__(self):
         return f"{self.action} on {self.report} by {self.actor}"
+
+
+class TemplateAuditLog(models.Model):
+    """
+    Audit log for template governance actions.
+    Tracks clone, activate, freeze, archive, import, and other governance operations.
+    """
+    ACTION_CHOICES = (
+        ("clone", "Clone"),
+        ("activate", "Activate"),
+        ("freeze", "Freeze"),
+        ("unfreeze", "Unfreeze"),
+        ("archive", "Archive"),
+        ("import", "Import"),
+        ("apply_baseline", "Apply Baseline"),
+        ("delete_blocked", "Delete Blocked"),
+        ("edit", "Edit"),
+        ("create", "Create"),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    actor = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.SET_NULL, 
+        null=True,
+        related_name='template_audit_logs'
+    )
+    action = models.CharField(max_length=30, choices=ACTION_CHOICES)
+    entity_type = models.CharField(max_length=50, help_text="e.g., report_profile, report_parameter, service_profile")
+    entity_id = models.CharField(max_length=100, help_text="ID of the affected entity")
+    timestamp = models.DateTimeField(auto_now_add=True)
+    metadata = models.JSONField(default=dict, blank=True, help_text="Additional context about the action")
+
+    class Meta:
+        ordering = ["-timestamp"]
+
+    def __str__(self):
+        return f"{self.action} on {self.entity_type}:{self.entity_id} by {self.actor}"

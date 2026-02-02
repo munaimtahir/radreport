@@ -30,7 +30,7 @@ export default function ServicesList() {
         try {
             setLoading(true);
             const query = search ? `?search=${encodeURIComponent(search)}` : "";
-            const data = await apiGet(`/catalog/services/${query}`, token);
+            const data = await apiGet(`/services/${query}`, token);
             setServices(Array.isArray(data) ? data : data.results || []);
         } catch (e: any) {
             setError(e.message || "Failed to load services");
@@ -46,13 +46,13 @@ export default function ServicesList() {
     const handleDeactivate = async (id: string) => {
         if (!window.confirm("Are you sure you want to deactivate this service?")) return;
         try {
-            await apiDelete(`/catalog/services/${id}/`, token);
+            await apiDelete(`/services/${id}/`, token);
             loadData();
         } catch (e: any) {
             setError(e.message || "Failed to deactivate");
         }
     };
-    
+
     const handleImportSuccess = () => {
         setImportModalOpen(false);
         loadData();
@@ -64,7 +64,7 @@ export default function ServicesList() {
                 isOpen={isImportModalOpen}
                 onClose={() => setImportModalOpen(false)}
                 onImportSuccess={handleImportSuccess}
-                importUrl="/catalog/services/import-csv/"
+                importUrl="/services/import-csv/"
                 title="Import Services"
             />
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
@@ -78,13 +78,13 @@ export default function ServicesList() {
                     />
                     <Button
                         variant="secondary"
-                        onClick={() => downloadFile(`${API_BASE}/catalog/services/template-csv/`, "services_template.csv", token)}
+                        onClick={() => downloadFile("/services/template-csv/", "services_template.csv", token)}
                     >
                         Download CSV Template
                     </Button>
                     <Button
                         variant="secondary"
-                        onClick={() => downloadFile(`${API_BASE}/catalog/services/export-csv/`, "services_export.csv", token)}
+                        onClick={() => downloadFile("/services/export-csv/", "services_export.csv", token)}
                     >
                         Export CSV
                     </Button>
@@ -98,7 +98,7 @@ export default function ServicesList() {
             </div>
 
             {error && <ErrorAlert message={error} />}
-            
+
             <div style={{ backgroundColor: "white", borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, overflow: "hidden" }}>
                 <table style={{ width: "100%", borderCollapse: "collapse" }}>
                     <thead>

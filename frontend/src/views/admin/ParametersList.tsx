@@ -95,10 +95,10 @@ export default function ParametersList() {
               </option>
             ))}
           </select>
-          <Button variant="secondary" onClick={() => downloadFile(`${API_BASE}/reporting/parameters/template-csv/`, "parameters_template.csv", token)}>
+          <Button variant="secondary" onClick={() => downloadFile("/reporting/parameters/template-csv/", "parameters_template.csv", token)}>
             Download Template
           </Button>
-          <Button variant="secondary" onClick={() => downloadFile(`${API_BASE}/reporting/parameters/export-csv/`, "parameters_export.csv", token)}>
+          <Button variant="secondary" onClick={() => downloadFile("/reporting/parameters/export-csv/", "parameters_export.csv", token)}>
             Export CSV
           </Button>
           <Button variant="secondary" onClick={() => setImportModalOpen(true)}>
@@ -115,7 +115,7 @@ export default function ParametersList() {
       </div>
 
       {error && <ErrorAlert message={error} />}
-      
+
       <div style={{ marginBottom: 12, color: theme.colors.textSecondary }}>
         {activeProfile ? (
           <span>

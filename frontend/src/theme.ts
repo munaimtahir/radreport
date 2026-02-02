@@ -13,7 +13,7 @@ export const theme = {
     brandBlueDark: '#094BB8',
     brandBlueLight: '#3D80E0',
     brandBlueSoft: '#E8F2FF',
-    
+
     // Brand Orange (from logo 'P') - ACCENT ONLY
     // Use for: Warnings, secondary emphasis, small badges/dots/icons
     // AVOID: Full-width UI elements, primary buttons, service pills
@@ -21,14 +21,15 @@ export const theme = {
     brandOrangeDark: '#E65520',
     brandOrangeLight: '#FF8A5C',
     brandOrangeSoft: '#FFF0EB',
-    
+
     // Semantic Colors
     primary: '#0B5ED7',
     secondary: '#FF6B35',
     success: '#28a745',
     warning: '#ffc107',
     danger: '#dc3545',
-    
+    info: '#17a2b8',
+
     // Neutrals
     textPrimary: '#333333',
     textSecondary: '#666666',
@@ -39,7 +40,7 @@ export const theme = {
     backgroundGray: '#fafafa',
     backgroundLight: '#f5f5f5',
   },
-  
+
   // Typography
   typography: {
     fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
@@ -60,7 +61,7 @@ export const theme = {
       bold: 700,
     },
   },
-  
+
   // Spacing
   spacing: {
     xs: 4,
@@ -72,16 +73,17 @@ export const theme = {
     xxl: 32,
     xxxl: 40,
   },
-  
+
   // Border Radius
   radius: {
     sm: 4,
     base: 6,
     md: 8,
     lg: 12,
+    xl: 16,
     full: 9999,
   },
-  
+
   // Shadows
   shadows: {
     sm: '0 1px 3px rgba(0,0,0,0.08)',
@@ -89,7 +91,7 @@ export const theme = {
     md: '0 4px 12px rgba(0,0,0,0.12)',
     lg: '0 8px 24px rgba(0,0,0,0.15)',
   },
-  
+
   // Transitions
   transitions: {
     fast: '0.15s ease',

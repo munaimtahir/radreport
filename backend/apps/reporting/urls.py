@@ -4,6 +4,7 @@ from .views import (
     ReportWorkItemViewSet, ReportProfileViewSet,
     ReportParameterViewSet, ServiceReportProfileViewSet
 )
+from .governance_views import TemplateGovernanceViewSet, TemplateAuditLogViewSet
 
 router = DefaultRouter()
 # We map 'workitems' to the viewset. 
@@ -18,6 +19,10 @@ router.register(r'workitems', ReportWorkItemViewSet, basename='reporting-workite
 router.register(r'profiles', ReportProfileViewSet, basename='reporting-profiles')
 router.register(r'parameters', ReportParameterViewSet, basename='reporting-parameters')
 router.register(r'service-profiles', ServiceReportProfileViewSet, basename='reporting-service-profiles')
+
+# Governance endpoints
+router.register(r'governance', TemplateGovernanceViewSet, basename='template-governance')
+router.register(r'audit-logs', TemplateAuditLogViewSet, basename='template-audit-logs')
 
 urlpatterns = [
     path('', include(router.urls)),

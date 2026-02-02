@@ -52,7 +52,7 @@ export default function ServiceTemplateLinksList() {
       setLoading(true);
       const [linksData, servicesData, profilesData] = await Promise.all([
         apiGet("/reporting/service-profiles/", token),
-        apiGet("/catalog/services/", token),
+        apiGet("/services/", token),
         apiGet("/reporting/profiles/", token),
       ]);
       setLinks(Array.isArray(linksData) ? linksData : linksData.results || []);
@@ -145,13 +145,13 @@ export default function ServiceTemplateLinksList() {
         <div style={{ display: "flex", gap: 12 }}>
           <Button
             variant="secondary"
-            onClick={() => downloadFile(`${API_BASE}/reporting/service-profiles/template-csv/`, "service_template_links_template.csv", token)}
+            onClick={() => downloadFile("/reporting/service-profiles/template-csv/", "service_template_links_template.csv", token)}
           >
             Download CSV Template
           </Button>
           <Button
             variant="secondary"
-            onClick={() => downloadFile(`${API_BASE}/reporting/service-profiles/export-csv/`, "service_template_links_export.csv", token)}
+            onClick={() => downloadFile("/reporting/service-profiles/export-csv/", "service_template_links_export.csv", token)}
           >
             Export CSV
           </Button>
@@ -163,7 +163,7 @@ export default function ServiceTemplateLinksList() {
 
       {error && <ErrorAlert message={error} />}
       {status && <div style={{ marginBottom: 12, color: theme.colors.textSecondary }}>{status}</div>}
-      
+
       <div style={{ backgroundColor: "white", borderRadius: theme.radius.lg, border: `1px solid ${theme.colors.border}`, padding: 20, marginBottom: 24 }}>
         <h3 style={{ marginTop: 0 }}>{form.id ? "Edit Link" : "Create Link"}</h3>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>

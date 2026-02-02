@@ -174,3 +174,63 @@ Source log: `/tmp/rad_audit/logs/legacy_trace.txt`
 /tmp/rad_audit/snapshots/usg_abd_case_09_payload.json
 /tmp/rad_audit/snapshots/usg_abd_case_10_payload.json
 ```
+
+## Phase G: Template Governance v1
+
+Implemented template governance to enable safe evolution of templates without breaking existing reports, with full audit trail.
+
+### Features
+
+1. **Versioning**
+   - Each template has a `version` field (int, default 1)
+   - `revision_of` FK points to the parent template when cloned
+   - Unique constraint on `(code, version)` ensures no duplicate versions
+
+2. **Status Lifecycle**
+   - `draft` - Template is being edited; not used for new reports
+   - `active` - Template is live; used for new reports
+   - `archived` - Template is retired; not used for new reports
+
+3. **Freeze Functionality**
+   - `is_frozen` boolean locks template from edits
+   - Prevents accidental changes to active templates
+
+4. **Governance Actions**
+   - **Clone**: Creates a new draft version with copied parameters and options
+   - **Activate**: Makes a draft active (archives other active versions with same code)
+   - **Freeze/Unfreeze**: Lock/unlock template for editing
+   - **Archive**: Soft-delete for non-active templates
+
+5. **Safety Guards**
+   - Active templates with reports cannot be edited (must clone first)
+   - Frozen templates cannot be edited
+   - Active templates cannot be deleted (must archive)
+   - Templates with reports cannot be deleted
+
+### API Endpoints
+
+#### Governance Actions (`/api/reporting/governance/{id}/`)
+- `POST /clone/` - Clone template to new draft version
+- `POST /activate/` - Activate draft version (requires `{"confirmation": "ACTIVATE"}`)
+- `POST /freeze/` - Freeze template
+- `POST /unfreeze/` - Unfreeze template
+- `POST /archive/` - Archive template (requires `{"confirmation": "ARCHIVE"}`)
+- `GET /versions/` - List all versions of a template
+
+#### Audit Logs (`/api/reporting/audit-logs/`)
+- `GET /` - List audit logs (filter by `?entity=`, `?action=`, `?actor=`)
+- `GET /export-csv/` - Export logs to CSV
+
+### Audit Log Actions
+- `clone`, `activate`, `freeze`, `unfreeze`, `archive`
+- `edit`, `create`, `delete_blocked`, `import`, `apply_baseline`
+
+### Frontend Updates
+- Enhanced TemplatesList with version/status display and governance actions
+- Added AuditLogsPage for viewing governance audit trail
+- Read-only mode in TemplateEditor for frozen/active-with-reports templates
+- Confirmation modals for destructive actions (activate, archive)
+
+### Test Coverage
+- `backend/apps/reporting/tests/test_governance.py`
+- Tests for clone, activate, freeze, archive, audit logs, and safety guards

@@ -17,24 +17,99 @@ from apps.workflow.models import ServiceVisitItem, ServiceVisit
 from .models import (
     ServiceReportProfile, ReportInstance, ReportValue,
     ReportProfile, ReportParameter, ReportParameterOption,
-    ReportParameterLibraryItem, ReportProfileParameterLink
+    ReportParameterLibraryItem, ReportProfileParameterLink,
+    TemplateAuditLog
 )
 from .serializers import (
     ReportProfileSerializer, ReportInstanceSerializer, ReportValueSerializer, ReportSaveSerializer,
-    ReportParameterSerializer, ServiceReportProfileSerializer
+    ReportParameterSerializer, ServiceReportProfileSerializer, ProfileListSerializer
 )
 from .services.narrative_v1 import generate_report_narrative
 from .pdf_engine.report_pdf import generate_report_pdf
 from .models import ReportPublishSnapshot, ReportActionLog
 from .utils import parse_bool
 from django.core.files.base import ContentFile
+from .governance_views import log_audit
 
 class ReportProfileViewSet(viewsets.ModelViewSet):
     queryset = ReportProfile.objects.all()
     serializer_class = ReportProfileSerializer
     permission_classes = [IsAuthenticated, permissions.IsAdminUser]
     search_fields = ["code", "name", "modality"]
-    filterset_fields = ["modality", "is_active"]
+    filterset_fields = ["modality", "is_active", "status", "is_frozen"]
+
+    def get_queryset(self):
+        """
+        Override to support filtering by status and code for version management.
+        """
+        queryset = super().get_queryset()
+        
+        # Filter by code (for viewing versions)
+        code = self.request.query_params.get("code")
+        if code:
+            queryset = queryset.filter(code=code)
+        
+        # Default to showing only active versions in list if not filtering
+        if self.action == "list" and not self.request.query_params.get("status"):
+            show_all = self.request.query_params.get("show_all", "").lower() == "true"
+            if not show_all:
+                queryset = queryset.filter(status="active")
+        
+        return queryset.order_by("code", "-version")
+
+    def get_serializer_class(self):
+        """Use lightweight serializer for list view."""
+        if self.action == "list":
+            return ProfileListSerializer
+        return super().get_serializer_class()
+
+    def perform_update(self, serializer):
+        """
+        Check if profile can be edited before updating.
+        Frozen or active profiles with reports cannot be edited.
+        """
+        instance = self.get_object()
+        can_edit, reason = instance.can_edit()
+        
+        if not can_edit:
+            raise exceptions.PermissionDenied(
+                f"Cannot edit this template: {reason}. "
+                "Clone the template to create a new draft version for editing."
+            )
+        
+        serializer.save()
+        
+        # Log audit for edits
+        log_audit(
+            self.request.user,
+            "edit",
+            "report_profile",
+            instance.id,
+            {"version": instance.version, "code": instance.code}
+        )
+
+    def perform_destroy(self, instance):
+        """
+        Prevent hard delete for production safety.
+        Only allow delete for non-active profiles without reports.
+        """
+        can_delete, reason = instance.can_delete()
+        
+        if not can_delete:
+            # Log the blocked delete attempt
+            log_audit(
+                self.request.user,
+                "delete_blocked",
+                "report_profile",
+                instance.id,
+                {"reason": reason, "version": instance.version, "code": instance.code}
+            )
+            raise exceptions.PermissionDenied(
+                f"Cannot delete this template: {reason}. "
+                "Archive the template instead."
+            )
+        
+        instance.delete()
 
     def _format_options(self, options):
         opts = []

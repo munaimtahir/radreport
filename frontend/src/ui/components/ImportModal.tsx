@@ -95,7 +95,7 @@ export default function ImportModal({ isOpen, onClose, onImportSuccess, importUr
         <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
           {errorMessage && <div style={{ color: theme.colors.danger, fontWeight: theme.typography.fontWeight.medium }}>{errorMessage}</div>}
           <input type="file" accept=".csv" onChange={handleFileChange} />
-          
+
           {file && (
             <Button onClick={handleDryRun} disabled={state === "validating"}>
               {state === "validating" ? "Validating..." : "Validate (Dry Run)"}
@@ -108,7 +108,7 @@ export default function ImportModal({ isOpen, onClose, onImportSuccess, importUr
               <p>To be Created: {dryRunResult.created}</p>
               <p>To be Updated: {dryRunResult.updated}</p>
               <p>Errors: {dryRunResult.errors?.length || 0}</p>
-              
+
               {dryRunResult.errors && dryRunResult.errors.length > 0 && (
                 <div style={{ maxHeight: 200, overflowY: "auto", border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.base, padding: 8 }}>
                   <table style={{ width: "100%", fontSize: 12 }}>
@@ -131,8 +131,8 @@ export default function ImportModal({ isOpen, onClose, onImportSuccess, importUr
               )}
 
               {dryRunResult.errors?.length === 0 && (
-                <Button onClick={handleApplyImport} disabled={state === "importing"} variant="primary" style={{ marginTop: 16 }}>
-                  {state === "importing" ? "Importing..." : "Apply Import"}
+                <Button onClick={handleApplyImport} variant="primary" style={{ marginTop: 16 }}>
+                  Apply Import
                 </Button>
               )}
             </div>
