@@ -23,7 +23,7 @@ class ReportParameterSerializer(serializers.ModelSerializer):
     class Meta:
         model = ReportParameter
         fields = [
-            "parameter_id", "profile", "section", "name", "type",
+            "parameter_id", "profile", "section", "name", "type", "parameter_type",
             "unit", "normal_value", "order", "is_required", "options",
             "slug", "sentence_template", "narrative_role", "omit_if_values", "join_label"
         ]
@@ -85,6 +85,7 @@ class ReportProfileSerializer(serializers.ModelSerializer):
                 "section": p.section,
                 "name": p.name,
                 "type": p.parameter_type,
+                "parameter_type": p.parameter_type,
                 "unit": p.unit,
                 "normal_value": p.normal_value,
                 "order": p.order,
@@ -115,6 +116,7 @@ class ReportProfileSerializer(serializers.ModelSerializer):
                 "section": link.section,
                 "name": overrides.get("name", item.name),
                 "type": item.parameter_type,
+                "parameter_type": item.parameter_type,
                 "unit": overrides.get("unit", item.unit),
                 "normal_value": overrides.get("normal_value", item.default_normal_value),
                 "order": link.order,

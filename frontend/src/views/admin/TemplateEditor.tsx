@@ -379,7 +379,10 @@ export default function TemplateEditor() {
 }
 
 function ParameterModal({ param, onClose, onSave, token }: { param: any, onClose: () => void, onSave: (p: any) => void, token: string | null }) {
-    const [data, setData] = useState({ ...param });
+    const [data, setData] = useState({
+        ...param,
+        parameter_type: param.parameter_type || param.type || "short_text"
+    });
     const [options, setOptions] = useState<any[]>(param.options || []);
 
     // If it's a link parameter (from library), editing might be restricted or different.

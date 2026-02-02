@@ -126,7 +126,9 @@ export default function ReportingPage() {
                 } else {
                     switch (param.type) {
                         case "short_text":
+                        case "text":
                         case "long_text":
+                        case "multiline":
                             initialValues[param.parameter_id] = "";
                             break;
                         case "number":
@@ -610,8 +612,8 @@ function renderParameter(
                 {param.unit && <span style={{ color: theme.colors.textTertiary, marginLeft: 4 }}>({param.unit})</span>}
                 {param.is_required && <span style={{ color: theme.colors.danger, marginLeft: 4 }}>*</span>}
             </label>
-            {param.type === "short_text" && <input type="text" value={value || ""} disabled={isReadOnly} onChange={e => onChange(param.parameter_id, e.target.value)} style={inputBaseStyle} />}
-            {param.type === "long_text" && <textarea value={value || ""} disabled={isReadOnly} onChange={e => onChange(param.parameter_id, e.target.value)} style={{ ...inputBaseStyle, minHeight: 100, resize: "vertical" }} />}
+            {(param.type === "short_text" || param.type === "text") && <input type="text" value={value || ""} disabled={isReadOnly} onChange={e => onChange(param.parameter_id, e.target.value)} style={inputBaseStyle} />}
+            {(param.type === "long_text" || param.type === "multiline") && <textarea value={value || ""} disabled={isReadOnly} onChange={e => onChange(param.parameter_id, e.target.value)} style={{ ...inputBaseStyle, minHeight: 100, resize: "vertical" }} />}
             {param.type === "number" && (
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                     <input type="number" value={value === null ? "" : value} disabled={isReadOnly} onChange={e => onChange(param.parameter_id, e.target.value === "" ? null : parseFloat(e.target.value))} style={{ ...inputBaseStyle, width: 200 }} />

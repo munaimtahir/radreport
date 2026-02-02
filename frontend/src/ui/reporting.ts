@@ -10,7 +10,7 @@ export interface ReportParameter {
     id: string; // Internal UUID
     parameter_id: string; // The UUID that should be used for value mapping as per spec
     name: string;
-    type: "number" | "dropdown" | "checklist" | "boolean" | "short_text" | "long_text" | "heading" | "separator";
+    type: "number" | "dropdown" | "checklist" | "boolean" | "short_text" | "long_text" | "heading" | "separator" | "text" | "multiline";
     unit: string | null;
     normal_value: string | null;
     is_required: boolean;
