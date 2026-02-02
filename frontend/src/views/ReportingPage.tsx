@@ -259,9 +259,12 @@ export default function ReportingPage() {
         if (!id) return;
         try {
             setSaving(true);
-            await verifyReport(id, "", token);
+            const res = await verifyReport(id, "", token);
             setStatus("verified");
-            setSuccess("Report verified successfully. Ready to publish.");
+            setIsPublished(true);
+            setSuccess("Report verified and published successfully.");
+            // Reload to get new version/history
+            await loadData();
         } catch (e: any) {
             setError(e.message || "Verification failed");
         } finally {
