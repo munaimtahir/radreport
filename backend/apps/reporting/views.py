@@ -967,7 +967,7 @@ class ServiceReportTemplateV2ViewSet(viewsets.ModelViewSet):
             request.user,
             "edit",
             "service_template_v2",
-            link.id,
+            str(link.id),
             {
                 "service_id": str(link.service_id),
                 "template_id": str(link.template_id),
