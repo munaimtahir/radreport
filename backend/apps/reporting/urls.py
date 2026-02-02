@@ -3,7 +3,8 @@ from rest_framework.routers import DefaultRouter
 from .views import (
     ReportWorkItemViewSet, ReportProfileViewSet,
     ReportParameterViewSet, ServiceReportProfileViewSet,
-    ReportParameterLibraryItemViewSet
+    ReportParameterLibraryItemViewSet,
+    ReportTemplateV2ViewSet, ServiceReportTemplateV2ViewSet
 )
 from .governance_views import TemplateGovernanceViewSet, TemplateAuditLogViewSet
 
@@ -18,8 +19,10 @@ router = DefaultRouter()
 
 router.register(r'workitems', ReportWorkItemViewSet, basename='reporting-workitems')
 router.register(r'profiles', ReportProfileViewSet, basename='reporting-profiles')
+router.register(r'templates-v2', ReportTemplateV2ViewSet, basename='reporting-templates-v2')
 router.register(r'parameters', ReportParameterViewSet, basename='reporting-parameters')
 router.register(r'service-profiles', ServiceReportProfileViewSet, basename='reporting-service-profiles')
+router.register(r'service-templates-v2', ServiceReportTemplateV2ViewSet, basename='reporting-service-templates-v2')
 router.register(r'parameter-library', ReportParameterLibraryItemViewSet, basename='reporting-parameter-library')
 
 # Governance endpoints

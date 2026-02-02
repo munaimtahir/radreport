@@ -429,6 +429,80 @@ class ReportProfileViewSet(viewsets.ModelViewSet):
         return Response({"profiles_created": created_profiles, "profiles_updated": updated_profiles})
 
 
+class ReportTemplateV2ViewSet(viewsets.ModelViewSet):
+    queryset = ReportTemplateV2.objects.all()
+    serializer_class = ReportTemplateV2Serializer
+    permission_classes = [IsAuthenticated, permissions.IsAdminUser]
+    search_fields = ["code", "name", "modality"]
+    filterset_fields = ["code", "modality", "status"]
+
+    def perform_create(self, serializer):
+        instance = serializer.save(created_by=self.request.user)
+        log_audit(
+            self.request.user,
+            "create",
+            "report_template_v2",
+            instance.id,
+            {"code": instance.code, "version": instance.version},
+        )
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        log_audit(
+            self.request.user,
+            "edit",
+            "report_template_v2",
+            instance.id,
+            {"code": instance.code, "version": instance.version},
+        )
+
+    @action(detail=True, methods=["post"], url_path="activate")
+    def activate(self, request, pk=None):
+        template = self.get_object()
+        force = parse_bool(request.query_params.get("force", "false"))
+        allow_reactivate = parse_bool(request.query_params.get("allow_reactivate", "false"))
+
+        if template.status == "archived" and not allow_reactivate:
+            return Response(
+                {"detail": "Archived templates cannot be reactivated without allow_reactivate=1."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        conflicts = ReportTemplateV2.objects.filter(
+            code=template.code,
+            modality=template.modality,
+            status="active",
+        ).exclude(id=template.id)
+
+        if conflicts.exists() and not force:
+            return Response(
+                {"detail": "Another active template exists for this code and modality."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        with transaction.atomic():
+            if conflicts.exists() and force:
+                conflicts.update(status="archived")
+            serializer = self.get_serializer(
+                template,
+                data={"status": "active"},
+                partial=True,
+                context={"allow_reactivate": allow_reactivate},
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+
+        log_audit(
+            request.user,
+            "activate",
+            "report_template_v2",
+            template.id,
+            {"code": template.code, "version": template.version, "force": force},
+        )
+
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
 class ReportParameterViewSet(viewsets.ModelViewSet):
     queryset = ReportParameter.objects.all()
     serializer_class = ReportParameterSerializer
@@ -836,6 +910,74 @@ class ServiceReportProfileViewSet(viewsets.ModelViewSet):
                 return Response({"created": 0, "updated": 0, "errors": errors}, status=status.HTTP_400_BAD_REQUEST)
 
         return Response({"created": created, "updated": updated, "errors": None})
+
+
+class ServiceReportTemplateV2ViewSet(viewsets.ModelViewSet):
+    queryset = ServiceReportTemplateV2.objects.all()
+    serializer_class = ServiceReportTemplateV2Serializer
+    permission_classes = [IsAuthenticated, permissions.IsAdminUser]
+    filterset_fields = ["service", "template", "is_active", "is_default"]
+
+    def perform_create(self, serializer):
+        instance = serializer.save()
+        if instance.is_default and instance.is_active:
+            ServiceReportTemplateV2.objects.filter(
+                service=instance.service,
+                is_default=True,
+            ).exclude(id=instance.id).update(is_default=False)
+        log_audit(
+            self.request.user,
+            "create",
+            "service_template_v2",
+            instance.id,
+            {"service_id": str(instance.service_id), "template_id": str(instance.template_id)},
+        )
+
+    def perform_update(self, serializer):
+        instance = serializer.save()
+        if instance.is_default and instance.is_active:
+            ServiceReportTemplateV2.objects.filter(
+                service=instance.service,
+                is_default=True,
+            ).exclude(id=instance.id).update(is_default=False)
+        log_audit(
+            self.request.user,
+            "edit",
+            "service_template_v2",
+            instance.id,
+            {"service_id": str(instance.service_id), "template_id": str(instance.template_id)},
+        )
+
+    @action(detail=True, methods=["post"], url_path="set-default")
+    def set_default(self, request, pk=None):
+        link = self.get_object()
+        if not link.is_active:
+            return Response(
+                {"detail": "Inactive template mappings cannot be default."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        with transaction.atomic():
+            ServiceReportTemplateV2.objects.filter(
+                service=link.service,
+                is_default=True,
+            ).exclude(id=link.id).update(is_default=False)
+            link.is_default = True
+            link.save(update_fields=["is_default", "updated_at"])
+
+        log_audit(
+            request.user,
+            "edit",
+            "service_template_v2",
+            str(link.id),
+            {
+                "service_id": str(link.service_id),
+                "template_id": str(link.template_id),
+                "set_default": True,
+            },
+        )
+        serializer = self.get_serializer(link)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
 
 class ReportWorkItemViewSet(viewsets.ViewSet):
     """
