@@ -24,7 +24,8 @@ from .models import (
 from .serializers import (
     ReportProfileSerializer, ReportInstanceSerializer, ReportValueSerializer, ReportSaveSerializer,
     ReportParameterSerializer, ServiceReportProfileSerializer, ProfileListSerializer,
-    ReportParameterLibraryItemSerializer, ReportInstanceV2Serializer
+    ReportParameterLibraryItemSerializer, ReportInstanceV2Serializer,
+    ReportTemplateV2Serializer, ServiceReportTemplateV2Serializer,
 )
 
 class ReportParameterLibraryItemViewSet(viewsets.ModelViewSet):
@@ -437,13 +438,13 @@ class ReportTemplateV2ViewSet(viewsets.ModelViewSet):
     filterset_fields = ["code", "modality", "status"]
 
     def perform_create(self, serializer):
-        instance = serializer.save(created_by=self.request.user)
+        instance = serializer.save()
         log_audit(
             self.request.user,
             "create",
             "report_template_v2",
             instance.id,
-            {"code": instance.code, "version": instance.version},
+            {"code": instance.code},
         )
 
     def perform_update(self, serializer):
@@ -453,7 +454,7 @@ class ReportTemplateV2ViewSet(viewsets.ModelViewSet):
             "edit",
             "report_template_v2",
             instance.id,
-            {"code": instance.code, "version": instance.version},
+            {"code": instance.code},
         )
 
     @action(detail=True, methods=["post"], url_path="activate")
@@ -497,7 +498,7 @@ class ReportTemplateV2ViewSet(viewsets.ModelViewSet):
             "activate",
             "report_template_v2",
             template.id,
-            {"code": template.code, "version": template.version, "force": force},
+            {"code": template.code, "force": force},
         )
 
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -962,7 +963,7 @@ class ServiceReportTemplateV2ViewSet(viewsets.ModelViewSet):
                 is_default=True,
             ).exclude(id=link.id).update(is_default=False)
             link.is_default = True
-            link.save(update_fields=["is_default", "updated_at"])
+            link.save(update_fields=["is_default"])
 
         log_audit(
             request.user,
@@ -1056,23 +1057,29 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             return Response({
                 "schema_version": "v2",
                 "values_json": serializer.data["values_json"],
+                "status": instance.status,
+                "last_saved_at": instance.updated_at,
             })
 
         instance = self._get_instance(item)
-        
+
         if not instance:
             return Response({
                 "schema_version": "v1",
                 "status": "draft",
-                "values": []
+                "values": [],
             })
-        
+
         serializer = ReportValueSerializer(instance.values.all(), many=True)
+        last_published = instance.publish_snapshots.order_by("-version").first()
         return Response({
             "schema_version": "v1",
             "status": instance.status,
             "is_published": instance.is_published,
-            "values": serializer.data
+            "values": serializer.data,
+            "last_saved_at": instance.updated_at,
+            "narrative_updated_at": instance.narrative_updated_at,
+            "last_published_at": last_published.published_at if last_published else None,
         })
 
     @action(detail=True, methods=["post"])

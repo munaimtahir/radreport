@@ -1,8 +1,9 @@
 from rest_framework import serializers
 from .models import (
-    ReportProfile, ReportParameter, ReportParameterOption, 
+    ReportProfile, ReportParameter, ReportParameterOption,
     ReportInstance, ReportValue, ServiceReportProfile, TemplateAuditLog,
-    ReportParameterLibraryItem, ReportInstanceV2
+    ReportParameterLibraryItem, ReportInstanceV2,
+    ReportTemplateV2, ServiceReportTemplateV2,
 )
 from apps.workflow.models import ServiceVisitItem
 
@@ -26,11 +27,11 @@ class ReportTemplateV2Serializer(serializers.ModelSerializer):
     class Meta:
         model = ReportTemplateV2
         fields = [
-            "id", "code", "name", "modality", "version", "status",
-            "json_schema", "ui_schema", "narrative_rules", "meta",
-            "created_by", "created_at", "updated_at",
+            "id", "code", "name", "modality", "status",
+            "json_schema", "ui_schema",
+            "created_at", "updated_at",
         ]
-        read_only_fields = ["created_by", "created_at", "updated_at"]
+        read_only_fields = ["created_at", "updated_at"]
 
     def validate_json_schema(self, value):
         if not isinstance(value, dict):
@@ -70,9 +71,9 @@ class ServiceReportTemplateV2Serializer(serializers.ModelSerializer):
         model = ServiceReportTemplateV2
         fields = [
             "id", "service", "template", "is_default", "is_active",
-            "created_at", "updated_at",
+            "created_at",
         ]
-        read_only_fields = ["created_at", "updated_at"]
+        read_only_fields = ["created_at"]
 
     def validate(self, attrs):
         is_default = attrs.get("is_default", getattr(self.instance, "is_default", False))

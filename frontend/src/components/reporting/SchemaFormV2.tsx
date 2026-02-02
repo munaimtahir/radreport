@@ -15,16 +15,19 @@ interface SchemaFormV2Props {
 interface SectionDefinition {
   title: string;
   fields: string[];
+  widgets?: Record<string, string>;
 }
 
 function getSections(uiSchema?: Record<string, any> | null): SectionDefinition[] {
   if (!uiSchema) return [];
-  const sections = Array.isArray(uiSchema.sections) ? uiSchema.sections : [];
-  return sections
-    .filter((section) => section && Array.isArray(section.fields))
-    .map((section) => ({
+  const raw =
+    Array.isArray(uiSchema.groups) ? uiSchema.groups : Array.isArray(uiSchema.sections) ? uiSchema.sections : [];
+  return raw
+    .filter((section: any) => section && Array.isArray(section.fields))
+    .map((section: any) => ({
       title: section.title || "Section",
       fields: section.fields,
+      widgets: section.widgets || {},
     }));
 }
 
@@ -61,10 +64,10 @@ export default function SchemaFormV2({
     });
   };
 
-  const renderField = (field: string, schema: Record<string, any>) => {
+  const renderField = (field: string, schema: Record<string, any>, widgetOverride?: string | null) => {
     const label = schema.title || field;
     const isRequired = requiredSet.has(field);
-    const widget = getWidget(uiSchema, field);
+    const widget = widgetOverride ?? getWidget(uiSchema, field);
     const fieldValue = values[field] ?? "";
     const enumValues = schema.enum as string[] | undefined;
 
@@ -162,9 +165,9 @@ export default function SchemaFormV2({
     );
   };
 
-  const renderSection = (title: string, fields: string[]) => (
+  const renderSection = (section: SectionDefinition) => (
     <div
-      key={title}
+      key={section.title}
       style={{
         backgroundColor: "white",
         borderRadius: theme.radius.lg,
@@ -181,11 +184,13 @@ export default function SchemaFormV2({
           fontSize: 16,
         }}
       >
-        {title}
+        {section.title}
       </div>
       <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 20 }}>
-        {fields.map((field) => (
-          <div key={field}>{renderField(field, properties[field] || {})}</div>
+        {section.fields.map((field) => (
+          <div key={field}>
+            {renderField(field, properties[field] || {}, section.widgets?.[field])}
+          </div>
         ))}
       </div>
     </div>
@@ -197,8 +202,8 @@ export default function SchemaFormV2({
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
-      {sectionDefs.map((section) => renderSection(section.title, section.fields))}
-      {ungroupedFields.length > 0 && renderSection("Fields", ungroupedFields)}
+      {sectionDefs.map((section) => renderSection(section))}
+      {ungroupedFields.length > 0 && renderSection({ title: "Fields", fields: ungroupedFields })}
       {onSave && (
         <div style={{ display: "flex", justifyContent: "flex-end" }}>
           <Button variant="primary" onClick={onSave} disabled={saving}>

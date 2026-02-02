@@ -26,16 +26,14 @@ class ReportTemplateV2APITestCase(TestCase):
             name="USG Test",
         )
 
-    def _create_template(self, code, status="draft", version=1):
+    def _create_template(self, code, status="draft"):
         payload = {
             "code": code,
             "name": f"{code} Template",
             "modality": "USG",
             "status": status,
-            "version": version,
             "json_schema": {"type": "object"},
             "ui_schema": {},
-            "narrative_rules": {},
         }
         response = self.client.post("/api/reporting/templates-v2/", payload, format="json")
         self.assertEqual(response.status_code, http_status.HTTP_201_CREATED)
@@ -85,7 +83,6 @@ class ReportTemplateV2APITestCase(TestCase):
             name="Active Template",
             modality="USG",
             status="active",
-            version=1,
             json_schema={"type": "object"},
         )
         draft = ReportTemplateV2.objects.create(
@@ -93,7 +90,6 @@ class ReportTemplateV2APITestCase(TestCase):
             name="Draft Template",
             modality="USG",
             status="draft",
-            version=2,
             json_schema={"type": "object"},
         )
 

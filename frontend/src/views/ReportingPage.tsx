@@ -181,7 +181,7 @@ export default function ReportingPage() {
         }
     };
 
-    const preparePayload = () => {
+    const preparePayload = (): { values: ReportValueEntry[] } | { schema_version: "v2"; values_json: Record<string, any> } => {
         if (isSchemaV2) {
             return { schema_version: "v2", values_json: valuesJson };
         }
@@ -342,14 +342,15 @@ export default function ReportingPage() {
 
     const groupedParameters = useMemo(() => {
         if (!schema || isSchemaV2) return [];
+        const v1Schema = schema as ReportSchema;
         const sections: Record<string, ReportParameter[]> = {};
-        schema.parameters.forEach(p => {
+        v1Schema.parameters.forEach((p: ReportParameter) => {
             const sec = p.section || "General";
             if (!sections[sec]) sections[sec] = [];
             sections[sec].push(p);
         });
         return Object.entries(sections);
-    }, [schema]);
+    }, [schema, isSchemaV2]);
 
     if (loading) return <div style={{ padding: 40, textAlign: "center" }}>Loading report...</div>;
     if (!schema) return <div style={{ padding: 40, textAlign: "center" }}><ErrorAlert message={error || "Error loading."} /></div>;
