@@ -156,13 +156,13 @@ class Stage5ReportingTests(TestCase):
         
         # Schema endpoint
         url_schema = f"/api/reporting/workitems/{self.item.id}/schema/"
-        with self.assertNumQueries(4): # 1 auth, 1 item/service, 1 profile, 1 params+options prefetch
+        with self.assertNumQueries(5): # 1 auth, 1 item/service, 1 v2 lookup, 1 profile, 1 params+options prefetch
             # Adjusted count might vary based on middleware but should be low and constant
             self.client.get(url_schema)
             
         # Values endpoint
         url_values = f"/api/reporting/workitems/{self.item.id}/values/"
-        with self.assertNumQueries(4):
+        with self.assertNumQueries(5):
             self.client.get(url_values)
 
     def test_admin_rebuild_tools(self):
