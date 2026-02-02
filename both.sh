@@ -28,9 +28,9 @@ fi
 
 # Ensure database is running (don't stop it)
 echo "Checking database service..."
-if ! docker compose ps db | grep -q "Up"; then
+if ! docker compose -f docker-compose.yml ps db | grep -q "Up"; then
     echo "Starting database service..."
-    docker compose up -d db
+    docker compose -f docker-compose.yml up -d db
     echo "Waiting for database to be ready..."
     sleep 5
 else
@@ -39,11 +39,11 @@ fi
 
 # Stop frontend and backend services only (not the database)
 echo "Stopping frontend and backend services..."
-docker compose stop frontend backend || true
+docker compose -f docker-compose.yml stop frontend backend || true
 
 # Remove containers if they exist
 echo "Removing containers..."
-docker compose rm -f frontend backend || true
+docker compose -f docker-compose.yml rm -f frontend backend || true
 
 # Remove existing images to force rebuild
 echo "Removing existing images..."
@@ -53,11 +53,11 @@ docker rmi radreport-backend 2>/dev/null || true
 # Rebuild both images without cache
 echo "Rebuilding frontend and backend images (no cache)..."
 echo "This will take a few minutes..."
-docker compose build --no-cache frontend backend
+docker compose -f docker-compose.yml build --no-cache frontend backend
 
 # Start both services (backend depends on db)
 echo "Starting frontend and backend services..."
-docker compose up -d frontend backend
+docker compose -f docker-compose.yml up -d frontend backend
 
 # Wait for services to start and backend to run migrations
 echo "Waiting for services to initialize..."
@@ -105,7 +105,7 @@ echo "   - Always safe to redeploy (no credential loss)"
 echo "=========================================="
 echo "Full deployment complete!"
 echo "Checking service status..."
-docker compose ps frontend backend db
+docker compose -f docker-compose.yml ps frontend backend db
 
 # Health checks
 echo "=========================================="

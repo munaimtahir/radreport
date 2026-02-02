@@ -19,11 +19,11 @@ cd "$SCRIPT_DIR"
 
 # Stop the frontend service
 echo "Stopping frontend service..."
-docker compose stop frontend || true
+docker compose -f docker-compose.yml stop frontend || true
 
 # Remove the frontend container if it exists
 echo "Removing frontend container..."
-docker compose rm -f frontend || true
+docker compose -f docker-compose.yml rm -f frontend || true
 
 # Remove the frontend image to force rebuild
 echo "Removing existing frontend image..."
@@ -31,11 +31,11 @@ docker rmi radreport-frontend 2>/dev/null || true
 
 # Rebuild the frontend image without cache
 echo "Rebuilding frontend image (no cache)..."
-docker compose build --no-cache frontend
+docker compose -f docker-compose.yml build --no-cache frontend
 
 # Start the frontend service
 echo "Starting frontend service..."
-docker compose up -d frontend
+docker compose -f docker-compose.yml up -d frontend
 
 # Wait a moment for the service to start
 echo "Waiting for frontend to start..."
@@ -51,7 +51,7 @@ docker compose logs --tail=30 frontend
 echo "=========================================="
 echo "Frontend deployment complete!"
 echo "Checking service status..."
-docker compose ps frontend
+docker compose -f docker-compose.yml ps frontend
 
 # Health check
 echo "=========================================="
