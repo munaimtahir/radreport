@@ -10,6 +10,7 @@ import {
     generateNarrative,
     getNarrative,
     ReportSchema,
+    ReportSchemaV2,
     ReportParameter,
     ReportValueEntry,
     NarrativeResponse,
@@ -21,6 +22,7 @@ import {
     fetchPublishedPdf,
     checkIntegrity
 } from "../ui/reporting";
+import SchemaFormV2 from "../components/reporting/SchemaFormV2";
 import Button from "../ui/components/Button";
 import ErrorAlert from "../ui/components/ErrorAlert";
 import SuccessAlert from "../ui/components/SuccessAlert";
@@ -30,8 +32,9 @@ export default function ReportingPage() {
     const { token, user } = useAuth(); // Assume user object has groups/permissions
     const navigate = useNavigate();
 
-    const [schema, setSchema] = useState<ReportSchema | null>(null);
+    const [schema, setSchema] = useState<ReportSchema | ReportSchemaV2 | null>(null);
     const [valuesByParamId, setValuesByParamId] = useState<Record<string, any>>({});
+    const [valuesJson, setValuesJson] = useState<Record<string, any>>({});
     const [status, setStatus] = useState<"draft" | "submitted" | "verified">("draft");
     const [isPublished, setIsPublished] = useState(false);
     const [loading, setLoading] = useState(true);
@@ -54,6 +57,8 @@ export default function ReportingPage() {
     const [publishNotes, setPublishNotes] = useState("");
     const [publishConfirm, setPublishConfirm] = useState("");
     const [publishHistory, setPublishHistory] = useState<any[]>([]);
+
+    const isSchemaV2 = (schema as ReportSchemaV2 | null)?.schema_version === "v2";
 
     // Stage 2: Narrative State
     const [narrative, setNarrative] = useState<NarrativeResponse['narrative'] | null>(null);
@@ -96,61 +101,67 @@ export default function ReportingPage() {
                 });
             }
 
-            // Defaulting Logic
-            const initialValues: Record<string, any> = {};
-            const existingValuesMap: Record<string, any> = {};
-            (valuesResponse.values || []).forEach(v => {
-                let val = v.value;
-                if (typeof val === "string" && (val.startsWith("[") || val.startsWith("{"))) {
-                    try { val = JSON.parse(val); } catch (e) { }
-                }
-                existingValuesMap[v.parameter_id] = val;
-            });
+            if ("schema_version" in schemaData && schemaData.schema_version === "v2") {
+                setValuesJson(valuesResponse.values_json || {});
+                setValuesByParamId({});
+            } else {
+                setValuesJson({});
+                // Defaulting Logic
+                const initialValues: Record<string, any> = {};
+                const existingValuesMap: Record<string, any> = {};
+                (valuesResponse.values || []).forEach(v => {
+                    let val = v.value;
+                    if (typeof val === "string" && (val.startsWith("[") || val.startsWith("{"))) {
+                        try { val = JSON.parse(val); } catch (e) { }
+                    }
+                    existingValuesMap[v.parameter_id] = val;
+                });
 
-            schemaData.parameters.forEach((param: ReportParameter) => {
-                const existingValue = existingValuesMap[param.parameter_id];
-                if (existingValue !== undefined && existingValue !== null) {
-                    initialValues[param.parameter_id] = existingValue;
-                    return;
-                }
-                if (param.normal_value !== null && param.normal_value !== undefined) {
-                    if (param.type === "boolean") {
-                        initialValues[param.parameter_id] = param.normal_value.toLowerCase() === "true" || param.normal_value === "1";
-                    } else if (param.type === "checklist") {
-                        initialValues[param.parameter_id] = param.normal_value.split(",").map(s => s.trim()).filter(Boolean);
-                    } else if (param.type === "number") {
-                        initialValues[param.parameter_id] = parseFloat(param.normal_value);
+                (schemaData as ReportSchema).parameters.forEach((param: ReportParameter) => {
+                    const existingValue = existingValuesMap[param.parameter_id];
+                    if (existingValue !== undefined && existingValue !== null) {
+                        initialValues[param.parameter_id] = existingValue;
+                        return;
+                    }
+                    if (param.normal_value !== null && param.normal_value !== undefined) {
+                        if (param.type === "boolean") {
+                            initialValues[param.parameter_id] = param.normal_value.toLowerCase() === "true" || param.normal_value === "1";
+                        } else if (param.type === "checklist") {
+                            initialValues[param.parameter_id] = param.normal_value.split(",").map(s => s.trim()).filter(Boolean);
+                        } else if (param.type === "number") {
+                            initialValues[param.parameter_id] = parseFloat(param.normal_value);
+                        } else {
+                            initialValues[param.parameter_id] = param.normal_value;
+                        }
                     } else {
-                        initialValues[param.parameter_id] = param.normal_value;
+                        switch (param.type) {
+                            case "short_text":
+                            case "text":
+                            case "long_text":
+                            case "multiline":
+                                initialValues[param.parameter_id] = "";
+                                break;
+                            case "number":
+                                initialValues[param.parameter_id] = null;
+                                break;
+                            case "boolean":
+                                initialValues[param.parameter_id] = false;
+                                break;
+                            case "dropdown":
+                                const hasNA = param.options.some(opt => opt.value === "na");
+                                initialValues[param.parameter_id] = hasNA ? "na" : "";
+                                break;
+                            case "checklist":
+                                initialValues[param.parameter_id] = [];
+                                break;
+                            default:
+                                initialValues[param.parameter_id] = "";
+                        }
                     }
-                } else {
-                    switch (param.type) {
-                        case "short_text":
-                        case "text":
-                        case "long_text":
-                        case "multiline":
-                            initialValues[param.parameter_id] = "";
-                            break;
-                        case "number":
-                            initialValues[param.parameter_id] = null;
-                            break;
-                        case "boolean":
-                            initialValues[param.parameter_id] = false;
-                            break;
-                        case "dropdown":
-                            const hasNA = param.options.some(opt => opt.value === "na");
-                            initialValues[param.parameter_id] = hasNA ? "na" : "";
-                            break;
-                        case "checklist":
-                            initialValues[param.parameter_id] = [];
-                            break;
-                        default:
-                            initialValues[param.parameter_id] = "";
-                    }
-                }
-            });
+                });
 
-            setValuesByParamId(initialValues);
+                setValuesByParamId(initialValues);
+            }
         } catch (e: any) {
             setError(e.message || "Failed to load report data");
         } finally {
@@ -171,6 +182,9 @@ export default function ReportingPage() {
     };
 
     const preparePayload = () => {
+        if (isSchemaV2) {
+            return { schema_version: "v2", values_json: valuesJson };
+        }
         const values: ReportValueEntry[] = Object.entries(valuesByParamId).map(([paramId, value]) => ({
             parameter_id: paramId,
             value: value
@@ -327,7 +341,7 @@ export default function ReportingPage() {
     };
 
     const groupedParameters = useMemo(() => {
-        if (!schema) return [];
+        if (!schema || isSchemaV2) return [];
         const sections: Record<string, ReportParameter[]> = {};
         schema.parameters.forEach(p => {
             const sec = p.section || "General";
@@ -406,18 +420,30 @@ export default function ReportingPage() {
 
             {/* Dynamic Form */}
             <div style={{ display: "flex", flexDirection: "column", gap: 32 }}>
-                {groupedParameters.map(([sectionName, params]) => (
-                    <div key={sectionName} style={{ backgroundColor: "white", borderRadius: theme.radius.lg, boxShadow: theme.shadows.sm, border: `1px solid ${theme.colors.border}`, overflow: "hidden" }}>
-                        <div style={{ padding: "16px 24px", backgroundColor: theme.colors.backgroundGray, borderBottom: `1px solid ${theme.colors.border}`, fontWeight: 600, fontSize: 16 }}>{sectionName}</div>
-                        <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 20 }}>
-                            {params.map(param => (
-                                <div key={param.parameter_id}>
-                                    {renderParameter(param, valuesByParamId[param.parameter_id], handleValueChange, isReadOnly, validationErrors[param.parameter_id])}
-                                </div>
-                            ))}
+                {isSchemaV2 ? (
+                    <SchemaFormV2
+                        jsonSchema={(schema as ReportSchemaV2).json_schema}
+                        uiSchema={(schema as ReportSchemaV2).ui_schema}
+                        values={valuesJson}
+                        onChange={setValuesJson}
+                        onSave={status === "draft" ? handleSaveDraft : undefined}
+                        saving={saving}
+                        isReadOnly={isReadOnly}
+                    />
+                ) : (
+                    groupedParameters.map(([sectionName, params]) => (
+                        <div key={sectionName} style={{ backgroundColor: "white", borderRadius: theme.radius.lg, boxShadow: theme.shadows.sm, border: `1px solid ${theme.colors.border}`, overflow: "hidden" }}>
+                            <div style={{ padding: "16px 24px", backgroundColor: theme.colors.backgroundGray, borderBottom: `1px solid ${theme.colors.border}`, fontWeight: 600, fontSize: 16 }}>{sectionName}</div>
+                            <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 20 }}>
+                                {params.map(param => (
+                                    <div key={param.parameter_id}>
+                                        {renderParameter(param, valuesByParamId[param.parameter_id], handleValueChange, isReadOnly, validationErrors[param.parameter_id])}
+                                    </div>
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    ))
+                )}
             </div>
 
             {/* Narrative Preview */}
