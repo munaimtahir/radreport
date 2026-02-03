@@ -1,6 +1,8 @@
-# Phase 1 Reporting V2 — Manual Smoke Steps
+# Phase 1 & 2 Reporting V2 — Manual Smoke Steps
 
 This document describes manual smoke steps to verify Reporting V2 works end-to-end in dual mode: services with an active + default V2 mapping use SchemaFormV2 and JSON values; all other services continue to use V1 reporting unchanged.
+
+**Phase 2 additions:** V2 PDF generation, Publish snapshots, and basic Narrative rules execution.
 
 ## Prerequisites
 
@@ -132,10 +134,136 @@ If you use a baseline pack, apply it so that services (e.g. USG Abdomen, USG KUB
   - V2: `{ schema_version: "v2", template, json_schema, ui_schema }`  
   - V1: `{ schema_version: "v1", ...profile schema... }`
 - **Values:** `GET /api/reporting/workitems/{id}/values/`  
-  - V2: `{ schema_version: "v2", values_json, status, last_saved_at }` (creates ReportInstanceV2 if missing)  
+  - V2: `{ schema_version: "v2", values_json, status, last_saved_at, is_published, last_published_at }` (creates ReportInstanceV2 if missing)  
   - V1: `{ schema_version: "v1", status, values, ... }`
+- **Report PDF (preview):** `GET /api/reporting/workitems/{id}/report-pdf/` — V2: on-the-fly from draft; V1: existing.
+- **Publish:** `POST /api/reporting/workitems/{id}/publish/` — V2: creates ReportPublishSnapshotV2; V1: existing.
+- **Published PDF:** `GET /api/reporting/workitems/{id}/published-pdf/` (optional `?version=N`) — V2: latest if no version; V1: version required.
+- **Publish history:** `GET /api/reporting/workitems/{id}/publish-history/` — dual-mode (V1/V2).
 - **Save:** `POST /api/reporting/workitems/{id}/save/`  
   - V2: `{ schema_version: "v2", values_json }`  
   - V1: `{ values: [ { parameter_id, value } ] }`
 
 V2 is used only when the service has a mapping with **is_active=True**, **is_default=True**, and **template status="active"**.
+
+---
+
+## Phase 2: V2 PDF Generation + Publish + Narrative
+
+Phase 2 adds V2 PDF generation, publish snapshots, and basic narrative rules execution.
+
+### 8. Add narrative rules to TemplateV2 (optional)
+
+1. Go to **Settings → Templates V2** and edit your V2 template.
+2. Add **Narrative Rules** (JSON format):
+
+```json
+{
+  "sections": [
+    {
+      "title": "Liver",
+      "lines": [
+        "Liver size: {{liver_size_cm}} cm",
+        "Echotexture: {{liver_echo}}"
+      ]
+    },
+    {
+      "title": "Gall Bladder",
+      "lines": ["Stones: {{gb_stones}}"]
+    }
+  ],
+  "impression": ["{{comments}}"]
+}
+```
+
+3. Save the template.
+4. **Note:** If no narrative rules are provided, the PDF will show values as a table instead.
+
+### 9. Preview PDF for V2 report (draft)
+
+1. Open a V2 work item report (from step 5).
+2. Fill in some values and click **Save Draft**.
+3. Click **Preview PDF** button.
+4. **Confirm:**
+   - PDF opens in a new tab.
+   - PDF shows patient demographics, service name, and report values.
+   - If narrative rules exist, PDF shows narrative sections; otherwise shows values table.
+   - PDF has facility branding (logo, name, address from ReportingOrganizationConfig).
+
+### 10. Publish V2 report
+
+1. With the same V2 work item open, click **Publish** button.
+2. **Confirm:**
+   - Success message appears.
+   - Response includes: `status: "published"`, `version: 1`, `content_hash`, `snapshot_id`.
+3. **Backend verification:**
+   - Check that `ReportPublishSnapshotV2` record was created with:
+     - `version = 1`
+     - `values_json` = saved values
+     - `narrative_json` = generated narrative (if rules exist)
+     - `pdf_file` = stored PDF artifact
+     - `content_hash` = SHA256 hash (64 chars)
+
+### 11. View published PDF
+
+1. After publishing, click **View Published PDF** (or use endpoint `GET /api/reporting/workitems/{id}/published-pdf/`).
+2. **Confirm:**
+   - PDF opens showing the published snapshot.
+   - PDF matches the values that were saved at publish time.
+   - PDF filename includes version number (e.g., `Report_V2_VISIT001_v1.pdf`).
+
+### 12. Republish with same values
+
+1. Click **Publish** again without changing values.
+2. **Confirm:**
+   - New snapshot created with `version = 2`.
+   - `content_hash` is the same as version 1 (same values = same hash).
+   - Both snapshots are stored independently.
+
+### 13. Verify V1 publish/PDF still works unchanged
+
+1. Open a work item for a service that uses **V1** (no V2 mapping).
+2. Fill values, submit, verify, and publish.
+3. **Confirm:**
+   - V1 publish flow works as before.
+   - V1 PDF generation works as before.
+   - V1 `ReportPublishSnapshot` (not V2) is created.
+   - No interference with V2 functionality.
+
+---
+
+## Phase 2 Checklist
+
+- [ ] Narrative rules can be added to TemplateV2 (optional).
+- [ ] Preview PDF works for V2 draft reports.
+- [ ] PDF shows patient demographics, values, and narrative (if rules exist).
+- [ ] Publish creates `ReportPublishSnapshotV2` with immutable values, narrative, PDF, and hash.
+- [ ] View Published PDF retrieves snapshot PDF.
+- [ ] Republish with same values produces same content_hash but new version.
+- [ ] V1 publish/PDF flows remain unchanged and functional.
+
+---
+
+## Troubleshooting
+
+### PDF generation fails
+
+- Check that `ReportingOrganizationConfig` exists with valid branding.
+- Check that logo file exists at the configured path.
+- Check backend logs for PDF generation errors.
+
+### Publish fails with 409
+
+- Ensure user has verifier permissions (or is admin).
+- Check that ReportInstanceV2 exists for the work item.
+
+### Narrative not showing in PDF
+
+- Verify `narrative_rules` is set in TemplateV2.
+- Check that field names in `{{field}}` placeholders match `values_json` keys.
+- If a field is missing/empty, that line will be omitted (by design).
+
+### Content hash mismatch on republish
+
+- This is expected if values or narrative rules changed between publishes.
+- Same values + same template = same hash (deterministic).

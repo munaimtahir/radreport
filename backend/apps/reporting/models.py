@@ -184,6 +184,7 @@ class ReportTemplateV2(models.Model):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     json_schema = models.JSONField(default=dict)
     ui_schema = models.JSONField(default=dict)
+    narrative_rules = models.JSONField(default=dict, blank=True, help_text="Narrative generation rules")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -270,6 +271,10 @@ class ReportInstanceV2(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    @property
+    def is_published(self):
+        return self.publish_snapshots_v2.exists()
 
     def __str__(self):
         return f"Report V2 {self.id} for {self.work_item_id}"
@@ -414,6 +419,50 @@ class ReportActionLog(models.Model):
 
     def __str__(self):
         return f"{self.action} on {self.report} by {self.actor}"
+
+
+class ReportPublishSnapshotV2(models.Model):
+    """
+    Immutable snapshot of a published V2 report version.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report_instance_v2 = models.ForeignKey(
+        ReportInstanceV2,
+        on_delete=models.CASCADE,
+        related_name="publish_snapshots_v2"
+    )
+    template_v2 = models.ForeignKey(
+        ReportTemplateV2,
+        on_delete=models.PROTECT,
+        related_name="snapshots"
+    )
+    values_json = models.JSONField(help_text="Immutable values at publish time")
+    narrative_json = models.JSONField(help_text="Generated narrative at publish time")
+    pdf_file = models.FileField(upload_to="report_snapshots_v2/%Y/%m/%d/")
+    content_hash = models.CharField(
+        max_length=64,
+        help_text="SHA256 hash of template+values+narrative",
+        db_index=True
+    )
+    published_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+    published_at = models.DateTimeField(auto_now_add=True)
+    version = models.PositiveIntegerField(default=1)
+
+    class Meta:
+        ordering = ["-version"]
+        unique_together = ("report_instance_v2", "version")
+        indexes = [
+            models.Index(fields=["report_instance_v2", "published_at"]),
+            models.Index(fields=["content_hash"]),
+        ]
+
+    def __str__(self):
+        return f"Snapshot V2 v{self.version} for {self.report_instance_v2_id}"
 
 
 class TemplateAuditLog(models.Model):

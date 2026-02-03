@@ -28,7 +28,7 @@ class ReportTemplateV2Serializer(serializers.ModelSerializer):
         model = ReportTemplateV2
         fields = [
             "id", "code", "name", "modality", "status",
-            "json_schema", "ui_schema",
+            "json_schema", "ui_schema", "narrative_rules",
             "created_at", "updated_at",
         ]
         read_only_fields = ["created_at", "updated_at"]
@@ -43,6 +43,13 @@ class ReportTemplateV2Serializer(serializers.ModelSerializer):
             return {}
         if not isinstance(value, dict):
             raise serializers.ValidationError("ui_schema must be a JSON object.")
+        return value
+
+    def validate_narrative_rules(self, value):
+        if value is None:
+            return {}
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("narrative_rules must be a JSON object.")
         return value
 
     def validate_status(self, value):

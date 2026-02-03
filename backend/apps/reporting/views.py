@@ -2,6 +2,7 @@ import csv
 import io
 import json
 import hashlib
+import logging
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from django.utils import timezone
@@ -40,6 +41,9 @@ from .models import ReportPublishSnapshot, ReportActionLog
 from .utils import parse_bool
 from django.core.files.base import ContentFile
 from .governance_views import log_audit
+
+logger = logging.getLogger(__name__)
+
 
 class ReportProfileViewSet(viewsets.ModelViewSet):
     queryset = ReportProfile.objects.all()
@@ -999,10 +1003,15 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         return srp.profile
 
     def _get_v2_template(self, item):
+        # V2 applies only when mapping is is_default=True AND is_active=True and template status=active
         mapping = (
             ServiceReportTemplateV2.objects.select_related("template")
-            .filter(service=item.service, is_active=True, template__status="active")
-            .order_by("-is_default", "created_at")
+            .filter(
+                service=item.service,
+                is_active=True,
+                is_default=True,
+                template__status="active",
+            )
             .first()
         )
         return mapping.template if mapping else None
@@ -1054,11 +1063,14 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
                 instance.template_v2 = template_v2
                 instance.save(update_fields=["template_v2", "updated_at"])
             serializer = ReportInstanceV2Serializer(instance)
+            last_snapshot = instance.publish_snapshots_v2.order_by("-version").first()
             return Response({
                 "schema_version": "v2",
                 "values_json": serializer.data["values_json"],
                 "status": instance.status,
                 "last_saved_at": instance.updated_at,
+                "is_published": instance.is_published,
+                "last_published_at": last_snapshot.published_at if last_snapshot else None,
             })
 
         instance = self._get_instance(item)
@@ -1312,19 +1324,46 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         })
     @action(detail=True, methods=["get"], url_path="report-pdf")
     def report_pdf(self, request, pk=None):
+        """
+        Generate PDF for report (dual-mode: V1 or V2).
+        V2: generates on-the-fly from current draft values_json.
+        V1: existing behavior unchanged.
+        """
         item = self._get_item(pk)
+        
+        # Check if V2 applies
+        template_v2 = self._get_v2_template(item)
+        if template_v2:
+            # V2 path
+            try:
+                instance_v2 = item.report_instance_v2
+            except ReportInstanceV2.DoesNotExist:
+                raise exceptions.NotFound("V2 report has not been started.")
+            
+            # Generate narrative from current values
+            from .services.narrative_v2 import generate_narrative_v2
+            narrative_json = generate_narrative_v2(template_v2, instance_v2.values_json)
+            
+            # Generate PDF
+            try:
+                from .pdf_engine.report_pdf_v2 import generate_report_pdf_v2
+                pdf_bytes = generate_report_pdf_v2(str(instance_v2.id), narrative_json)
+            except Exception as e:
+                logger.error(f"Failed to generate V2 PDF: {e}")
+                return Response({"error": f"Failed to generate PDF: {str(e)}"}, status=500)
+            
+            filename = f"Report_{item.service_visit.visit_id}.pdf"
+            response = HttpResponse(pdf_bytes, content_type='application/pdf')
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
+        
+        # V1 path (unchanged)
         instance = self._get_instance(item)
         
         if not instance:
              raise exceptions.NotFound("Report has not been started.")
-             
-        # Check permission? IsAuthenticated is on class.
-        # User asked for "Read-only access allowed for submitted/verified reports"
-        # "Draft allowed if explicitly requested (same endpoint)"
-        # Since it is a GET request, it is read-only by definition.
         
-        # Auto-generate narrative if empty?
-        # Requirement: "If narrative not generated yet: Auto-generate narrative using Stage 2 engine; Persist it"
+        # Auto-generate narrative if empty
         if not instance.narrative_updated_at or not instance.findings_text:
              narrative_data = generate_report_narrative(str(instance.id))
              with transaction.atomic():
@@ -1338,12 +1377,10 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         try:
             pdf_bytes = generate_report_pdf(str(instance.id))
         except Exception as e:
-            # Log error?
             return Response({"error": f"Failed to generate PDF: {str(e)}"}, status=500)
             
         filename = f"Report_{item.service_visit.visit_id}.pdf"
         response = HttpResponse(pdf_bytes, content_type='application/pdf')
-        # Content-Disposition: inline; filename="..."
         response['Content-Disposition'] = f'inline; filename="{filename}"'
         return response
 
@@ -1505,17 +1542,102 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             
         return Response({"status": "verified", "published": True, "version": version})
 
+    def _perform_publish_v2(self, instance_v2, user):
+        """
+        Internal helper to execute V2 publish logic (snapshot, PDF, workflow update).
+        Assumes we are inside a transaction.
+        """
+        import hashlib
+        import json
+        from .services.narrative_v2 import generate_narrative_v2
+        from .pdf_engine.report_pdf_v2 import generate_report_pdf_v2
+        from .models import ReportPublishSnapshotV2
+        
+        template_v2 = instance_v2.template_v2
+        
+        # Generate narrative
+        narrative_json = generate_narrative_v2(template_v2, instance_v2.values_json)
+        
+        # Calculate next version
+        last_snapshot = instance_v2.publish_snapshots_v2.order_by("-version").first()
+        version = (last_snapshot.version + 1) if last_snapshot else 1
+        
+        # Compute content hash
+        hash_input = json.dumps({
+            "template_id": str(template_v2.id),
+            "template_version": str(template_v2.updated_at),
+            "values_json": instance_v2.values_json,
+            "narrative_json": narrative_json,
+        }, sort_keys=True)
+        content_hash = hashlib.sha256(hash_input.encode('utf-8')).hexdigest()
+        
+        # Generate PDF
+        pdf_bytes = generate_report_pdf_v2(str(instance_v2.id), narrative_json)
+        file_name = f"Report_V2_{instance_v2.work_item.service_visit.visit_id}_v{version}.pdf"
+        
+        # Create snapshot
+        snapshot = ReportPublishSnapshotV2(
+            report_instance_v2=instance_v2,
+            template_v2=template_v2,
+            values_json=instance_v2.values_json,
+            narrative_json=narrative_json,
+            content_hash=content_hash,
+            published_by=user,
+            version=version,
+        )
+        snapshot.pdf_file.save(file_name, ContentFile(pdf_bytes), save=False)
+        snapshot.save()
+        
+        # Update workflow status
+        item = instance_v2.work_item
+        item.status = "PUBLISHED"
+        item.published_at = timezone.now()
+        item.save()
+        
+        return version, snapshot
+
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
+        """
+        Publish report (dual-mode: V1 or V2).
+        V2: creates immutable snapshot with PDF.
+        V1: existing behavior unchanged.
+        """
         item = self._get_item(pk)
+        
+        # Permission check: Verifier only (or admin)
+        if not (request.user.is_superuser or request.user.groups.filter(name="reporting_verifier").exists()):
+            raise exceptions.PermissionDenied("Only verifiers can publish reports.")
+        
+        # Check if V2 applies
+        template_v2 = self._get_v2_template(item)
+        if template_v2:
+            # V2 path
+            try:
+                instance_v2 = item.report_instance_v2
+            except ReportInstanceV2.DoesNotExist:
+                return Response({"error": "V2 report not found."}, status=409)
+            
+            # For now, allow publish from any status (can add status checks later)
+            # TODO: Add status validation if needed (e.g., must be verified first)
+            
+            with transaction.atomic():
+                version, snapshot = self._perform_publish_v2(instance_v2, request.user)
+            
+            return Response({
+                "status": "published",
+                "version": version,
+                "schema_version": "v2",
+                "snapshot_id": str(snapshot.id),
+                "content_hash": snapshot.content_hash,
+                "pdf_url": request.build_absolute_uri(snapshot.pdf_file.url) if snapshot.pdf_file else None,
+            })
+        
+        # V1 path (unchanged)
         instance = self._get_instance(item)
         
         if not instance:
              raise exceptions.NotFound("Report not found.")
-
-        # Permission check: Verifier only
-        if not (request.user.is_superuser or request.user.groups.filter(name="reporting_verifier").exists()):
-            raise exceptions.PermissionDenied("Only verifiers can publish reports.")
 
         if instance.status not in ["verified", "published"]:
              return Response({"error": "Only verified reports can be published."}, status=409)
@@ -1529,11 +1651,31 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=["get"], url_path="publish-history")
     def publish_history(self, request, pk=None):
+        """
+        Return publish history (dual-mode: V1 or V2).
+        """
         item = self._get_item(pk)
+        template_v2 = self._get_v2_template(item)
+        if template_v2:
+            try:
+                instance_v2 = item.report_instance_v2
+            except ReportInstanceV2.DoesNotExist:
+                return Response([])
+            snapshots = instance_v2.publish_snapshots_v2.order_by("-version")
+            history = []
+            for snap in snapshots:
+                history.append({
+                    "version": snap.version,
+                    "published_at": snap.published_at,
+                    "published_by": snap.published_by.username if snap.published_by else "Unknown",
+                    "sha256": snap.content_hash,
+                    "notes": "",
+                    "pdf_url": request.build_absolute_uri(snap.pdf_file.url) if snap.pdf_file else None
+                })
+            return Response(history)
         instance = self._get_instance(item)
         if not instance:
              return Response([])
-        
         snapshots = instance.publish_snapshots.all().order_by("-version")
         history = []
         for snap in snapshots:
@@ -1549,7 +1691,46 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=["get"], url_path="published-pdf")
     def published_pdf(self, request, pk=None):
+        """
+        Get published PDF snapshot (dual-mode: V1 or V2).
+        V2: returns latest snapshot PDF.
+        V1: existing behavior unchanged.
+        """
         item = self._get_item(pk)
+        
+        # Check if V2 applies
+        template_v2 = self._get_v2_template(item)
+        if template_v2:
+            # V2 path
+            try:
+                instance_v2 = item.report_instance_v2
+            except ReportInstanceV2.DoesNotExist:
+                raise exceptions.NotFound("V2 report not found.")
+            
+            # Get version from query params, default to latest
+            version = request.query_params.get("version")
+            
+            if version:
+                try:
+                    from .models import ReportPublishSnapshotV2
+                    snapshot = instance_v2.publish_snapshots_v2.get(version=version)
+                except ReportPublishSnapshotV2.DoesNotExist:
+                    raise exceptions.NotFound("Snapshot not found.")
+            else:
+                # Get latest snapshot
+                snapshot = instance_v2.publish_snapshots_v2.order_by("-version").first()
+                if not snapshot:
+                    raise exceptions.NotFound("No published snapshots found.")
+            
+            if not snapshot.pdf_file:
+                raise exceptions.NotFound("PDF file missing for this snapshot.")
+            
+            response = HttpResponse(snapshot.pdf_file.read(), content_type='application/pdf')
+            filename = f"Report_V2_{item.service_visit.visit_id}_v{snapshot.version}.pdf"
+            response['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
+        
+        # V1 path (unchanged)
         instance = self._get_instance(item)
         if not instance:
              raise exceptions.NotFound("Report not found.")

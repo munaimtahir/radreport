@@ -392,7 +392,15 @@ export default function ReportingPage() {
                     {status === "draft" && (
                         <>
                             <Button variant="secondary" onClick={handleSaveDraft} disabled={saving}>Save Draft</Button>
-                            <Button variant="primary" onClick={() => setShowSubmitModal(true)} disabled={saving}>Submit Report</Button>
+                            {isSchemaV2 && (
+                                <>
+                                    <Button variant="secondary" onClick={handlePreviewPdf}>Preview PDF</Button>
+                                    <Button variant="primary" onClick={() => setShowPublishModal(true)} disabled={saving} style={{ backgroundColor: theme.colors.success, borderColor: theme.colors.success }}>Publish</Button>
+                                </>
+                            )}
+                            {!isSchemaV2 && (
+                                <Button variant="primary" onClick={() => setShowSubmitModal(true)} disabled={saving}>Submit Report</Button>
+                            )}
                         </>
                     )}
 
