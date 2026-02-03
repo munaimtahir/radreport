@@ -37,7 +37,7 @@ export default function BlockLibrary() {
         if (!token) return;
         setLoading(true);
         try {
-            const data = await apiGet('/block-library/', token);
+            const data = await apiGet('/reporting/block-library/', token);
             setBlocks(Array.isArray(data) ? data : data.results || []);
             setLoading(false);
         } catch (e: any) {
@@ -55,10 +55,10 @@ export default function BlockLibrary() {
         setError(null);
         try {
             if (editingBlock.id) {
-                await apiPatch(`/block-library/${editingBlock.id}/`, token, editingBlock);
+                await apiPatch(`/reporting/block-library/${editingBlock.id}/`, token, editingBlock);
                 setSuccess("Block updated.");
             } else {
-                await apiPost('/block-library/', token, editingBlock);
+                await apiPost('/reporting/block-library/', token, editingBlock);
                 setSuccess("Block created.");
             }
             setIsModalOpen(false);
@@ -71,7 +71,7 @@ export default function BlockLibrary() {
     const handleDelete = async (id: string) => {
         if (!token || !confirm("Delete this block?")) return;
         try {
-            await apiDelete(`/block-library/${id}/`, token);
+            await apiDelete(`/reporting/block-library/${id}/`, token);
             setSuccess("Block deleted.");
             loadBlocks();
         } catch (e: any) {

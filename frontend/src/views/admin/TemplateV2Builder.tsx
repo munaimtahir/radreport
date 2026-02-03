@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../ui/auth';
 import { apiGet, apiPatch, apiPost } from '../../ui/api';
@@ -9,6 +9,7 @@ import ErrorAlert from '../../ui/components/ErrorAlert';
 import SuccessAlert from '../../ui/components/SuccessAlert';
 import {
     BuilderState,
+    NarrativeState,
     parseBuilderState,
     buildJsonSchema,
     buildUiSchema,
@@ -18,7 +19,9 @@ import {
     NarrativeLine,
     Condition,
     ConditionOp,
-    applyKeyRenames
+    applyKeyRenames,
+    normalizeBlockToBuilderFragment,
+    BuilderFragment
 } from '../../utils/reporting/v2Builder';
 import InsertBlockModal from './InsertBlockModal';
 import ConflictResolutionModal from './ConflictResolutionModal';
@@ -55,7 +58,7 @@ const Panel = ({ title, children, style, actions }: { title: string, children: R
     </div>
 );
 
-const ConditionEditor = ({ condition, onChange }: { condition: Condition, onChange: (c: Condition) => void }) => {
+const ConditionEditor = ({ condition, onChange, disabled }: { condition: Condition, onChange: (c: Condition) => void, disabled?: boolean }) => {
     return (
         <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
             <input
@@ -63,11 +66,13 @@ const ConditionEditor = ({ condition, onChange }: { condition: Condition, onChan
                 value={condition.field}
                 onChange={e => onChange({ ...condition, field: e.target.value })}
                 style={{ width: 100, padding: 4, fontSize: 11 }}
+                disabled={disabled}
             />
             <select
                 value={condition.op}
                 onChange={e => onChange({ ...condition, op: e.target.value as ConditionOp })}
                 style={{ width: 80, padding: 4, fontSize: 11 }}
+                disabled={disabled}
             >
                 <option value="equals">=</option>
                 <option value="not_equals">!=</option>
@@ -86,13 +91,14 @@ const ConditionEditor = ({ condition, onChange }: { condition: Condition, onChan
                     value={condition.value}
                     onChange={e => onChange({ ...condition, value: e.target.value })} // Note: simple string for now, need type awareness but skipping for complexity
                     style={{ width: 80, padding: 4, fontSize: 11 }}
+                    disabled={disabled}
                 />
             )}
         </div>
     );
 }
 
-const NarrativeLineEditor = ({ line, onChange, onDelete }: { line: NarrativeLine, onChange: (l: NarrativeLine) => void, onDelete: () => void }) => {
+const NarrativeLineEditor = ({ line, onChange, onDelete, disabled }: { line: NarrativeLine, onChange: (l: NarrativeLine) => void, onDelete: () => void, disabled?: boolean }) => {
     if (line.kind === 'text') {
         return (
             <div style={{ display: 'flex', gap: 8, marginBottom: 4, alignItems: 'flex-start' }}>
@@ -102,8 +108,9 @@ const NarrativeLineEditor = ({ line, onChange, onDelete }: { line: NarrativeLine
                     onChange={e => onChange({ ...line, template: e.target.value })}
                     style={{ flex: 1, padding: 4, fontSize: 12, borderRadius: 4, border: '1px solid #ddd' }}
                     rows={2}
+                    disabled={disabled}
                 />
-                <button onClick={onDelete} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'red' }}>×</button>
+                <button onClick={onDelete} disabled={disabled} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'red', opacity: disabled ? 0.4 : 1 }}>×</button>
             </div>
         );
     } else {
@@ -112,9 +119,9 @@ const NarrativeLineEditor = ({ line, onChange, onDelete }: { line: NarrativeLine
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         <span style={{ fontSize: 10, fontWeight: 'bold' }}>IF</span>
-                        <ConditionEditor condition={line.if} onChange={c => onChange({ ...line, if: c })} />
+                        <ConditionEditor condition={line.if} onChange={c => onChange({ ...line, if: c })} disabled={disabled} />
                     </div>
-                    <button onClick={onDelete} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'red' }}>×</button>
+                    <button onClick={onDelete} disabled={disabled} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'red', opacity: disabled ? 0.4 : 1 }}>×</button>
                 </div>
                 <div style={{ paddingLeft: 12, borderLeft: '2px solid #ddd' }}>
                     <div style={{ fontSize: 10, color: '#666', marginBottom: 2 }}>THEN</div>
@@ -146,17 +153,29 @@ export default function TemplateV2Builder() {
 
     const [showConflictModal, setShowConflictModal] = useState(false);
     const [conflictingKeys, setConflictingKeys] = useState<FieldDef[]>([]);
-    const [blockStateToInsert, setBlockStateToInsert] = useState<BuilderState | null>(null);
+    const [fragmentToInsert, setFragmentToInsert] = useState<BuilderFragment | null>(null);
     const [renameMapping, setRenameMapping] = useState<Record<string, string>>({});
     const [mergeIntoSection, setMergeIntoSection] = useState(false);
+    const [incomingKeys, setIncomingKeys] = useState<string[]>([]);
+
+    const [blockList, setBlockList] = useState<any[]>([]);
+    const [blockListLoading, setBlockListLoading] = useState(false);
+    const [blockListError, setBlockListError] = useState<string | null>(null);
 
     const isFrozen = state?.meta.is_frozen;
+    const editingDisabled = !!isFrozen;
+
+    const existingFieldKeys = useMemo(() => state ? state.sections.flatMap(s => s.fields.map(f => f.key)) : [], [state]);
+    const existingAndIncomingKeys = useMemo(
+        () => [...existingFieldKeys, ...incomingKeys.filter(k => !existingFieldKeys.includes(k))],
+        [existingFieldKeys, incomingKeys]
+    );
 
     // Load Template
     useEffect(() => {
         if (!token || !id) return;
         setLoading(true);
-        apiGet(`/templates-v2/${id}/`, token)
+        apiGet(`/reporting/templates-v2/${id}/`, token)
             .then(data => {
                 const builderState = parseBuilderState(data, data.json_schema || {}, data.ui_schema || {}, data.narrative_rules || {});
                 setState(builderState);
@@ -168,6 +187,23 @@ export default function TemplateV2Builder() {
                 setLoading(false);
             });
     }, [id, token]);
+
+    // Load block library lazily and cache to avoid refetch storms
+    const loadBlocks = useCallback(() => {
+        if (!token || blockList.length > 0 || blockListLoading) return;
+        setBlockListLoading(true);
+        setBlockListError(null);
+        apiGet('/reporting/block-library/', token)
+            .then(data => {
+                const results = Array.isArray(data) ? data : data.results || [];
+                setBlockList(results);
+                setBlockListLoading(false);
+            })
+            .catch(err => {
+                setBlockListError(err.message || "Failed to load block library");
+                setBlockListLoading(false);
+            });
+    }, [token, blockList.length, blockListLoading]);
 
     const handleDuplicate = async () => {
         if (!token || !state) return;
@@ -199,8 +235,8 @@ export default function TemplateV2Builder() {
                 narrative_rules: buildNarrativeRules(newTemplate),
             };
 
-            const response = await apiPost(`/templates-v2/`, token, payload);
-            navigate(`/settings/templates-v2/${response.id}`);
+            const response = await apiPost(`/reporting/templates-v2/`, token, payload);
+            navigate(`/settings/templates-v2/${response.id}/builder`);
         } catch (err: any) {
             setError(err.message || "Failed to duplicate template");
         }
@@ -208,6 +244,7 @@ export default function TemplateV2Builder() {
 
     const handleSave = async () => {
         if (!token || !id || !state) return;
+        if (editingDisabled) return;
         try {
             setSuccess(null);
             setError(null);
@@ -216,55 +253,89 @@ export default function TemplateV2Builder() {
                 ui_schema: buildUiSchema(state),
                 narrative_rules: buildNarrativeRules(state)
             };
-            await apiPatch(`/templates-v2/${id}/`, token, payload);
+            await apiPatch(`/reporting/templates-v2/${id}/`, token, payload);
             setSuccess("Template saved successfully.");
         } catch (err: any) {
             setError(err.message || "Failed to save template");
         }
     };
 
-    const handleInsertBlock = async (blockId: number, merge: boolean) => {
-        if (!token || !state) return;
+    const handleInsertBlock = async (block: any, merge: boolean) => {
+        if (!token || !state || editingDisabled) return;
+        if (merge && !selectedSectionId) {
+            setError("Select a section before merging a block into it.");
+            return;
+        }
 
         try {
-            const block = await apiGet(`/report-block-library/${blockId}/`, token);
-            const blockState = parseBuilderState({}, block.json_schema || {}, block.ui_schema || {}, block.narrative_rules || {});
+            const fragment = normalizeBlockToBuilderFragment(block);
 
-            const existingKeys = new Set(state.sections.flatMap(s => s.fields.map(f => f.key)));
-            const conflictingKeysList = blockState.sections.flatMap(s => s.fields).filter(f => existingKeys.has(f.key));
+            const incomingFields = fragment.sections.flatMap(s => s.fields);
+            const incomingKeysLocal = incomingFields.map(f => f.key);
+            const existingKeys = new Set(existingFieldKeys);
+            const conflicts = incomingFields.filter(f => existingKeys.has(f.key));
 
-            if (conflictingKeysList.length > 0) {
-                setConflictingKeys(conflictingKeysList);
-                setBlockStateToInsert(blockState);
+            if (conflicts.length > 0) {
+                const suggestedMap: Record<string, string> = {};
+                const allKeys = new Set([...existingKeys, ...incomingKeys]);
+                conflicts.forEach(f => {
+                    let suggestion = `${f.key}_block`;
+                    let counter = 1;
+                    while (allKeys.has(suggestion)) {
+                        suggestion = `${f.key}_${counter}`;
+                        counter += 1;
+                    }
+                    suggestedMap[f.key] = suggestion;
+                });
+                setConflictingKeys(conflicts);
+                setFragmentToInsert(fragment);
                 setMergeIntoSection(merge);
+                setRenameMapping(suggestedMap);
+                setIncomingKeys(incomingKeysLocal);
                 setShowConflictModal(true);
                 setShowInsertBlockModal(false);
-            } else {
-                if (merge && selectedSectionId) {
-                    const blockFields = blockState.sections.flatMap(s => s.fields);
-                    updateState(s => {
-                        const newSections = [...s.sections];
-                        const sectionIndex = newSections.findIndex(s => s.id === selectedSectionId);
-                        if (sectionIndex > -1) {
-                            newSections[sectionIndex].fields.push(...blockFields);
-                        }
-                        return { ...s, sections: newSections };
-                    });
-
-                } else {
-                    // Append sections
-                    updateState(s => ({
-                        ...s,
-                        sections: [...s.sections, ...blockState.sections]
-                    }));
-                }
-                setShowInsertBlockModal(false);
-                setSuccess("Block inserted successfully.");
+                return;
             }
 
+            applyFragment(fragment, merge);
+            setShowInsertBlockModal(false);
+            setSuccess(fragment.narrative ? "Block inserted successfully. Narrative defaults applied." : "Block inserted successfully.");
         } catch (err: any) {
             setError(err.message || "Failed to insert block");
         }
+    };
+
+    const applyFragment = (fragment: BuilderFragment, merge: boolean) => {
+        if (!state) return;
+        if (merge && selectedSectionId) {
+            const blockFields = fragment.sections.flatMap(s => s.fields);
+            updateState(s => {
+                const newSections = [...s.sections];
+                const sectionIndex = newSections.findIndex(sec => sec.id === selectedSectionId);
+                if (sectionIndex > -1) {
+                    newSections[sectionIndex].fields = [...newSections[sectionIndex].fields, ...blockFields];
+                }
+                return {
+                    ...s,
+                    sections: newSections,
+                    narrative: fragment.narrative ? mergeNarrative(s.narrative, fragment.narrative) : s.narrative
+                };
+            });
+        } else {
+            updateState(s => ({
+                ...s,
+                sections: [...s.sections, ...fragment.sections],
+                narrative: fragment.narrative ? mergeNarrative(s.narrative, fragment.narrative) : s.narrative
+            }));
+        }
+    };
+
+    const mergeNarrative = (base: NarrativeState, incoming: NarrativeState): NarrativeState => {
+        return {
+            computed_fields: [...(base?.computed_fields || []), ...(incoming?.computed_fields || [])],
+            sections: [...(base?.sections || []), ...(incoming?.sections || [])],
+            impression_rules: [...(base?.impression_rules || []), ...(incoming?.impression_rules || [])]
+        };
     };
 
     // --- Handlers ---
@@ -275,13 +346,22 @@ export default function TemplateV2Builder() {
 
 
     // Section Helpers
-    const addSection = () => updateState(s => ({ ...s, sections: [...s.sections, { id: crypto.randomUUID(), title: "New Section", fields: [] }] }));
-    const deleteSection = (id: string) => updateState(s => ({ ...s, sections: s.sections.filter(x => x.id !== id) }));
+    const addSection = () => {
+        if (editingDisabled) return;
+        updateState(s => ({ ...s, sections: [...s.sections, { id: crypto.randomUUID(), title: "New Section", fields: [] }] }));
+    };
+    const deleteSection = (id: string) => {
+        if (editingDisabled) return;
+        updateState(s => ({ ...s, sections: s.sections.filter(x => x.id !== id) }));
+    };
 
     // Narrative Helper
-    const addNarrSection = () => updateState(s => ({
-        ...s, narrative: { ...s.narrative, sections: [...s.narrative.sections, { title: "New Section", lines: [] }] }
-    }));
+    const addNarrSection = () => {
+        if (editingDisabled) return;
+        updateState(s => ({
+            ...s, narrative: { ...s.narrative, sections: [...s.narrative.sections, { title: "New Section", lines: [] }] }
+        }));
+    };
     const updateNarrSection = (idx: number, u: any) => updateState(s => {
         const ns = [...s.narrative.sections];
         ns[idx] = { ...ns[idx], ...u };
@@ -289,53 +369,28 @@ export default function TemplateV2Builder() {
     });
 
     const handleResolveConflicts = () => {
-        if (!blockStateToInsert) return;
+        if (!fragmentToInsert) return;
 
-        const renamedBlockState = { ...blockStateToInsert };
+        const renamedFragment: BuilderFragment = {
+            sections: fragmentToInsert.sections.map(sec => ({
+                ...sec,
+                fields: sec.fields.map(f => ({
+                    ...f,
+                    key: renameMapping[f.key] || f.key
+                }))
+            })),
+            narrative: fragmentToInsert.narrative ? applyKeyRenames(fragmentToInsert.narrative, renameMapping) : fragmentToInsert.narrative
+        };
 
-        // Apply renames
-        renamedBlockState.sections.forEach(section => {
-            section.fields.forEach(field => {
-                if (renameMapping[field.key]) {
-                    field.key = renameMapping[field.key];
-                }
-            });
-        });
-
-        const renamedNarrative = applyKeyRenames(renamedBlockState.narrative, renameMapping);
-        renamedBlockState.narrative = renamedNarrative;
-
-        if (mergeIntoSection && selectedSectionId) {
-            const blockFields = renamedBlockState.sections.flatMap(s => s.fields);
-            updateState(s => {
-                const newSections = [...s.sections];
-                const sectionIndex = newSections.findIndex(s => s.id === selectedSectionId);
-                if (sectionIndex > -1) {
-                    newSections[sectionIndex].fields.push(...blockFields);
-                }
-                return { ...s, sections: newSections };
-            });
-        } else {
-            // Merge sections
-            updateState(s => ({
-                ...s,
-                sections: [...s.sections, ...renamedBlockState.sections],
-                narrative: {
-                    ...s.narrative,
-                    sections: [...s.narrative.sections, ...renamedBlockState.narrative.sections],
-                    computed_fields: [...s.narrative.computed_fields, ...renamedBlockState.narrative.computed_fields],
-                    impression_rules: [...s.narrative.impression_rules, ...renamedBlockState.narrative.impression_rules],
-                }
-            }));
-        }
+        applyFragment(renamedFragment, mergeIntoSection);
 
         // Reset state
         setShowConflictModal(false);
         setConflictingKeys([]);
-        setBlockStateToInsert(null);
+        setFragmentToInsert(null);
         setRenameMapping({});
         setMergeIntoSection(false);
-        setSuccess("Block inserted successfully.");
+        setSuccess(renamedFragment.narrative ? "Block inserted successfully. Narrative defaults applied." : "Block inserted successfully.");
     };
 
     if (loading) return <div style={{ padding: 20 }}>Loading builder...</div>;
@@ -351,7 +406,7 @@ export default function TemplateV2Builder() {
                     </nav>
                     <h1 style={{ fontSize: 18, margin: 0 }}>Template Builder: {state.meta.name}</h1>
                 </div>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                     <div style={{ display: 'flex', backgroundColor: theme.colors.backgroundGray, borderRadius: theme.radius.md, padding: 2 }}>
                         {(['form', 'narrative'] as const).map(tab => (
                             <button key={tab}
@@ -364,9 +419,21 @@ export default function TemplateV2Builder() {
                             >{tab === 'form' ? 'Form Design' : 'Narrative Logic'}</button>
                         ))}
                     </div>
-                    <Button variant="primary" onClick={handleSave}>Save Changes</Button>
+                    {activeTab === 'form' && !editingDisabled && (
+                        <Button variant="secondary" onClick={() => { setShowInsertBlockModal(true); loadBlocks(); }}>Insert Block</Button>
+                    )}
+                    {isFrozen && (
+                        <Button variant="secondary" onClick={handleDuplicate}>Duplicate as New Version</Button>
+                    )}
+                    <Button variant="primary" onClick={handleSave} disabled={editingDisabled}>Save Changes</Button>
                 </div>
             </div>
+
+            {isFrozen && (
+                <div style={{ backgroundColor: '#fff3cd', borderBottom: '1px solid #ffeeba', padding: '10px 20px', color: '#856404', fontWeight: 600 }}>
+                    Frozen template — editing disabled.
+                </div>
+            )}
 
             {error && <div style={{ padding: '0 20px' }}><ErrorAlert message={error} /></div>}
             {success && <div style={{ padding: '0 20px' }}><SuccessAlert message={success} /></div>}
@@ -381,38 +448,37 @@ export default function TemplateV2Builder() {
                                         padding: 10, border: `1px solid ${sec.id === selectedSectionId ? theme.colors.primary : theme.colors.border}`, marginBottom: 8,
                                         borderRadius: theme.radius.sm, backgroundColor: sec.id === selectedSectionId ? '#f0f9ff' : 'white', cursor: 'pointer', display: 'flex', gap: 8
                                     }}>
-                                    <input value={sec.title} onChange={e => {
+                                    <input value={sec.title} disabled={editingDisabled} onChange={e => {
                                         const ns = [...state.sections]; ns[idx].title = e.target.value; setState({ ...state, sections: ns });
                                     }} style={{ border: 'none', background: 'transparent', width: '100%', fontWeight: 500 }} onClick={e => e.stopPropagation()} />
                                 </div>
                             ))}
-                            <Button variant="secondary" onClick={addSection}>+ Add Section</Button>
-                            <Button variant="secondary" onClick={() => setShowInsertBlockModal(true)}>Insert Block</Button>
+                            <Button variant="secondary" onClick={addSection} disabled={editingDisabled}>+ Add Section</Button>
                         </Panel>
 
                         <Panel title="Fields">
                             {state.sections.find(s => s.id === selectedSectionId)?.fields.map((f, i) => (
                                 <div key={i} style={{ border: '1px solid #eee', padding: 8, marginBottom: 8, borderRadius: 4 }}>
                                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                                        <input value={f.title} onChange={e => {
+                                        <input value={f.title} disabled={editingDisabled} onChange={e => {
                                             const ns = [...state.sections];
                                             const sec = ns.find(s => s.id === selectedSectionId)!;
                                             sec.fields[i].title = e.target.value;
                                             setState({ ...state, sections: ns });
                                         }} style={{ fontWeight: 'bold', border: 'none', background: 'transparent' }} />
-                                        <button onClick={() => {
+                                        <button disabled={editingDisabled} onClick={() => {
                                             const ns = [...state.sections];
                                             const sec = ns.find(s => s.id === selectedSectionId)!;
                                             sec.fields = sec.fields.filter((_, idx) => idx !== i);
                                             setState({ ...state, sections: ns });
-        
-                                        }} style={{ color: 'red', border: 'none', background: 'transparent', cursor: 'pointer' }}>×</button>
+
+                                        }} style={{ color: 'red', border: 'none', background: 'transparent', cursor: 'pointer', opacity: editingDisabled ? 0.4 : 1 }}>×</button>
                                     </div>
                                     <div style={{ fontSize: 11, color: '#666' }}>Key: {f.key}</div>
                                     {/* Simplified editor */}
                                 </div>
                             )) || <div style={{ color: '#888' }}>Select a section</div>}
-                            {selectedSectionId && <Button variant="secondary" onClick={() => {
+                            {selectedSectionId && <Button variant="secondary" disabled={editingDisabled} onClick={() => {
                                 const ns = [...state.sections];
                                 const sec = ns.find(s => s.id === selectedSectionId)!;
                                 sec.fields.push({ key: `new_field_${Date.now()}`, title: "New Field", type: "string" });
@@ -440,11 +506,11 @@ export default function TemplateV2Builder() {
                                 <div>
                                     {state.narrative.sections.map((nsec, idx) => (
                                         <div key={idx} style={{ marginBottom: 20, border: '1px solid #ddd', padding: 10 }}>
-                                            <input value={nsec.title} onChange={e => updateNarrSection(idx, { title: e.target.value })}
+                                            <input value={nsec.title} disabled={editingDisabled} onChange={e => updateNarrSection(idx, { title: e.target.value })}
                                                 style={{ fontWeight: 'bold', marginBottom: 10, width: '100%', padding: 4 }} />
                                             <div>
                                                 {nsec.lines.map((line, lidx) => (
-                                                    <NarrativeLineEditor key={lidx} line={line}
+                                                    <NarrativeLineEditor key={lidx} line={line} disabled={editingDisabled}
                                                         onChange={nl => {
                                                             const ns = [...state.narrative.sections];
                                                             ns[idx].lines[lidx] = nl;
@@ -458,12 +524,12 @@ export default function TemplateV2Builder() {
                                                     />
                                                 ))}
                                                 <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                                                    <button onClick={() => {
+                                                    <button disabled={editingDisabled} onClick={() => {
                                                         const ns = [...state.narrative.sections];
                                                         ns[idx].lines.push({ kind: 'text', template: 'New line' });
                                                         setState({ ...state, narrative: { ...state.narrative, sections: ns } });
                                                     }}>+ Text</button>
-                                                    <button onClick={() => {
+                                                    <button disabled={editingDisabled} onClick={() => {
                                                         const ns = [...state.narrative.sections];
                                                         ns[idx].lines.push({ kind: 'if', if: { field: '', op: 'equals', value: '' }, then: [], else: [] });
                                                         setState({ ...state, narrative: { ...state.narrative, sections: ns } });
@@ -472,7 +538,7 @@ export default function TemplateV2Builder() {
                                             </div>
                                         </div>
                                     ))}
-                                    <Button variant="secondary" onClick={addNarrSection}>+ Add Narrative Section</Button>
+                                    <Button variant="secondary" onClick={addNarrSection} disabled={editingDisabled}>+ Add Narrative Section</Button>
                                 </div>
                             )}
                             {narrativeSubTab === 'computed' && <div>Computed Fields Editor Placeholder (JSON for now)<pre>{JSON.stringify(state.narrative.computed_fields, null, 2)}</pre></div>}
@@ -491,6 +557,10 @@ export default function TemplateV2Builder() {
                     onClose={() => setShowInsertBlockModal(false)}
                     onInsert={handleInsertBlock}
                     isSectionSelected={selectedSectionId !== null}
+                    blocks={blockList}
+                    loading={blockListLoading}
+                    error={blockListError}
+                    onReload={loadBlocks}
                 />
             )}
 
@@ -501,10 +571,9 @@ export default function TemplateV2Builder() {
                     onRenameChange={(oldKey, newKey) => setRenameMapping(prev => ({ ...prev, [oldKey]: newKey }))}
                     onResolve={handleResolveConflicts}
                     onCancel={() => setShowConflictModal(false)}
-                    existingKeys={state.sections.flatMap(s => s.fields.map(f => f.key))}
+                    existingKeys={existingAndIncomingKeys}
                 />
             )}
         </div>
     );
 }
-

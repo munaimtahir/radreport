@@ -11,7 +11,7 @@ This document outlines the steps to manually test the core functionality of the 
     *   **Code**: `SMOKE_TEST_TPL_v1`
     *   **Modality**: `US`
 4.  Click **Create**.
-5.  You should be redirected to the **Template Builder** for `SMOKE_TEST_TPL_v1`.
+5.  You should be redirected to the **Template Builder** for `SMOKE_TEST_TPL_v1` at `/settings/templates-v2/{id}/builder`. (This redirect is now automatic.)
 
 **Expected Outcome:** A new, empty template is created and the builder is displayed.
 
@@ -65,9 +65,9 @@ This document outlines the steps to manually test the core functionality of the 
 
 1.  Click **Save Changes**.
 2.  Go back to the **Templates V2** list.
-3.  Find `SMOKE_TEST_TPL_v1` and click the **Freeze** action.
+3.  Find `SMOKE_TEST_TPL_v1` and click the **Freeze** action (row-level button).
 4.  Confirm the action.
-5.  Re-enter the builder for `SMOKE_TEST_TPL_v1`.
+5.  Re-enter the builder for `SMOKE_TEST_TPL_v1` (use **Open Builder** in the same row).
 
 **Expected Outcome:**
 *   A banner at the top indicates "This template is frozen and cannot be edited."
@@ -80,7 +80,7 @@ This document outlines the steps to manually test the core functionality of the 
 
 **Expected Outcome:**
 *   You are redirected to a new template builder page.
-*   The URL should reflect a new template ID.
+*   The URL should reflect a new template ID and still end with `/builder`.
 *   The template name should be `SMOKE_TEST_TPL` and the code should be `SMOKE_TEST_TPL_v2`.
 *   The builder should be fully editable.
 *   The new template has a `draft` status and `is_frozen` is `false`.
@@ -90,7 +90,7 @@ This document outlines the steps to manually test the core functionality of the 
 1.  Save the new `SMOKE_TEST_TPL_v2` template.
 2.  Go back to the **Templates V2** list.
 3.  Activate `SMOKE_TEST_TPL_v2`.
-4.  Navigate to **Settings > Service-Template Links**.
+4.  Navigate to **Settings > Service-Template Links** (in sidebar).
 5.  Create a new link between a service (e.g., `US-ABD`) and the `SMOKE_TEST_TPL_v2` template.
 
 **Expected Outcome:** The template is now active and linked to a service.

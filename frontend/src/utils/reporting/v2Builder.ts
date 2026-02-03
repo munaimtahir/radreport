@@ -44,6 +44,18 @@ export type BuilderState = {
     narrative: NarrativeState;
 };
 
+export type BuilderFragment = {
+    sections: SectionDef[];
+    narrative?: NarrativeState;
+};
+
+export function generateUUID(): string {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
 // --- Conversion Logic ---
 
 export function buildJsonSchema(builderState: BuilderState): any {
@@ -238,13 +250,6 @@ function parseBackendNarrativeContent(content: any[]): NarrativeLine[] {
     });
 }
 
-function generateUUID(): string {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
-        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
-        return v.toString(16);
-    });
-}
-
 export function parseBuilderState(
     meta: any,
     jsonSchema: any,
@@ -360,34 +365,46 @@ export function parseBuilderState(
 }
 
 export function applyKeyRenames(
-    narrative: NarrativeState,
+    narrative: NarrativeState | undefined,
     renameMap: Record<string, string>
-): NarrativeState {
+): NarrativeState | undefined {
+    if (!narrative) return narrative;
     const newNarrative = JSON.parse(JSON.stringify(narrative));
+
+    const replaceAllOccurrences = (input: string, oldKey: string, newKey: string) => {
+        // Replace template placeholders {{key}} and bare key occurrences in expressions
+        return input
+            .replace(new RegExp(`{{\s*${oldKey}\s*}}`, 'g'), `{{${newKey}}}`)
+            .replace(new RegExp(`\b${oldKey}\b`, 'g'), newKey);
+    };
 
     // Rename in text templates
     newNarrative.sections.forEach((section: NarrativeSection) => {
-        section.lines.forEach((line: NarrativeLine) => {
-            if (line.kind === 'text') {
-                Object.entries(renameMap).forEach(([oldKey, newKey]) => {
-                    line.template = line.template.replace(new RegExp(`{{${oldKey}}}`, 'g'), `{{${newKey}}}`);
-                });
-            } else if (line.kind === 'if') {
-                // Rename in conditions
-                if (renameMap[line.if.field]) {
-                    line.if.field = renameMap[line.if.field];
+        const walkLines = (lines: NarrativeLine[]) => {
+            lines.forEach((line: NarrativeLine) => {
+                if (line.kind === 'text') {
+                    Object.entries(renameMap).forEach(([oldKey, newKey]) => {
+                        line.template = replaceAllOccurrences(line.template, oldKey, newKey);
+                    });
+                } else if (line.kind === 'if') {
+                    if (renameMap[line.if.field]) {
+                        line.if.field = renameMap[line.if.field];
+                    }
+                    walkLines(line.then);
+                    if (line.else) walkLines(line.else);
                 }
-            }
-        });
+            });
+        };
+        walkLines(section.lines);
     });
 
-    // Rename in computed fields
+    // Rename in computed fields (key + expression body)
     newNarrative.computed_fields.forEach((field: ComputedField) => {
         if (renameMap[field.key]) {
             field.key = renameMap[field.key];
         }
         Object.entries(renameMap).forEach(([oldKey, newKey]) => {
-            field.expr = field.expr.replace(new RegExp(oldKey, 'g'), newKey);
+            field.expr = replaceAllOccurrences(field.expr, oldKey, newKey);
         });
     });
 
@@ -396,7 +413,77 @@ export function applyKeyRenames(
         if (renameMap[rule.when.field]) {
             rule.when.field = renameMap[rule.when.field];
         }
+        Object.entries(renameMap).forEach(([oldKey, newKey]) => {
+            if (typeof rule.text === 'string') {
+                rule.text = replaceAllOccurrences(rule.text, oldKey, newKey);
+            }
+        });
     });
 
     return newNarrative;
+}
+
+export function normalizeBlockToBuilderFragment(block: any): BuilderFragment {
+    // Accepts a ReportBlockLibrary content payload and coerces to BuilderFragment
+    // Supports two shapes:
+    // 1) content: { json_schema, ui_schema, narrative_rules }
+    // 2) content: { sections, narrative_defaults }
+    if (!block || typeof block !== 'object') {
+        throw new Error('Invalid block payload');
+    }
+
+    const content = block.content || block;
+    const hasSchema = content.json_schema || content.ui_schema || content.narrative_rules;
+    const hasSections = Array.isArray(content.sections);
+
+    try {
+        if (hasSchema) {
+            const parsed = parseBuilderState(
+                block.meta || {},
+                content.json_schema || {},
+                content.ui_schema || {},
+                content.narrative_rules || {}
+            );
+            return { sections: parsed.sections, narrative: parsed.narrative };
+        }
+
+        if (hasSections) {
+            const sections: SectionDef[] = (content.sections as any[]).map((sec: any) => ({
+                id: sec.id || generateUUID(),
+                title: sec.title || 'Untitled Section',
+                fields: Array.isArray(sec.fields) ? sec.fields.map((f: any) => {
+                    if (!f.key) {
+                        throw new Error('Block field is missing a key.');
+                    }
+                    return {
+                        key: f.key,
+                        title: f.title || f.key,
+                        type: (f.type || 'string') as FieldType,
+                        required: !!f.required,
+                        enumValues: f.enumValues || f.enum || undefined,
+                        widget: f.widget,
+                        min: f.min,
+                        max: f.max,
+                        default: f.default
+                    };
+                }) : []
+            }));
+
+            const narrative: NarrativeState = content.narrative_defaults ? {
+                computed_fields: content.narrative_defaults.computed_fields || [],
+                sections: content.narrative_defaults.sections || [],
+                impression_rules: content.narrative_defaults.impression_rules || []
+            } : {
+                computed_fields: [],
+                sections: [],
+                impression_rules: []
+            };
+
+            return { sections, narrative };
+        }
+    } catch (err) {
+        throw new Error('Block content is malformed. Please fix block JSON before inserting.');
+    }
+
+    throw new Error('Block does not contain sections or schema to insert.');
 }

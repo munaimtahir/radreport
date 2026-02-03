@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../ui/auth";
 import { apiGet } from "../../ui/api";
 import { theme } from "../../theme";
@@ -9,6 +10,7 @@ import {
   activateTemplateV2,
   createServiceTemplateV2,
   createTemplateV2,
+  freezeTemplateV2,
   listServiceTemplatesV2,
   listTemplatesV2,
   setDefaultServiceTemplateV2,
@@ -22,6 +24,7 @@ interface TemplateV2 {
   status?: string;
   version?: number;
   is_active?: boolean;
+  is_frozen?: boolean;
 }
 
 interface ServiceSummary {
@@ -53,6 +56,7 @@ const emptyMappingForm = {
 
 export default function TemplatesV2() {
   const { token } = useAuth();
+  const navigate = useNavigate();
   const [templates, setTemplates] = useState<TemplateV2[]>([]);
   const [services, setServices] = useState<ServiceSummary[]>([]);
   const [mappings, setMappings] = useState<ServiceTemplateV2[]>([]);
@@ -112,10 +116,14 @@ export default function TemplatesV2() {
         json_schema: jsonSchema,
         ui_schema: uiSchema,
       };
-      await createTemplateV2(token, payload);
+      const created = await createTemplateV2(token, payload);
       setSuccess("TemplateV2 created.");
       setTemplateForm(emptyTemplateForm);
-      loadData();
+      if (created?.id) {
+        navigate(`/settings/templates-v2/${created.id}/builder`);
+      } else {
+        loadData();
+      }
     } catch (e: any) {
       setError(e.message || "Failed to create TemplateV2");
     }
@@ -156,6 +164,19 @@ export default function TemplatesV2() {
       loadData();
     } catch (e: any) {
       setError(e.message || "Failed to create mapping");
+    }
+  };
+
+  const handleFreeze = async (templateId: string) => {
+    if (!token) return;
+    setError(null);
+    setSuccess(null);
+    try {
+      await freezeTemplateV2(token, templateId);
+      setSuccess("Template frozen.");
+      loadData();
+    } catch (e: any) {
+      setError(e.message || "Failed to freeze template");
     }
   };
 
@@ -278,9 +299,31 @@ export default function TemplatesV2() {
                       <td style={{ padding: 12 }}>{template.code || "-"}</td>
                       <td style={{ padding: 12 }}>{template.name}</td>
                       <td style={{ padding: 12 }}>{template.version ?? "-"}</td>
-                      <td style={{ padding: 12 }}>{template.status || (template.is_active ? "active" : "-")}</td>
+                      <td style={{ padding: 12 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <span>{template.status || (template.is_active ? "active" : "-")}</span>
+                          {template.is_frozen && (
+                            <span style={{
+                              fontSize: 11,
+                              backgroundColor: "#ffeeba",
+                              color: "#795548",
+                              padding: "2px 6px",
+                              borderRadius: 4,
+                              textTransform: "uppercase"
+                            }}>Frozen</span>
+                          )}
+                        </div>
+                      </td>
                       <td style={{ padding: 12, textAlign: "right" }}>
                         <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, alignItems: "center" }}>
+                          <Button variant="secondary" onClick={() => navigate(`/settings/templates-v2/${template.id}/builder`)}>
+                            Open Builder
+                          </Button>
+                          {!template.is_frozen && (
+                            <Button variant="secondary" onClick={() => handleFreeze(template.id)}>
+                              Freeze
+                            </Button>
+                          )}
                           <Button variant="secondary" onClick={() => handleActivate(template.id)}>
                             Activate
                           </Button>

@@ -15,6 +15,10 @@ export async function updateTemplateV2(token: string | null, id: string, payload
   return apiPut(`${TEMPLATE_V2_BASE}${id}/`, token, payload);
 }
 
+export async function freezeTemplateV2(token: string | null, id: string) {
+  return apiPatch(`${TEMPLATE_V2_BASE}${id}/`, token, { is_frozen: true });
+}
+
 export async function activateTemplateV2(token: string | null, id: string, force?: boolean) {
   const path = force
     ? `${TEMPLATE_V2_BASE}${id}/activate/?force=1`

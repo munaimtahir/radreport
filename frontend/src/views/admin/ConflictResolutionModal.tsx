@@ -16,10 +16,10 @@ export default function ConflictResolutionModal({ conflictingKeys, renameMapping
 
     const validate = () => {
         const newErrors: Record<string, string> = {};
-        const allNewKeys = Object.values(renameMapping);
+        const allNewKeys = conflictingKeys.map(field => renameMapping[field.key] || `${field.key}_block`);
 
         conflictingKeys.forEach(field => {
-            const newKey = renameMapping[field.key] || `${field.key}_1`;
+            const newKey = renameMapping[field.key] || `${field.key}_block`;
             if (existingKeys.includes(newKey)) {
                 newErrors[field.key] = "This key already exists in the template.";
             }
@@ -49,7 +49,7 @@ export default function ConflictResolutionModal({ conflictingKeys, renameMapping
                             <span>{field.key}</span>
                             <input
                                 type="text"
-                                value={renameMapping[field.key] || `${field.key}_1`}
+                                value={renameMapping[field.key] || `${field.key}_block`}
                                 onChange={(e) => onRenameChange(field.key, e.target.value)}
                                 placeholder="New key"
                             />
