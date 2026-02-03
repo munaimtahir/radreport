@@ -20,13 +20,13 @@ from .models import (
     ReportProfile, ReportParameter, ReportParameterOption,
     ReportParameterLibraryItem, ReportProfileParameterLink,
     TemplateAuditLog, ReportTemplateV2, ServiceReportTemplateV2,
-    ReportInstanceV2
+    ReportInstanceV2, ReportActionLogV2, ReportBlockLibrary
 )
 from .serializers import (
     ReportProfileSerializer, ReportInstanceSerializer, ReportValueSerializer, ReportSaveSerializer,
     ReportParameterSerializer, ServiceReportProfileSerializer, ProfileListSerializer,
     ReportParameterLibraryItemSerializer, ReportInstanceV2Serializer,
-    ReportTemplateV2Serializer, ServiceReportTemplateV2Serializer,
+    ReportTemplateV2Serializer, ServiceReportTemplateV2Serializer, ReportBlockLibrarySerializer
 )
 
 class ReportParameterLibraryItemViewSet(viewsets.ModelViewSet):
@@ -35,6 +35,16 @@ class ReportParameterLibraryItemViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, permissions.IsAdminUser]
     search_fields = ["name", "slug", "modality"]
     filterset_fields = ["modality"]
+
+class ReportBlockLibraryViewSet(viewsets.ModelViewSet):
+    """
+    CRUD for preset blocks (Phase 3C).
+    """
+    queryset = ReportBlockLibrary.objects.all()
+    serializer_class = ReportBlockLibrarySerializer
+    permission_classes = [IsAuthenticated, permissions.IsAdminUser]
+    filterset_fields = ["category", "block_type"]
+    search_fields = ["name", "category"]
 from .services.narrative_v1 import generate_report_narrative
 from .pdf_engine.report_pdf import generate_report_pdf
 from .models import ReportPublishSnapshot, ReportActionLog
@@ -452,6 +462,11 @@ class ReportTemplateV2ViewSet(viewsets.ModelViewSet):
         )
 
     def perform_update(self, serializer):
+        instance = self.get_object()
+        can_edit, reason = instance.can_edit()
+        if not can_edit:
+            raise exceptions.PermissionDenied(f"Cannot edit this template: {reason}")
+
         instance = serializer.save()
         log_audit(
             self.request.user,
@@ -1067,6 +1082,7 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             return Response({
                 "schema_version": "v2",
                 "values_json": serializer.data["values_json"],
+                "narrative_json": instance.narrative_json,
                 "status": instance.status,
                 "last_saved_at": instance.updated_at,
                 "is_published": instance.is_published,
@@ -1115,14 +1131,40 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
                     "status": "draft",
                 },
             )
-            if not created:
+            narrative_json = request.data.get("narrative_json")
+
+            if created:
+                # If created, defaults are set. Check if we need to update narrative.
+                if narrative_json is not None:
+                    instance.narrative_json = narrative_json
+                    instance.save()
+            else:
+                # Existing instance
+                if instance.status in ["submitted", "verified"]:
+                    return Response({"error": "Report is locked. Reset to draft to edit."}, status=409)
+                    
                 instance.template_v2 = template_v2
                 instance.values_json = values_json
+                if narrative_json is not None:
+                    instance.narrative_json = narrative_json
+                    
                 if instance.created_by is None:
                     instance.created_by = request.user
+                
                 instance.status = "draft"
                 instance.save()
-            return Response({"schema_version": "v2", "saved": True})
+            
+            ReportActionLogV2.objects.create(
+                report_v2=instance,
+                action="save_draft",
+                actor=request.user
+            )
+            return Response({
+                "schema_version": "v2", 
+                "saved": True, 
+                "narrative_json": instance.narrative_json
+            })
+
 
         profile = self._get_profile(item)
         
@@ -1200,6 +1242,33 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
         item = self._get_item(pk)
+        
+        # Check V2
+        template_v2 = self._get_v2_template(item)
+        if template_v2:
+             try:
+                 instance_v2 = item.report_instance_v2
+             except ReportInstanceV2.DoesNotExist:
+                 return Response({"error": "Report not found."}, status=404)
+             
+             if instance_v2.status != "draft":
+                 return Response({"error": "Only draft reports can be submitted."}, status=409)
+             
+             with transaction.atomic():
+                 instance_v2.status = "submitted"
+                 instance_v2.save()
+                 
+                 item.status = "PENDING_VERIFICATION"
+                 item.submitted_at = timezone.now()
+                 item.save()
+                 
+                 ReportActionLogV2.objects.create(
+                     report_v2=instance_v2,
+                     action="submit",
+                     actor=request.user
+                 )
+             return Response({"status": "submitted"})
+
         instance = self._get_instance(item)
 
         if not instance:
@@ -1268,6 +1337,29 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         Generates and saves the narrative.
         """
         item = self._get_item(pk)
+        
+        # V2 Logic
+        template_v2 = self._get_v2_template(item)
+        if template_v2:
+             try:
+                 instance_v2 = item.report_instance_v2
+             except ReportInstanceV2.DoesNotExist:
+                 raise exceptions.NotFound("Report must be started before generating narrative.")
+
+             # Generate from rules
+             from .services.narrative_v2 import generate_narrative_v2
+             narrative_json = generate_narrative_v2(template_v2, instance_v2.values_json)
+
+             with transaction.atomic():
+                 instance_v2.narrative_json = narrative_json
+                 instance_v2.save()
+             
+             return Response({
+                 "schema_version": "v2",
+                 "status": instance_v2.status,
+                 "narrative_json": narrative_json
+             })
+
         instance = self._get_instance(item)
 
         if not instance:
@@ -1387,6 +1479,42 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"], url_path="return-for-correction")
     def return_for_correction(self, request, pk=None):
         item = self._get_item(pk)
+        
+        # Permission check: Verifier only
+        if not (request.user.is_superuser or request.user.groups.filter(name="reporting_verifier").exists()):
+            raise exceptions.PermissionDenied("Only verifiers can return reports.")
+            
+        reason = request.data.get("reason", "").strip()
+        if not reason:
+             return Response({"error": "Reason is required."}, status=400)
+
+        # Check V2
+        template_v2 = self._get_v2_template(item)
+        if template_v2:
+            try:
+                instance_v2 = item.report_instance_v2
+            except ReportInstanceV2.DoesNotExist:
+                return Response({"error": "Report not found."}, status=404)
+            
+            if instance_v2.status not in ["submitted", "verified"]:
+                # Logic: "Only submitted can be verified or returned" - actually returned can happen from verified too (un-verify)
+                return Response({"error": "Report can only be returned if submitted or verified."}, status=409)
+
+            with transaction.atomic():
+                instance_v2.status = "draft"
+                instance_v2.save()
+                
+                item.status = "RETURNED_FOR_CORRECTION"
+                item.save()
+                
+                ReportActionLogV2.objects.create(
+                    report_v2=instance_v2,
+                    action="return",
+                    actor=request.user,
+                    meta={"reason": reason}
+                )
+            return Response({"status": "returned"})
+
         instance = self._get_instance(item)
         
         if not instance:
@@ -1501,6 +1629,36 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"])
     def verify(self, request, pk=None):
         item = self._get_item(pk)
+        
+        # Permission check: Verifier only
+        if not (request.user.is_superuser or request.user.groups.filter(name="reporting_verifier").exists()):
+            raise exceptions.PermissionDenied("Only verifiers can verify reports.")
+
+        notes = request.data.get("notes", "")
+
+        # Check V2
+        template_v2 = self._get_v2_template(item)
+        if template_v2:
+            try:
+                instance_v2 = item.report_instance_v2
+            except ReportInstanceV2.DoesNotExist:
+                return Response({"error": "Report not found."}, status=404)
+            
+            if instance_v2.status != "submitted":
+                return Response({"error": "Only submitted reports can be verified."}, status=409)
+
+            with transaction.atomic():
+                instance_v2.status = "verified"
+                instance_v2.save()
+                
+                ReportActionLogV2.objects.create(
+                    report_v2=instance_v2,
+                    action="verify",
+                    actor=request.user,
+                    meta={"notes": notes}
+                )
+            return Response({"status": "verified"})
+
         instance = self._get_instance(item)
         
         if not instance:
@@ -1618,11 +1776,19 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             except ReportInstanceV2.DoesNotExist:
                 return Response({"error": "V2 report not found."}, status=409)
             
-            # For now, allow publish from any status (can add status checks later)
-            # TODO: Add status validation if needed (e.g., must be verified first)
+            # Check valid status
+            if instance_v2.status != "verified":
+                return Response({"error": "Only verified reports can be published."}, status=403)
             
             with transaction.atomic():
                 version, snapshot = self._perform_publish_v2(instance_v2, request.user)
+                
+                ReportActionLogV2.objects.create(
+                    report_v2=instance_v2,
+                    action="publish",
+                    actor=request.user,
+                    meta={"version": version, "sha256": snapshot.content_hash}
+                )
             
             return Response({
                 "status": "published",

@@ -4,7 +4,8 @@ from .views import (
     ReportWorkItemViewSet, ReportProfileViewSet,
     ReportParameterViewSet, ServiceReportProfileViewSet,
     ReportParameterLibraryItemViewSet,
-    ReportTemplateV2ViewSet, ServiceReportTemplateV2ViewSet
+    ReportTemplateV2ViewSet, ServiceReportTemplateV2ViewSet,
+    ReportBlockLibraryViewSet
 )
 from .governance_views import TemplateGovernanceViewSet, TemplateAuditLogViewSet
 
@@ -24,6 +25,7 @@ router.register(r'parameters', ReportParameterViewSet, basename='reporting-param
 router.register(r'service-profiles', ServiceReportProfileViewSet, basename='reporting-service-profiles')
 router.register(r'service-templates-v2', ServiceReportTemplateV2ViewSet, basename='reporting-service-templates-v2')
 router.register(r'parameter-library', ReportParameterLibraryItemViewSet, basename='reporting-parameter-library')
+router.register(r'block-library', ReportBlockLibraryViewSet, basename='reporting-block-library')
 
 # Governance endpoints
 router.register(r'governance', TemplateGovernanceViewSet, basename='template-governance')

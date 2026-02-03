@@ -103,3 +103,19 @@ class ReportTemplateV2APITestCase(TestCase):
         draft.refresh_from_db()
         self.assertEqual(active_template.status, "archived")
         self.assertEqual(draft.status, "active")
+
+    def test_freeze_enforcement(self):
+        """Test that frozen templates cannot be edited."""
+        template = ReportTemplateV2.objects.create(
+            code="FROZEN",
+            name="Frozen Template",
+            modality="USG",
+            status="active",
+            json_schema={"type": "object"},
+            is_frozen=True
+        )
+        
+        url = f"/api/reporting/templates-v2/{template.id}/"
+        response = self.client.patch(url, {"name": "Changed Name"}, format="json")
+        self.assertEqual(response.status_code, http_status.HTTP_403_FORBIDDEN)
+

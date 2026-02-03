@@ -185,11 +185,43 @@ class ReportTemplateV2(models.Model):
     json_schema = models.JSONField(default=dict)
     ui_schema = models.JSONField(default=dict)
     narrative_rules = models.JSONField(default=dict, blank=True, help_text="Narrative generation rules")
+    is_frozen = models.BooleanField(default=False, help_text="If true, template cannot be edited")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.code} - {self.name}"
+
+    def can_edit(self):
+        if self.is_frozen:
+            return False, "Template is frozen"
+        # Can check usage too? For now just frozen check per requirements
+        return True, None
+
+class ReportActionLogV2(models.Model):
+    """
+    Audit log for critical reporting V2 actions.
+    """
+    ACTION_CHOICES = (
+        ("save_draft", "Draft Saved"),
+        ("submit", "Submit"),
+        ("verify", "Verify"),
+        ("return", "Return for Correction"),
+        ("publish", "Publish"),
+    )
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report_v2 = models.ForeignKey('ReportInstanceV2', on_delete=models.CASCADE, related_name="action_logs")
+    action = models.CharField(max_length=20, choices=ACTION_CHOICES)
+    actor = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    meta = models.JSONField(default=dict, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.action} on {self.report_v2} by {self.actor}"
 
 class ServiceReportTemplateV2(models.Model):
     """
@@ -261,6 +293,7 @@ class ReportInstanceV2(models.Model):
     )
     template_v2 = models.ForeignKey(ReportTemplateV2, on_delete=models.PROTECT, related_name="instances")
     values_json = models.JSONField(default=dict)
+    narrative_json = models.JSONField(default=dict, blank=True, help_text="Current narrative content (including overrides)")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="draft")
     created_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -463,6 +496,26 @@ class ReportPublishSnapshotV2(models.Model):
 
     def __str__(self):
         return f"Snapshot V2 v{self.version} for {self.report_instance_v2_id}"
+
+
+class ReportBlockLibrary(models.Model):
+    """
+    Library of reusable reporting blocks (Phase 3C).
+    Can be used for UI blocks or Narrative snippets.
+    """
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    name = models.CharField(max_length=150)
+    category = models.CharField(max_length=100, blank=True, null=True)
+    block_type = models.CharField(max_length=50, default="ui", choices=[
+        ("ui", "UI Component"),
+        ("narrative", "Narrative Snippet"),
+    ])
+    content = models.JSONField(help_text="JSON schema/UI schema or narrative rule snippet")
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    def __str__(self):
+        return self.name
 
 
 class TemplateAuditLog(models.Model):

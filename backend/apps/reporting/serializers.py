@@ -3,7 +3,7 @@ from .models import (
     ReportProfile, ReportParameter, ReportParameterOption,
     ReportInstance, ReportValue, ServiceReportProfile, TemplateAuditLog,
     ReportParameterLibraryItem, ReportInstanceV2,
-    ReportTemplateV2, ServiceReportTemplateV2,
+    ReportTemplateV2, ServiceReportTemplateV2, ReportBlockLibrary
 )
 from apps.workflow.models import ServiceVisitItem
 
@@ -17,6 +17,18 @@ class ReportParameterLibraryItemSerializer(serializers.ModelSerializer):
             'default_join_label', 'default_narrative_role'
         ]
 
+class ReportBlockLibrarySerializer(serializers.ModelSerializer):
+    """
+    Serializer for preset blocks.
+    """
+    class Meta:
+        model = ReportBlockLibrary
+        fields = [
+            "id", "name", "category", "block_type", "content",
+            "created_at", "updated_at"
+        ]
+        read_only_fields = ["created_at", "updated_at"]
+
 class ServiceReportProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceReportProfile
@@ -27,7 +39,7 @@ class ReportTemplateV2Serializer(serializers.ModelSerializer):
     class Meta:
         model = ReportTemplateV2
         fields = [
-            "id", "code", "name", "modality", "status",
+            "id", "code", "name", "modality", "status", "is_frozen",
             "json_schema", "ui_schema", "narrative_rules",
             "created_at", "updated_at",
         ]

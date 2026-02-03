@@ -22,6 +22,8 @@ import ParametersList from "../views/admin/ParametersList";
 import ServiceTemplateLinksList from "../views/admin/ServiceTemplateLinksList";
 import BaselinePacks from "../views/admin/BaselinePacks";
 import AuditLogsPage from "../views/admin/AuditLogsPage";
+import TemplateV2Builder from "../views/admin/TemplateV2Builder";
+import BlockLibrary from "../views/admin/BlockLibrary";
 import ReportPrintingWorklist from "../views/ReportPrintingWorklist";
 
 
@@ -150,6 +152,9 @@ function Shell() {
                 <NavLink to="/settings/templates-v2">
                   Templates V2
                 </NavLink>
+                <NavLink to="/settings/block-library">
+                  Block Library
+                </NavLink>
                 <NavLink to="/settings/parameters">
                   Parameters
                 </NavLink>
@@ -275,6 +280,8 @@ function Shell() {
               <Route path="/settings/templates" element={canAdmin ? <TemplatesList /> : <AccessDenied />} />
               <Route path="/settings/templates/:id" element={canAdmin ? <TemplateEditor /> : <AccessDenied />} />
               <Route path="/settings/templates-v2" element={canAdmin ? <TemplatesV2 /> : <AccessDenied />} />
+              <Route path="/settings/templates-v2/:id/builder" element={canAdmin ? <TemplateV2Builder /> : <AccessDenied />} />
+              <Route path="/settings/block-library" element={canAdmin ? <BlockLibrary /> : <AccessDenied />} />
               <Route path="/settings/services" element={canAdmin ? <ServicesList /> : <AccessDenied />} />
               <Route path="/settings/services/:id" element={canAdmin ? <ServiceEditor /> : <AccessDenied />} />
               <Route path="/settings/service-template-links" element={canAdmin ? <ServiceTemplateLinksList /> : <AccessDenied />} />
