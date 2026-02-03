@@ -1,4 +1,3 @@
-
 export type FieldType = "string" | "number" | "integer" | "boolean" | "enum" | "text";
 
 export type FieldDef = {
@@ -358,4 +357,46 @@ export function parseBuilderState(
         sections,
         narrative
     };
+}
+
+export function applyKeyRenames(
+    narrative: NarrativeState,
+    renameMap: Record<string, string>
+): NarrativeState {
+    const newNarrative = JSON.parse(JSON.stringify(narrative));
+
+    // Rename in text templates
+    newNarrative.sections.forEach((section: NarrativeSection) => {
+        section.lines.forEach((line: NarrativeLine) => {
+            if (line.kind === 'text') {
+                Object.entries(renameMap).forEach(([oldKey, newKey]) => {
+                    line.template = line.template.replace(new RegExp(`{{${oldKey}}}`, 'g'), `{{${newKey}}}`);
+                });
+            } else if (line.kind === 'if') {
+                // Rename in conditions
+                if (renameMap[line.if.field]) {
+                    line.if.field = renameMap[line.if.field];
+                }
+            }
+        });
+    });
+
+    // Rename in computed fields
+    newNarrative.computed_fields.forEach((field: ComputedField) => {
+        if (renameMap[field.key]) {
+            field.key = renameMap[field.key];
+        }
+        Object.entries(renameMap).forEach(([oldKey, newKey]) => {
+            field.expr = field.expr.replace(new RegExp(oldKey, 'g'), newKey);
+        });
+    });
+
+    // Rename in impression rules
+    newNarrative.impression_rules.forEach((rule: ImpressionRule) => {
+        if (renameMap[rule.when.field]) {
+            rule.when.field = renameMap[rule.when.field];
+        }
+    });
+
+    return newNarrative;
 }

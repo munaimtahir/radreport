@@ -17,7 +17,8 @@ import {
     FieldDef,
     NarrativeLine,
     Condition,
-    ConditionOp
+    ConditionOp,
+    applyKeyRenames
 } from '../../utils/reporting/v2Builder';
 import InsertBlockModal from './InsertBlockModal';
 import ConflictResolutionModal from './ConflictResolutionModal';
@@ -147,6 +148,7 @@ export default function TemplateV2Builder() {
     const [conflictingKeys, setConflictingKeys] = useState<FieldDef[]>([]);
     const [blockStateToInsert, setBlockStateToInsert] = useState<BuilderState | null>(null);
     const [renameMapping, setRenameMapping] = useState<Record<string, string>>({});
+    const [mergeIntoSection, setMergeIntoSection] = useState(false);
 
     const isFrozen = state?.meta.is_frozen;
 
@@ -221,7 +223,7 @@ export default function TemplateV2Builder() {
         }
     };
 
-    const handleInsertBlock = async (blockId: number) => {
+    const handleInsertBlock = async (blockId: number, merge: boolean) => {
         if (!token || !state) return;
 
         try {
@@ -234,15 +236,30 @@ export default function TemplateV2Builder() {
             if (conflictingKeysList.length > 0) {
                 setConflictingKeys(conflictingKeysList);
                 setBlockStateToInsert(blockState);
+                setMergeIntoSection(merge);
                 setShowConflictModal(true);
                 setShowInsertBlockModal(false);
             } else {
-                // Append sections
-                updateState(s => ({
-                    ...s,
-                    sections: [...s.sections, ...blockState.sections]
-                }));
+                if (merge && selectedSectionId) {
+                    const blockFields = blockState.sections.flatMap(s => s.fields);
+                    updateState(s => {
+                        const newSections = [...s.sections];
+                        const sectionIndex = newSections.findIndex(s => s.id === selectedSectionId);
+                        if (sectionIndex > -1) {
+                            newSections[sectionIndex].fields.push(...blockFields);
+                        }
+                        return { ...s, sections: newSections };
+                    });
+
+                } else {
+                    // Append sections
+                    updateState(s => ({
+                        ...s,
+                        sections: [...s.sections, ...blockState.sections]
+                    }));
+                }
                 setShowInsertBlockModal(false);
+                setSuccess("Block inserted successfully.");
             }
 
         } catch (err: any) {
@@ -285,17 +302,40 @@ export default function TemplateV2Builder() {
             });
         });
 
-        // Merge sections
-        updateState(s => ({
-            ...s,
-            sections: [...s.sections, ...renamedBlockState.sections]
-        }));
+        const renamedNarrative = applyKeyRenames(renamedBlockState.narrative, renameMapping);
+        renamedBlockState.narrative = renamedNarrative;
+
+        if (mergeIntoSection && selectedSectionId) {
+            const blockFields = renamedBlockState.sections.flatMap(s => s.fields);
+            updateState(s => {
+                const newSections = [...s.sections];
+                const sectionIndex = newSections.findIndex(s => s.id === selectedSectionId);
+                if (sectionIndex > -1) {
+                    newSections[sectionIndex].fields.push(...blockFields);
+                }
+                return { ...s, sections: newSections };
+            });
+        } else {
+            // Merge sections
+            updateState(s => ({
+                ...s,
+                sections: [...s.sections, ...renamedBlockState.sections],
+                narrative: {
+                    ...s.narrative,
+                    sections: [...s.narrative.sections, ...renamedBlockState.narrative.sections],
+                    computed_fields: [...s.narrative.computed_fields, ...renamedBlockState.narrative.computed_fields],
+                    impression_rules: [...s.narrative.impression_rules, ...renamedBlockState.narrative.impression_rules],
+                }
+            }));
+        }
 
         // Reset state
         setShowConflictModal(false);
         setConflictingKeys([]);
         setBlockStateToInsert(null);
         setRenameMapping({});
+        setMergeIntoSection(false);
+        setSuccess("Block inserted successfully.");
     };
 
     if (loading) return <div style={{ padding: 20 }}>Loading builder...</div>;
@@ -450,6 +490,7 @@ export default function TemplateV2Builder() {
                 <InsertBlockModal
                     onClose={() => setShowInsertBlockModal(false)}
                     onInsert={handleInsertBlock}
+                    isSectionSelected={selectedSectionId !== null}
                 />
             )}
 
@@ -460,6 +501,7 @@ export default function TemplateV2Builder() {
                     onRenameChange={(oldKey, newKey) => setRenameMapping(prev => ({ ...prev, [oldKey]: newKey }))}
                     onResolve={handleResolveConflicts}
                     onCancel={() => setShowConflictModal(false)}
+                    existingKeys={state.sections.flatMap(s => s.fields.map(f => f.key))}
                 />
             )}
         </div>
