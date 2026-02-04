@@ -17,6 +17,7 @@ from apps.workflow.api import (
     OPDVitalsViewSet, OPDConsultViewSet, PDFViewSet,
     PatientWorkflowViewSet,
 )
+from apps.workflow.user_api import UserViewSet, GroupViewSet, PermissionViewSet
 from apps.consultants.api import ConsultantProfileViewSet, ConsultantSettlementViewSet, ConsultantBillingRuleViewSet
 from apps.workflow.dashboard_api import (
     dashboard_summary, dashboard_worklist, dashboard_flow
@@ -49,6 +50,10 @@ router.register(r"pdf", PDFViewSet, basename="pdf")
 router.register(r"consultants", ConsultantProfileViewSet, basename="consultants")
 router.register(r"consultant-billing-rules", ConsultantBillingRuleViewSet, basename="consultant-billing-rules")
 router.register(r"consultant-settlements", ConsultantSettlementViewSet, basename="consultant-settlements")
+# Auth/user management
+router.register(r"auth/users", UserViewSet, basename="users")
+router.register(r"auth/groups", GroupViewSet, basename="groups")
+router.register(r"auth/permissions", PermissionViewSet, basename="permissions")
 
 
 workflow_visit_receipt = ServiceVisitViewSet.as_view({"get": "receipt_reprint"})

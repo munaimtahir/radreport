@@ -25,6 +25,7 @@ import AuditLogsPage from "../views/admin/AuditLogsPage";
 import TemplateV2Builder from "../views/admin/TemplateV2Builder";
 import BlockLibrary from "../views/admin/BlockLibrary";
 import ReportPrintingWorklist from "../views/ReportPrintingWorklist";
+import UserSettings from "../views/admin/UserSettings";
 
 
 import ModuleDisabled from "../views/ModuleDisabled";
@@ -198,6 +199,9 @@ function Shell() {
                 <NavLink to="/settings/consultant-settlements">
                   Consultant Settlements
                 </NavLink>
+                <NavLink to="/settings/users">
+                  User Settings
+                </NavLink>
                 <NavLink to="/receipt-settings">
                   Receipt Settings
                 </NavLink>
@@ -287,6 +291,7 @@ function Shell() {
               <Route path="/settings/service-template-links" element={canAdmin ? <ServiceTemplateLinksList /> : <AccessDenied />} />
               <Route path="/settings/baseline-packs" element={canAdmin ? <BaselinePacks /> : <AccessDenied />} />
               <Route path="/settings/audit-logs" element={canAdmin ? <AuditLogsPage /> : <AccessDenied />} />
+              <Route path="/settings/users" element={canAdmin ? <UserSettings /> : <AccessDenied />} />
 
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />

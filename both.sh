@@ -15,6 +15,26 @@ echo "frontend and backend, or for full rebuild"
 echo "Location: /home/munaim/srv/apps/radreport"
 echo "=========================================="
 
+wait_for_health () {
+    # Poll an HTTP endpoint until it returns expected content or timeout
+    local url="$1"
+    local expected="$2"
+    local attempts="${3:-12}"
+    local sleep_secs="${4:-5}"
+
+    for i in $(seq 1 "$attempts"); do
+        if curl -s --max-time 5 "$url" 2>/dev/null | grep -Eiq -- "$expected"; then
+            echo "✓ OK after $i attempt(s): $url"
+            return 0
+        fi
+        echo "… waiting for $url ($i/$attempts)"
+        sleep "$sleep_secs"
+    done
+
+    echo "⚠ Timeout waiting for $url"
+    return 1
+}
+
 # Get the directory where the script is located
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
@@ -112,33 +132,33 @@ echo "=========================================="
 echo "Testing service health..."
 sleep 3
 
-# Backend health
-if curl -s http://127.0.0.1:8015/api/health/ 2>/dev/null | grep -q '"status":"ok"'; then
+# Backend health (retry to avoid false negatives during boot)
+if wait_for_health "http://127.0.0.1:8015/api/health/" '"status"[[:space:]]*:[[:space:]]*"ok"' 12 5; then
     echo "✓ Backend health check: OK"
 else
-    echo "⚠ Backend health check: FAILED (may still be starting)"
+    echo "⚠ Backend health check: FAILED after retries"
 fi
 
 # Frontend health
-if curl -s -I http://127.0.0.1:8081/ 2>/dev/null | head -n1 | grep -q "200"; then
+if wait_for_health "http://127.0.0.1:8081/" "<!doctype html>" 12 5; then
     echo "✓ Frontend is accessible"
 else
-    echo "⚠ Frontend check: FAILED (may still be starting)"
+    echo "⚠ Frontend check: FAILED after retries"
 fi
 
 # Public URLs
 echo ""
 echo "Testing public URLs..."
-if curl -s https://rims.alshifalab.pk 2>/dev/null | head -c 100 | grep -q "html"; then
+if wait_for_health "https://rims.alshifalab.pk" "html" 12 5; then
     echo "✓ Frontend is publicly accessible"
 else
-    echo "⚠ Public frontend check failed"
+    echo "⚠ Public frontend check failed after retries"
 fi
 
-if curl -s https://api.rims.alshifalab.pk/api/health/ 2>/dev/null | grep -q '"status":"ok"'; then
+if wait_for_health "https://api.rims.alshifalab.pk/api/health/" '"status"[[:space:]]*:[[:space:]]*"ok"' 12 5; then
     echo "✓ Backend is publicly accessible"
 else
-    echo "⚠ Public backend check failed"
+    echo "⚠ Public backend check failed after retries"
 fi
 
 echo "=========================================="
