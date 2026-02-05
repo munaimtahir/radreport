@@ -383,7 +383,7 @@ Placeholders like `{ep_ga_weeks_days}` or `{pleff_r_amount}` are resolved as:
 
 * rule_id: PANC_PANCREATITIS_PATTERN
   Trigger: (panc_size = bulky) AND (panc_echotexture = heterogeneous)
-  Sentence: “Bulky heterogeneous pancreas; correlate clinically and with laboratory parameters for pancreatitis.”
+  Sentence: “Bulky heterogeneous pancreas; correlate clinically and with relevant parameters for pancreatitis.”
   Priority: 85
 * rule_id: PANC_FOCAL_LESION
   Trigger: panc_focal_lesion_present = true
@@ -1700,7 +1700,7 @@ If suspicious nodule-feature rule fires, it **suppresses** the generic “nodule
 
 ### Template-specific fixes (high impact)
 - Gallbladder: tightened acute cholecystitis suggestion logic to require two supportive signs; single supportive signs produce softer statements.
-- Pancreas: pancreatitis wording softened to correlation with clinical context and laboratory parameters.
+- Pancreas: pancreatitis wording softened to correlation with clinical context and relevant parameters.
 - Paired organs (kidneys/ureters/pleural effusions/ovaries/scrotum/carotids/DVT): standardized side-aware output using either (a) combined branching rules where defined, or (b) separate right/left rule blocks where defined.
 
 ### Key additions

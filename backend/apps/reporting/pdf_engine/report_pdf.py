@@ -62,12 +62,12 @@ class ReportPDFGenerator:
         ]
 
         # Config / Branding Logic
-        lab_details = {
+        org_details = {
              "lab_name": "Adjacent Excel Labs",
              "lab_address": "Near Arman Pan Shop Faisalabad Road Jaranwala",
              "lab_contact": "Tel: 041 4313 777 | WhatsApp: 03279640897",
             "logo_path": str(settings.BASE_DIR / "static" / "branding" / "logo.png"),
-            "disclaimer": "Electronically verified. Laboratory results should be interpreted by a physician in correlation with clinical and radiologic findings."
+            "disclaimer": "Electronically verified. Results should be interpreted by a physician in correlation with clinical and radiologic findings."
         }
         
         static_signatories = []
@@ -75,21 +75,21 @@ class ReportPDFGenerator:
         # Load Config
         config = PrintingConfig.get()
         if config:
-            lab_details["lab_name"] = config.org_name
+            org_details["lab_name"] = config.org_name
             if config.address:
-                lab_details["lab_address"] = config.address
+                org_details["lab_address"] = config.address
             if config.phone:
-                lab_details["lab_contact"] = config.phone
+                org_details["lab_contact"] = config.phone
 
             # Handle Logo
             if config.report_logo:
                 try:
-                    lab_details["logo_path"] = config.report_logo.path
+                    org_details["logo_path"] = config.report_logo.path
                 except Exception:
                     pass
 
             if config.disclaimer_text:
-                lab_details["disclaimer"] = config.disclaimer_text
+                org_details["disclaimer"] = config.disclaimer_text
 
             if config.signatories_json and isinstance(config.signatories_json, list):
                 static_signatories = config.signatories_json
@@ -99,7 +99,7 @@ class ReportPDFGenerator:
         final_signatories = dynamic_signatories + static_signatories
 
         self.data = {
-            "header": lab_details,
+            "header": org_details,
             "patient": {
                 "name": patient.name,
                 "age_gender": f"{patient.age or '-'} Y / {patient.gender or '-'}",
@@ -119,7 +119,7 @@ class ReportPDFGenerator:
                 "limitations": report.limitations_text
             },
             "footer": {
-                "disclaimer": lab_details["disclaimer"],
+                "disclaimer": org_details["disclaimer"],
                 "signatories": final_signatories
             }
         }
@@ -147,10 +147,10 @@ class ReportPDFGenerator:
             except Exception as e:
                 logger.error(f"Error drawing logo: {e}")
 
-        # Lab Details - Centered/Right or just Text next to logo
+        # Organization details - centered/right or just text next to logo
         # Matching Receipt style: Center text
         # But for Report, usually Logo Left, Text Center/Right.
-        # Let's put Lab Name Centered Top
+        # Let's put organization name centered at top
         
         canvas.setFont("Helvetica-Bold", 16)
         canvas.setFillColor(HexColor('#0B5ED7'))
