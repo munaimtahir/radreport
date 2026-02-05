@@ -1,0 +1,13 @@
+FINDINGS:
+1 Liver:
+- Echogenicity: Normal.
+
+2 Gallbladder:
+- Wall thickness: 2mm.
+
+IMPRESSION:
+Impression: Gallbladder polyp.
+
+LIMITATIONS:
+Limitations: Limited by patient motion.
+
