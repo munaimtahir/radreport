@@ -1,16 +1,15 @@
 import csv
 import json
-import os
 import re
 from difflib import get_close_matches
 from pathlib import Path
 
 from django.core.management.base import BaseCommand, CommandError
+from django.db import transaction
 
 
 class _DryRunRollback(Exception):
     pass
-from django.db import transaction
 
 from apps.catalog.models import Service
 from apps.reporting.models import ReportTemplateV2, ServiceReportTemplateV2
@@ -54,6 +53,7 @@ class Command(BaseCommand):
                 if dry_run:
                     raise _DryRunRollback()
         except _DryRunRollback:
+            # Intentionally swallow this to rollback all DB changes in dry-run mode.
             pass
 
         self._print_summary(stats)
