@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { FieldDef } from '../../utils/reporting/v2Builder';
+import Modal from '../../ui/components/Modal';
 
 type Props = {
     conflictingKeys: FieldDef[];

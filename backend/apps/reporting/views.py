@@ -46,6 +46,7 @@ class ReportBlockLibraryViewSet(viewsets.ModelViewSet):
     filterset_fields = ["category", "block_type"]
     search_fields = ["name", "category"]
 from .services.narrative_v1 import generate_report_narrative
+from .services.narrative_v2 import generate_narrative_v2
 from .pdf_engine.report_pdf import generate_report_pdf
 from .models import ReportPublishSnapshot, ReportActionLog
 from .utils import parse_bool
@@ -521,6 +522,31 @@ class ReportTemplateV2ViewSet(viewsets.ModelViewSet):
         )
 
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(detail=False, methods=['post'], url_path='preview-narrative')
+    def preview_narrative(self, request):
+        """
+        Preview narrative generation for V2 builder.
+        Accepts: { json_schema, narrative_rules, values }
+        """
+        data = request.data
+        json_schema = data.get('json_schema', {})
+        narrative_rules = data.get('narrative_rules', {})
+        values = data.get('values', {})
+
+        # Mock a template object
+        class MockTemplate:
+            def __init__(self, schema, rules):
+                self.json_schema = schema
+                self.narrative_rules = rules
+
+        mock_tmpl = MockTemplate(json_schema, narrative_rules)
+        
+        try:
+            result = generate_narrative_v2(mock_tmpl, values)
+            return Response(result)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
 class ReportParameterViewSet(viewsets.ModelViewSet):

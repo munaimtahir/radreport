@@ -25,6 +25,9 @@ import {
 } from '../../utils/reporting/v2Builder';
 import InsertBlockModal from './InsertBlockModal';
 import ConflictResolutionModal from './ConflictResolutionModal';
+import ComputedFieldEditor from './ComputedFieldEditor';
+import ImpressionRuleEditor from './ImpressionRuleEditor';
+import { NarrativeLineEditor } from './NarrativeComponents';
 
 // --- Components ---
 
@@ -58,82 +61,7 @@ const Panel = ({ title, children, style, actions }: { title: string, children: R
     </div>
 );
 
-const ConditionEditor = ({ condition, onChange, disabled }: { condition: Condition, onChange: (c: Condition) => void, disabled?: boolean }) => {
-    return (
-        <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            <input
-                placeholder="Field"
-                value={condition.field}
-                onChange={e => onChange({ ...condition, field: e.target.value })}
-                style={{ width: 100, padding: 4, fontSize: 11 }}
-                disabled={disabled}
-            />
-            <select
-                value={condition.op}
-                onChange={e => onChange({ ...condition, op: e.target.value as ConditionOp })}
-                style={{ width: 80, padding: 4, fontSize: 11 }}
-                disabled={disabled}
-            >
-                <option value="equals">=</option>
-                <option value="not_equals">!=</option>
-                <option value="gt">&gt;</option>
-                <option value="gte">&gt;=</option>
-                <option value="lt">&lt;</option>
-                <option value="lte">&lt;=</option>
-                <option value="is_empty">Empty</option>
-                <option value="is_not_empty">Not Empty</option>
-                <option value="in">In</option>
-            </select>
-            {/* Show value input if not unary operator */}
-            {!["is_empty", "is_not_empty"].includes(condition.op) && (
-                <input
-                    placeholder="Value"
-                    value={condition.value}
-                    onChange={e => onChange({ ...condition, value: e.target.value })} // Note: simple string for now, need type awareness but skipping for complexity
-                    style={{ width: 80, padding: 4, fontSize: 11 }}
-                    disabled={disabled}
-                />
-            )}
-        </div>
-    );
-}
 
-const NarrativeLineEditor = ({ line, onChange, onDelete, disabled }: { line: NarrativeLine, onChange: (l: NarrativeLine) => void, onDelete: () => void, disabled?: boolean }) => {
-    if (line.kind === 'text') {
-        return (
-            <div style={{ display: 'flex', gap: 8, marginBottom: 4, alignItems: 'flex-start' }}>
-                <span style={{ fontSize: 10, paddingTop: 6, color: '#888' }}>TXT</span>
-                <textarea
-                    value={line.template}
-                    onChange={e => onChange({ ...line, template: e.target.value })}
-                    style={{ flex: 1, padding: 4, fontSize: 12, borderRadius: 4, border: '1px solid #ddd' }}
-                    rows={2}
-                    disabled={disabled}
-                />
-                <button onClick={onDelete} disabled={disabled} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'red', opacity: disabled ? 0.4 : 1 }}>×</button>
-            </div>
-        );
-    } else {
-        return (
-            <div style={{ border: '1px solid #eee', padding: 8, borderRadius: 4, marginBottom: 4, backgroundColor: '#f9f9f9' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                        <span style={{ fontSize: 10, fontWeight: 'bold' }}>IF</span>
-                        <ConditionEditor condition={line.if} onChange={c => onChange({ ...line, if: c })} disabled={disabled} />
-                    </div>
-                    <button onClick={onDelete} disabled={disabled} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'red', opacity: disabled ? 0.4 : 1 }}>×</button>
-                </div>
-                <div style={{ paddingLeft: 12, borderLeft: '2px solid #ddd' }}>
-                    <div style={{ fontSize: 10, color: '#666', marginBottom: 2 }}>THEN</div>
-                    {/* Recursive limit: 1 level for simplicity? Or simple list? */}
-                    {/* Implementing full recursion is complex. Let's assume lines in THEN are just Texts for now or simple lines */}
-                    <div style={{ color: 'orange', fontSize: 11 }}>[Nested lines support simplified]</div>
-                    {/* For MVP, let's just show JSON for nested lines or a simpler UI */}
-                </div>
-            </div>
-        );
-    }
-}
 
 export default function TemplateV2Builder() {
     const { id } = useParams<{ id: string }>();
@@ -161,6 +89,11 @@ export default function TemplateV2Builder() {
     const [blockList, setBlockList] = useState<any[]>([]);
     const [blockListLoading, setBlockListLoading] = useState(false);
     const [blockListError, setBlockListError] = useState<string | null>(null);
+
+    // Preview States
+    const [previewData, setPreviewData] = useState('{\n  \n}');
+    const [previewResult, setPreviewResult] = useState<any>(null);
+    const [previewLoading, setPreviewLoading] = useState(false);
 
     const isFrozen = state?.meta.is_frozen;
     const editingDisabled = !!isFrozen;
@@ -336,6 +269,25 @@ export default function TemplateV2Builder() {
             sections: [...(base?.sections || []), ...(incoming?.sections || [])],
             impression_rules: [...(base?.impression_rules || []), ...(incoming?.impression_rules || [])]
         };
+    };
+
+    const handlePreviewNarrative = async () => {
+        if (!token || !state) return;
+        try {
+            const values = JSON.parse(previewData);
+            setPreviewLoading(true);
+            const payload = {
+                json_schema: buildJsonSchema(state),
+                narrative_rules: buildNarrativeRules(state),
+                values
+            };
+            const res = await apiPost('/reporting/templates-v2/preview-narrative/', token, payload);
+            setPreviewResult(res);
+            setPreviewLoading(false);
+        } catch (err: any) {
+            setPreviewResult({ error: err.message || "Failed to generate preview" });
+            setPreviewLoading(false);
+        }
     };
 
     // --- Handlers ---
@@ -541,12 +493,72 @@ export default function TemplateV2Builder() {
                                     <Button variant="secondary" onClick={addNarrSection} disabled={editingDisabled}>+ Add Narrative Section</Button>
                                 </div>
                             )}
-                            {narrativeSubTab === 'computed' && <div>Computed Fields Editor Placeholder (JSON for now)<pre>{JSON.stringify(state.narrative.computed_fields, null, 2)}</pre></div>}
-                            {narrativeSubTab === 'impressions' && <div>Impressions Editor Placeholder (JSON for now)<pre>{JSON.stringify(state.narrative.impression_rules, null, 2)}</pre></div>}
+                            {narrativeSubTab === 'computed' && (
+                                <ComputedFieldEditor
+                                    fields={state.narrative.computed_fields}
+                                    onChange={fields => setState({ ...state, narrative: { ...state.narrative, computed_fields: fields } })}
+                                    disabled={editingDisabled}
+                                />
+                            )}
+                            {narrativeSubTab === 'impressions' && (
+                                <ImpressionRuleEditor
+                                    rules={state.narrative.impression_rules}
+                                    onChange={rules => setState({ ...state, narrative: { ...state.narrative, impression_rules: rules } })}
+                                    disabled={editingDisabled}
+                                />
+                            )}
                         </Panel>
 
                         <Panel title="Preview Output">
-                            <div style={{ color: '#888' }}>Select sample data to preview...</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 10 }}>
+                                <div style={{ height: '40%', display: 'flex', flexDirection: 'column' }}>
+                                    <label style={{ fontSize: 11, fontWeight: 'bold' }}>Input Values (JSON)</label>
+                                    <textarea
+                                        value={previewData}
+                                        onChange={e => setPreviewData(e.target.value)}
+                                        style={{ flex: 1, fontFamily: 'monospace', fontSize: 11, padding: 6, border: `1px solid ${theme.colors.border}`, borderRadius: theme.radius.sm }}
+                                    />
+                                    <Button variant="secondary" onClick={handlePreviewNarrative} disabled={previewLoading} style={{ marginTop: 4 }}>
+                                        {previewLoading ? 'Generating...' : 'Generate Preview'}
+                                    </Button>
+                                </div>
+                                <div style={{ flex: 1, borderTop: '1px solid #eee', paddingTop: 8, overflowY: 'auto' }}>
+                                    <label style={{ fontSize: 11, fontWeight: 'bold' }}>Generated Narrative</label>
+                                    {previewResult?.error ? (
+                                        <div style={{ color: 'red', fontSize: 12 }}>{previewResult.error}</div>
+                                    ) : previewResult ? (
+                                        <div>
+                                            {previewResult.sections?.map((sec: any, i: number) => (
+                                                <div key={i} style={{ marginBottom: 10 }}>
+                                                    <div style={{ fontWeight: 600, fontSize: 13 }}>{sec.title}</div>
+                                                    <div style={{ whiteSpace: 'pre-wrap', fontSize: 12, lineHeight: 1.4 }}>
+                                                        {sec.lines.join('\n')}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {previewResult.impression && previewResult.impression.length > 0 && (
+                                                <div style={{ marginTop: 10, borderTop: '1px dashed #ccc', paddingTop: 6 }}>
+                                                    <div style={{ fontWeight: 600, fontSize: 13 }}>Impression</div>
+                                                    <ul style={{ paddingLeft: 20, margin: '4px 0', fontSize: 12 }}>
+                                                        {previewResult.impression.map((imp: string, i: number) => (
+                                                            <li key={i}>{imp}</li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            )}
+                                            {previewResult.computed && (
+                                                <div style={{ marginTop: 10, fontSize: 10, color: '#666' }}>
+                                                    <strong>Computed: </strong> {JSON.stringify(previewResult.computed)}
+                                                </div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div style={{ color: '#888', fontStyle: 'italic', fontSize: 12 }}>
+                                            No result generated yet.
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </Panel>
                     </div>
                 )}

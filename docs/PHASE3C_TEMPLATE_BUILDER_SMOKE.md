@@ -45,6 +45,25 @@ This document outlines the steps to manually test the core functionality of the 
 6.  Add a conditional line:
     *   **IF** `main_finding` `is_not_empty`
     *   **THEN** (text): `The main finding is: {{main_finding}}`.
+7.  **Computed Fields**:
+    *   Switch sub-tab to **Configuration**.
+    *   Switch sub-tab to **Computed**.
+    *   Add a computed field:
+        *   **Key**: `age_months`
+        *   **Expression**: `patient_age * 12`
+8.  **Impression Rules**:
+    *   Switch sub-tab to **Impressions**.
+    *   Add an impression rule:
+        *   **Priority**: `1`
+        *   **Condition**: `main_finding` `is_not_empty`
+        *   **Text**: `Abnormal findings noted.`
+9.  **Live Preview**:
+    *   Switch to **Preview Output** panel.
+    *   Enter JSON in "Input Values": `{"patient_name": "John", "patient_age": 30, "main_finding": "Mass found"}`.
+    *   Click **Generate Preview**.
+    *   Verify generated narrative contains "Patient: John, Age: 30" and "The main finding is: Mass found".
+    *   Verify computed field shows `{"age_months": 360}`.
+    *   Verify impression shows "Abnormal findings noted."
 
 **Expected Outcome:** The narrative rules are added and configured correctly.
 

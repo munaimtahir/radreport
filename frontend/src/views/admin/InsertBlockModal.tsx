@@ -1,6 +1,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { normalizeBlockToBuilderFragment } from '../../utils/reporting/v2Builder';
+import Modal from '../../ui/components/Modal';
 
 type Block = {
     id: string;
