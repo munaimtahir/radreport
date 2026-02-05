@@ -1,2 +1,4 @@
-service_code,template_code,is_default,is_active
-USG-ABD,USG_ABD_COMPLETE_V1,true,true
+service_code,service_slug,service_name,template_code,is_default,is_active
+USG-ABD,,USG Abdomen,USG_ABD_V1,true,true
+USG-KUB,,USG KUB,USG_KUB_V1,true,true
+USG-PELVIS,,USG Pelvis,USG_PELVIS_V1,true,true
