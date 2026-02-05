@@ -9,7 +9,7 @@ from reportlab.lib.utils import ImageReader
 from django.conf import settings
 from django.utils import timezone
 
-from apps.reporting.models import ReportInstance, ReportingOrganizationConfig
+from apps.reporting.models import ReportInstance, PrintingConfig
 from .styles import ReportStyles
 
 logger = logging.getLogger(__name__)
@@ -66,33 +66,31 @@ class ReportPDFGenerator:
              "lab_name": "Adjacent Excel Labs",
              "lab_address": "Near Arman Pan Shop Faisalabad Road Jaranwala",
              "lab_contact": "Tel: 041 4313 777 | WhatsApp: 03279640897",
-             "logo_path": str(settings.BASE_DIR / "static" / "branding" / "logo.png"),
-             "disclaimer": "Electronically verified. Laboratory results should be interpreted by a physician in correlation with clinical and radiologic findings."
+            "logo_path": str(settings.BASE_DIR / "static" / "branding" / "logo.png"),
+            "disclaimer": "Electronically verified. Laboratory results should be interpreted by a physician in correlation with clinical and radiologic findings."
         }
         
         static_signatories = []
 
         # Load Config
-        config = ReportingOrganizationConfig.objects.first()
+        config = PrintingConfig.get()
         if config:
             lab_details["lab_name"] = config.org_name
             if config.address:
                 lab_details["lab_address"] = config.address
             if config.phone:
                 lab_details["lab_contact"] = config.phone
-            
+
             # Handle Logo
-            if config.logo:
+            if config.report_logo:
                 try:
-                    # Use .path for filesystem access (standard Django FileField)
-                    lab_details["logo_path"] = config.logo.path
+                    lab_details["logo_path"] = config.report_logo.path
                 except Exception:
-                    # Fallback if storage backend doesn't support .path or other issue
                     pass
-            
+
             if config.disclaimer_text:
                 lab_details["disclaimer"] = config.disclaimer_text
-            
+
             if config.signatories_json and isinstance(config.signatories_json, list):
                 static_signatories = config.signatories_json
 

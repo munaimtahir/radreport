@@ -5,7 +5,7 @@ import { apiGet } from "./api";
 import Login from "../views/Login";
 import Dashboard from "../views/Dashboard";
 import Patients from "../views/Patients";
-import ReceiptSettings from "../views/ReceiptSettings";
+import PrintingSettings from "../views/PrintingSettings";
 import ConsultantSettlementsPage from "../views/ConsultantSettlementsPage";
 import ConsultantsPage from "../views/ConsultantsPage";
 import RegistrationPage from "../views/RegistrationPage";
@@ -202,24 +202,19 @@ function Shell() {
                 <NavLink to="/settings/users">
                   User Settings
                 </NavLink>
-                <NavLink to="/receipt-settings">
-                  Receipt Settings
+                <NavLink to="/settings/printing">
+                  Printing Settings
                 </NavLink>
               </div>
             )}
             {/* PHASE C: Legacy routes hidden from navigation - accessible via direct URL for admin only */}
             {/* Uncomment below to show legacy routes (admin-only in production) */}
             {/*
-            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e0e0e0" }}>
-              <div style={{ fontSize: 11, color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
-                LEGACY (ADMIN ONLY)
-              </div>
-            </div>
-            <NavLink to="/intake">Front Desk Intake (LEGACY)</NavLink>
-            <NavLink to="/patients">Patients (LEGACY)</NavLink>
-            <NavLink to="/studies">Studies (LEGACY)</NavLink>
-            <NavLink to="/templates">Templates</NavLink>
-            <NavLink to="/receipt-settings">Receipt Settings</NavLink>
+              Legacy nav hidden. Printing Settings now lives at /settings/printing.
+              <NavLink to="/intake">Front Desk Intake (LEGACY)</NavLink>
+              <NavLink to="/patients">Patients (LEGACY)</NavLink>
+              <NavLink to="/studies">Studies (LEGACY)</NavLink>
+              <NavLink to="/templates">Templates</NavLink>
             */}
           </nav>
           <button
@@ -291,11 +286,11 @@ function Shell() {
               <Route path="/settings/service-template-links" element={canAdmin ? <ServiceTemplateLinksList /> : <AccessDenied />} />
               <Route path="/settings/baseline-packs" element={canAdmin ? <BaselinePacks /> : <AccessDenied />} />
               <Route path="/settings/audit-logs" element={canAdmin ? <AuditLogsPage /> : <AccessDenied />} />
+              <Route path="/settings/printing" element={canAdmin ? <PrintingSettings /> : <AccessDenied />} />
               <Route path="/settings/users" element={canAdmin ? <UserSettings /> : <AccessDenied />} />
 
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />
-              <Route path="/receipt-settings" element={canAdmin ? <ReceiptSettings /> : <AccessDenied />} />
 
               {/* Legacy endpoints disabled in Phase 2 */}
               <Route path="/studies" element={<Navigate to="/" replace />} />

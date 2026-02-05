@@ -123,6 +123,22 @@ class GroupViewSet(viewsets.ModelViewSet):
     search_fields = ("name",)
     filterset_fields = ("name",)
 
+    @action(detail=False, methods=["get"], url_path="standard-roles")
+    def standard_roles(self, request):
+        """Return the standard roles used across the app (no mutation)."""
+        # Align with existing desk roles and seeds (seed_roles_phase3)
+        roles = [
+            {"name": "registration", "description": "Front-desk registration desk users"},
+            {"name": "performance", "description": "Performing/tech users handling studies"},
+            {"name": "verification", "description": "Verification/consultant reviewers"},
+            {"name": "admin", "description": "Superuser-equivalent; manage settings/templates"},
+        ]
+        # Flag which exist already
+        existing = set(Group.objects.values_list("name", flat=True))
+        for r in roles:
+            r["exists"] = r["name"] in existing
+        return Response(roles)
+
 
 class PermissionViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = PermissionSerializer

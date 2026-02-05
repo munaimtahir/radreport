@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from decimal import Decimal
-from .models import Study, Visit, OrderItem, ReceiptSettings
+from .models import Study, Visit, OrderItem
 
 class OrderItemSerializer(serializers.ModelSerializer):
     service_name = serializers.CharField(source="service.name", read_only=True)
@@ -177,34 +177,3 @@ class UnifiedIntakeSerializer(serializers.Serializer):
         
         return visit
 
-
-class ReceiptSettingsSerializer(serializers.ModelSerializer):
-    logo_image_url = serializers.SerializerMethodField()
-    header_image_url = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = ReceiptSettings
-        fields = [
-            "header_text",
-            "footer_text",
-            "logo_image",
-            "header_image",
-            "logo_image_url",
-            "header_image_url",
-            "updated_at",
-        ]
-        read_only_fields = ["updated_at"]
-    
-    def get_logo_image_url(self, obj):
-        if obj.logo_image:
-            request = self.context.get("request")
-            if request:
-                return request.build_absolute_uri(obj.logo_image.url)
-        return None
-    
-    def get_header_image_url(self, obj):
-        if obj.header_image:
-            request = self.context.get("request")
-            if request:
-                return request.build_absolute_uri(obj.header_image.url)
-        return None

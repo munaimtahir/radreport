@@ -173,16 +173,15 @@ def _resolve_media_path(relative_path):
         raise SuspiciousFileOperation(f"Blocked path traversal: {relative_path}")
     return candidate
 try:
-    from apps.studies.models import ReceiptSequence
+    from apps.reporting.models import PrintingSequence
 except ImportError:
-    # Fallback if ReceiptSequence doesn't exist
-    class ReceiptSequence:
+    # Fallback if PrintingSequence doesn't exist
+    class PrintingSequence:
         @staticmethod
-        def get_next_receipt_number():
+        def next_number(seq_type="receipt"):
             from django.utils import timezone
             now = timezone.now()
             yymm = now.strftime("%y%m")
-            # Simple fallback - in production use proper sequence
             return f"{yymm}-0001"
 
 
@@ -866,12 +865,11 @@ class PDFViewSet(viewsets.ViewSet):
         # Generate receipt number if not exists (idempotent - generated on invoice creation or print)
         # This ensures receipt number exists even if paid=0
         if not invoice.receipt_number:
-            from apps.studies.models import ReceiptSequence
+            from apps.reporting.models import PrintingSequence
             with transaction.atomic():
-                # Double-check in transaction to avoid race condition
                 invoice.refresh_from_db()
                 if not invoice.receipt_number:
-                    invoice.receipt_number = ReceiptSequence.get_next_receipt_number()
+                    invoice.receipt_number = PrintingSequence.next_number("receipt")
                     invoice.save()
         
         # Generate receipt PDF using snapshot data

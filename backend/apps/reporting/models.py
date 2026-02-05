@@ -1,5 +1,5 @@
 import uuid
-from django.db import models
+from django.db import models, transaction
 from django.conf import settings
 from django.utils import timezone
 
@@ -312,31 +312,85 @@ class ReportInstanceV2(models.Model):
     def __str__(self):
         return f"Report V2 {self.id} for {self.work_item_id}"
 
-class ReportingOrganizationConfig(models.Model):
+class PrintingConfig(models.Model):
     """
-    Singleton configuration for branding and header/footer details.
+    Unified printing configuration for reports and receipts (singleton).
     """
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    # Report branding
     org_name = models.CharField(max_length=200, help_text="Organization Name")
     address = models.TextField(blank=True, null=True)
     phone = models.CharField(max_length=50, blank=True, null=True)
-    logo = models.ImageField(upload_to="org_config/", blank=True, null=True)
+    report_logo = models.ImageField(upload_to="printing/", blank=True, null=True)
     disclaimer_text = models.TextField(blank=True, default="This report is electronically verified.")
     signatories_json = models.JSONField(default=list, blank=True, help_text="List of {name, designation}")
+
+    # Receipt branding
+    receipt_header_text = models.CharField(max_length=200, default="Consultant Place Clinic")
+    receipt_footer_text = models.TextField(
+        blank=True,
+        default="Adjacent Excel Labs, Near Arman Pan Shop Faisalabad Road Jaranwala\nFor information/Appointment: Tel: 041 4313 777 | WhatsApp: 03279640897",
+        help_text="Footer text displayed at bottom of receipt"
+    )
+    receipt_logo = models.ImageField(upload_to="printing/", blank=True, null=True)
+    receipt_banner = models.ImageField(upload_to="printing/", blank=True, null=True)
+
     updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
 
     def save(self, *args, **kwargs):
-        # Enforce singleton pattern: if another exists, prevent creation or delete others?
-        # Typically for simple cases, we just rely on Admin to enforce single instance,
-        # but here we can check on save.
-        if not self.pk and ReportingOrganizationConfig.objects.exists():
-            # If creating a new one but one already exists, we could either error or return existing.
-            # Let's just allow it but business logic should enforce one.
-            pass
+        # enforce singleton by always using the first UUID if exists
+        existing = PrintingConfig.objects.first()
+        if existing and not self.pk:
+            self.pk = existing.pk
         super().save(*args, **kwargs)
 
+    @classmethod
+    def get(cls):
+        obj = cls.objects.first()
+        if obj:
+            return obj
+        return cls.objects.create(org_name="Organization", disclaimer_text="This report is electronically verified.")
+
     def __str__(self):
-        return self.org_name
+        return "Printing Configuration"
+
+
+class PrintingSequence(models.Model):
+    """
+    Generic sequence for printed artifacts (e.g., receipts).
+    """
+    TYPE_CHOICES = (
+        ("receipt", "Receipt"),
+    )
+    seq_type = models.CharField(max_length=20, choices=TYPE_CHOICES, default="receipt")
+    yymm = models.CharField(max_length=4, db_index=True)  # e.g., "2601"
+    last_number = models.IntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ("seq_type", "yymm")
+        indexes = [
+            models.Index(fields=["seq_type", "yymm"]),
+        ]
+        ordering = ["-yymm"]
+
+    @classmethod
+    @transaction.atomic
+    def next_number(cls, seq_type="receipt"):
+        now = timezone.now()
+        yymm = now.strftime("%y%m")
+        seq, _ = cls.objects.select_for_update().get_or_create(
+            seq_type=seq_type,
+            yymm=yymm,
+            defaults={"last_number": 0},
+        )
+        seq.last_number += 1
+        seq.save()
+        return f"{yymm}-{str(seq.last_number).zfill(4)}"
+
+    def __str__(self):
+        return f"{self.seq_type} {self.yymm}: {self.last_number}"
 
 class ReportParameterLibraryItem(models.Model):
     """

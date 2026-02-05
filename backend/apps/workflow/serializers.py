@@ -361,8 +361,8 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
             # Receipt number is generated when invoice is created OR when receipt is printed
             # This ensures receipt number exists even if paid=0
             if not invoice.receipt_number:
-                from apps.studies.models import ReceiptSequence
-                invoice.receipt_number = ReceiptSequence.get_next_receipt_number()
+                from apps.reporting.models import PrintingSequence
+                invoice.receipt_number = PrintingSequence.next_number("receipt")
                 invoice.save()
             
             # Create payment if amount_paid > 0

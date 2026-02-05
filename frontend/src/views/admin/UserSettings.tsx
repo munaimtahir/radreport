@@ -8,6 +8,7 @@ import { theme } from "../../theme";
 import {
   Group,
   Permission,
+  StandardRole,
   User,
   UserPayload,
   createGroup,
@@ -16,6 +17,7 @@ import {
   deleteUser,
   listGroups,
   listPermissions,
+  listStandardRoles,
   listUsers,
   resetUserPassword,
   updateGroup,
@@ -46,6 +48,7 @@ export default function UserSettings() {
   const [users, setUsers] = useState<User[]>([]);
   const [groups, setGroups] = useState<Group[]>([]);
   const [permissions, setPermissions] = useState<Permission[]>([]);
+  const [standardRoles, setStandardRoles] = useState<StandardRole[]>([]);
 
   const [selectedUserId, setSelectedUserId] = useState<number | null>(null);
   const [userForm, setUserForm] = useState<UserPayload>(emptyUser);
@@ -73,19 +76,29 @@ export default function UserSettings() {
     setIsLoading(true);
     setErrorMsg(null);
     try {
-      const [u, g, p] = await Promise.all([
+      const [u, g, p, sr] = await Promise.all([
         listUsers(token),
         listGroups(token),
         listPermissions(token),
+        listStandardRoles(token),
       ]);
       setUsers(u);
       setGroups(g);
       setPermissions(p);
+      setStandardRoles(sr);
     } catch (err: any) {
       setErrorMsg(err?.message || "Failed to load user settings.");
     } finally {
       setIsLoading(false);
     }
+  }
+
+  async function ensureStandardRole(name: string) {
+    if (!token) return;
+    const exists = groups.some((g) => g.name === name);
+    if (exists) return;
+    await createGroup(token, { name, permissions: [] });
+    await loadAll();
   }
 
   const filteredUsers = useMemo(() => {
@@ -553,6 +566,33 @@ export default function UserSettings() {
             <Button variant="accent" onClick={startNewGroup}>
               New role
             </Button>
+          </div>
+          <div
+            style={{
+              background: theme.colors.backgroundGray,
+              border: `1px dashed ${theme.colors.border}`,
+              borderRadius: theme.radius.base,
+              padding: 10,
+              display: "flex",
+              flexWrap: "wrap",
+              gap: 8,
+            }}
+          >
+            {standardRoles.map((r) => (
+              <Button
+                key={r.name}
+                variant={r.exists ? "secondary" : "accent"}
+                onClick={() => ensureStandardRole(r.name)}
+                disabled={isSaving}
+              >
+                {r.exists ? "Exists" : "Create"} {r.name}
+              </Button>
+            ))}
+            {standardRoles.length === 0 && (
+              <div style={{ color: theme.colors.textTertiary, fontSize: 13 }}>
+                Standard roles info unavailable.
+              </div>
+            )}
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr", gap: 8, maxHeight: 180, overflow: "auto" }}>
             {groups.map((g) => (

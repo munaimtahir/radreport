@@ -4,7 +4,8 @@ from .models import (
     ReportProfile, ReportParameter, ReportParameterOption, 
     ServiceReportProfile, ReportInstance, ReportValue,
     ReportActionLog, ReportPublishSnapshot,
-    ReportingOrganizationConfig, ReportParameterLibraryItem, ReportProfileParameterLink
+    ReportParameterLibraryItem, ReportProfileParameterLink,
+    PrintingConfig, PrintingSequence
 )
 
 class ReportParameterOptionInline(admin.TabularInline):
@@ -67,19 +68,19 @@ class ReportPublishSnapshotAdmin(HiddenFromAdminIndexModelAdmin):
     search_fields = ("report__id", "sha256", "published_by__username")
     readonly_fields = ("sha256", "values_json", "findings_text", "impression_text", "limitations_text")
 
-@admin.register(ReportingOrganizationConfig)
-class ReportingOrganizationConfigAdmin(admin.ModelAdmin):
+@admin.register(PrintingConfig)
+class PrintingConfigAdmin(admin.ModelAdmin):
     list_display = ("org_name", "updated_at")
-    
-    def has_add_permission(self, request):
-        # Enforce singleton in admin UI
-        if self.model.objects.exists():
-            return False
-        return True
+    readonly_fields = ("updated_at",)
+
+@admin.register(PrintingSequence)
+class PrintingSequenceAdmin(admin.ModelAdmin):
+    list_display = ("seq_type", "yymm", "last_number", "updated_at")
+    readonly_fields = ("updated_at",)
+    list_filter = ("seq_type", "yymm")
 
 @admin.register(ReportParameterLibraryItem)
 class ReportParameterLibraryItemAdmin(HiddenFromAdminIndexModelAdmin):
     list_display = ("slug", "name", "modality", "parameter_type")
     search_fields = ("slug", "name")
     list_filter = ("modality", "parameter_type")
-

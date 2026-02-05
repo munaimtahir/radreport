@@ -9,7 +9,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
 from apps.patients.api import PatientViewSet
 from apps.catalog.api import ModalityViewSet, ServiceViewSet
-from apps.studies.api import StudyViewSet, VisitViewSet, ReceiptSettingsViewSet
+from apps.studies.api import StudyViewSet, VisitViewSet
 
 from apps.audit.api import AuditLogViewSet
 from apps.workflow.api import (
@@ -18,6 +18,7 @@ from apps.workflow.api import (
     PatientWorkflowViewSet,
 )
 from apps.workflow.user_api import UserViewSet, GroupViewSet, PermissionViewSet
+from apps.reporting.printing_api import PrintingConfigViewSet, PrintingSequenceViewSet
 from apps.consultants.api import ConsultantProfileViewSet, ConsultantSettlementViewSet, ConsultantBillingRuleViewSet
 from apps.workflow.dashboard_api import (
     dashboard_summary, dashboard_worklist, dashboard_flow
@@ -37,7 +38,7 @@ router.register(r"services", ServiceViewSet, basename="services")
 router.register(r"studies", StudyViewSet, basename="studies")
 router.register(r"visits", VisitViewSet, basename="visits")
 router.register(r"audit", AuditLogViewSet, basename="audit")
-router.register(r"receipt-settings", ReceiptSettingsViewSet, basename="receipt-settings")
+# Unified printing config now handled in reporting app; receipt-settings endpoint removed
 # Workflow endpoints
 router.register(r"workflow/service-catalog", ServiceCatalogViewSet, basename="service-catalog")
 router.register(r"workflow/visits", ServiceVisitViewSet, basename="service-visits")
@@ -54,6 +55,9 @@ router.register(r"consultant-settlements", ConsultantSettlementViewSet, basename
 router.register(r"auth/users", UserViewSet, basename="users")
 router.register(r"auth/groups", GroupViewSet, basename="groups")
 router.register(r"auth/permissions", PermissionViewSet, basename="permissions")
+# Printing (reports + receipts)
+router.register(r"printing/config", PrintingConfigViewSet, basename="printing-config")
+router.register(r"printing/sequence", PrintingSequenceViewSet, basename="printing-sequence")
 
 
 workflow_visit_receipt = ServiceVisitViewSet.as_view({"get": "receipt_reprint"})
@@ -148,12 +152,12 @@ def receipt_pdf_alt(request, visit_id):
     
     # Generate receipt number if not exists
     if not invoice.receipt_number:
-        from apps.studies.models import ReceiptSequence
+        from apps.reporting.models import PrintingSequence
         from django.db import transaction
         with transaction.atomic():
             invoice.refresh_from_db()
             if not invoice.receipt_number:
-                invoice.receipt_number = ReceiptSequence.get_next_receipt_number()
+                invoice.receipt_number = PrintingSequence.next_number("receipt")
                 invoice.save()
     
     # Generate receipt PDF using snapshot data

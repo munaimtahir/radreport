@@ -3,7 +3,8 @@ from .models import (
     ReportProfile, ReportParameter, ReportParameterOption,
     ReportInstance, ReportValue, ServiceReportProfile, TemplateAuditLog,
     ReportParameterLibraryItem, ReportInstanceV2,
-    ReportTemplateV2, ServiceReportTemplateV2, ReportBlockLibrary
+    ReportTemplateV2, ServiceReportTemplateV2, ReportBlockLibrary,
+    PrintingConfig
 )
 from apps.workflow.models import ServiceVisitItem
 
@@ -286,6 +287,51 @@ class TemplateAuditLogSerializer(serializers.ModelSerializer):
 
     def get_actor_email(self, obj):
         return obj.actor.email if obj.actor else None
+
+
+class PrintingConfigSerializer(serializers.ModelSerializer):
+    report_logo_url = serializers.SerializerMethodField()
+    receipt_logo_url = serializers.SerializerMethodField()
+    receipt_banner_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PrintingConfig
+        fields = [
+            "org_name",
+            "address",
+            "phone",
+            "report_logo",
+            "report_logo_url",
+            "disclaimer_text",
+            "signatories_json",
+            "receipt_header_text",
+            "receipt_footer_text",
+            "receipt_logo",
+            "receipt_logo_url",
+            "receipt_banner",
+            "receipt_banner_url",
+            "updated_at",
+        ]
+        read_only_fields = ["updated_at"]
+
+    def _abs_url(self, file_field):
+        if file_field:
+            request = self.context.get("request")
+            if request:
+                try:
+                    return request.build_absolute_uri(file_field.url)
+                except Exception:
+                    return None
+        return None
+
+    def get_report_logo_url(self, obj):
+        return self._abs_url(obj.report_logo)
+
+    def get_receipt_logo_url(self, obj):
+        return self._abs_url(obj.receipt_logo)
+
+    def get_receipt_banner_url(self, obj):
+        return self._abs_url(obj.receipt_banner)
 
 
 class ProfileListSerializer(serializers.ModelSerializer):

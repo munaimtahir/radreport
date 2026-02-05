@@ -219,9 +219,9 @@ class PDFBase:
         ])
     
     def get_receipt_settings(self):
-        """Get receipt settings if available"""
+        """Get unified printing config for receipts"""
         try:
-            from apps.studies.models import ReceiptSettings
-            return ReceiptSettings.get_settings()
+            from apps.reporting.models import PrintingConfig
+            return PrintingConfig.get()
         except Exception:
             return None
