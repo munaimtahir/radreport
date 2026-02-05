@@ -15,12 +15,6 @@ export type Group = {
   permissions: number[];
 };
 
-export type StandardRole = {
-  name: string;
-  description: string;
-  exists: boolean;
-};
-
 export type User = {
   id: number;
   username: string;
@@ -88,8 +82,4 @@ export async function deleteGroup(token: string | null, id: number) {
 
 export async function listPermissions(token: string | null): Promise<Permission[]> {
   return apiGet("/auth/permissions/", token);
-}
-
-export async function listStandardRoles(token: string | null): Promise<StandardRole[]> {
-  return apiGet("/auth/groups/standard-roles/", token);
 }

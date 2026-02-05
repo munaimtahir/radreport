@@ -5,7 +5,7 @@ import { apiGet } from "./api";
 import Login from "../views/Login";
 import Dashboard from "../views/Dashboard";
 import Patients from "../views/Patients";
-import PrintingSettings from "../views/PrintingSettings";
+import ReceiptSettings from "../views/ReceiptSettings";
 import ConsultantSettlementsPage from "../views/ConsultantSettlementsPage";
 import ConsultantsPage from "../views/ConsultantsPage";
 import RegistrationPage from "../views/RegistrationPage";
@@ -13,15 +13,9 @@ import PatientsWorkflow from "../views/PatientsWorkflow";
 import AccessDenied from "../views/AccessDenied";
 import ReportingPage from "../views/ReportingPage";
 import ReportingWorklistPage from "../views/ReportingWorklistPage";
-import TemplatesList from "../views/admin/TemplatesList";
-import TemplateEditor from "../views/admin/TemplateEditor";
 import TemplatesV2 from "../views/admin/TemplatesV2";
 import ServicesList from "../views/admin/ServicesList";
 import ServiceEditor from "../views/admin/ServiceEditor";
-import ParametersList from "../views/admin/ParametersList";
-import ServiceTemplateLinksList from "../views/admin/ServiceTemplateLinksList";
-import BaselinePacks from "../views/admin/BaselinePacks";
-import AuditLogsPage from "../views/admin/AuditLogsPage";
 import TemplateV2Builder from "../views/admin/TemplateV2Builder";
 import BlockLibrary from "../views/admin/BlockLibrary";
 import ReportPrintingWorklist from "../views/ReportPrintingWorklist";
@@ -147,29 +141,14 @@ function Shell() {
                 }}>
                   CATALOG & TEMPLATES
                 </div>
-                <NavLink to="/settings/templates">
-                  Templates
-                </NavLink>
                 <NavLink to="/settings/templates-v2">
                   Templates V2
                 </NavLink>
                 <NavLink to="/settings/block-library">
                   Block Library
                 </NavLink>
-                <NavLink to="/settings/parameters">
-                  Parameters
-                </NavLink>
                 <NavLink to="/settings/services">
                   Services
-                </NavLink>
-                <NavLink to="/settings/service-template-links">
-                  Service-Template Links
-                </NavLink>
-                <NavLink to="/settings/baseline-packs">
-                  Baseline Packs
-                </NavLink>
-                <NavLink to="/settings/audit-logs">
-                  Audit Logs
                 </NavLink>
               </div>
             )}
@@ -202,19 +181,24 @@ function Shell() {
                 <NavLink to="/settings/users">
                   User Settings
                 </NavLink>
-                <NavLink to="/settings/printing">
-                  Printing Settings
+                <NavLink to="/receipt-settings">
+                  Receipt Settings
                 </NavLink>
               </div>
             )}
             {/* PHASE C: Legacy routes hidden from navigation - accessible via direct URL for admin only */}
             {/* Uncomment below to show legacy routes (admin-only in production) */}
             {/*
-              Legacy nav hidden. Printing Settings now lives at /settings/printing.
-              <NavLink to="/intake">Front Desk Intake (LEGACY)</NavLink>
-              <NavLink to="/patients">Patients (LEGACY)</NavLink>
-              <NavLink to="/studies">Studies (LEGACY)</NavLink>
-              <NavLink to="/templates">Templates</NavLink>
+            <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #e0e0e0" }}>
+              <div style={{ fontSize: 11, color: "#999", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.5px", marginBottom: 8 }}>
+                LEGACY (ADMIN ONLY)
+              </div>
+            </div>
+            <NavLink to="/intake">Front Desk Intake (LEGACY)</NavLink>
+            <NavLink to="/patients">Patients (LEGACY)</NavLink>
+            <NavLink to="/studies">Studies (LEGACY)</NavLink>
+            <NavLink to="/templates">Templates</NavLink>
+            <NavLink to="/receipt-settings">Receipt Settings</NavLink>
             */}
           </nav>
           <button
@@ -275,22 +259,16 @@ function Shell() {
                 element={canAdmin ? <ConsultantsPage /> : <AccessDenied />}
               />
 
-              <Route path="/settings/parameters" element={canAdmin ? <ParametersList /> : <AccessDenied />} />
-              <Route path="/settings/templates" element={canAdmin ? <TemplatesList /> : <AccessDenied />} />
-              <Route path="/settings/templates/:id" element={canAdmin ? <TemplateEditor /> : <AccessDenied />} />
               <Route path="/settings/templates-v2" element={canAdmin ? <TemplatesV2 /> : <AccessDenied />} />
               <Route path="/settings/templates-v2/:id/builder" element={canAdmin ? <TemplateV2Builder /> : <AccessDenied />} />
               <Route path="/settings/block-library" element={canAdmin ? <BlockLibrary /> : <AccessDenied />} />
               <Route path="/settings/services" element={canAdmin ? <ServicesList /> : <AccessDenied />} />
               <Route path="/settings/services/:id" element={canAdmin ? <ServiceEditor /> : <AccessDenied />} />
-              <Route path="/settings/service-template-links" element={canAdmin ? <ServiceTemplateLinksList /> : <AccessDenied />} />
-              <Route path="/settings/baseline-packs" element={canAdmin ? <BaselinePacks /> : <AccessDenied />} />
-              <Route path="/settings/audit-logs" element={canAdmin ? <AuditLogsPage /> : <AccessDenied />} />
-              <Route path="/settings/printing" element={canAdmin ? <PrintingSettings /> : <AccessDenied />} />
               <Route path="/settings/users" element={canAdmin ? <UserSettings /> : <AccessDenied />} />
 
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />
+              <Route path="/receipt-settings" element={canAdmin ? <ReceiptSettings /> : <AccessDenied />} />
 
               {/* Legacy endpoints disabled in Phase 2 */}
               <Route path="/studies" element={<Navigate to="/" replace />} />

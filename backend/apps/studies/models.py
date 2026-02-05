@@ -127,3 +127,77 @@ class Study(models.Model):
     def __str__(self):
         return f"{self.accession} - {self.patient.name} - {self.service.name}"
 
+
+class ReceiptSequence(models.Model):
+    """Concurrency-safe receipt number sequence generator"""
+    yymm = models.CharField(max_length=4, unique=True, db_index=True)  # e.g., "2601" for Jan 2026
+    last_number = models.IntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ["-yymm"]
+        indexes = [
+            models.Index(fields=["yymm"]),
+        ]
+    
+    @classmethod
+    @transaction.atomic
+    def get_next_receipt_number(cls):
+        """Generate next receipt number in format YYMM-0001"""
+        from django.db import connection
+        
+        now = timezone.now()
+        yymm = now.strftime("%y%m")  # e.g., "2601"
+        
+        # Use select_for_update to lock the row
+        sequence, created = cls.objects.select_for_update().get_or_create(
+            yymm=yymm,
+            defaults={"last_number": 0}
+        )
+        
+        sequence.last_number += 1
+        sequence.save()
+        
+        receipt_number = f"{yymm}-{str(sequence.last_number).zfill(4)}"
+        return receipt_number
+    
+    def __str__(self):
+        return f"{self.yymm}: {self.last_number}"
+
+
+class ReceiptSettings(models.Model):
+    """Receipt branding settings (singleton)"""
+    header_text = models.CharField(max_length=200, default="Consultant Place Clinic")
+    footer_text = models.TextField(
+        blank=True,
+        default="Adjacent Excel Labs, Near Arman Pan Shop Faisalabad Road Jaranwala\nFor information/Appointment: Tel: 041 4313 777 | WhatsApp: 03279640897",
+        help_text="Footer text displayed at bottom of receipt"
+    )
+    logo_image = models.ImageField(upload_to="branding/", blank=True, null=True)
+    header_image = models.ImageField(upload_to="branding/", blank=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    updated_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    class Meta:
+        verbose_name = "Receipt Settings"
+        verbose_name_plural = "Receipt Settings"
+    
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists
+        self.pk = 1
+        super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_settings(cls):
+        """Get or create the singleton instance"""
+        obj, created = cls.objects.get_or_create(
+            pk=1,
+            defaults={
+                "header_text": "Consultant Place Clinic",
+                "footer_text": "Adjacent Excel Labs, Near Arman Pan Shop Faisalabad Road Jaranwala\nFor information/Appointment: Tel: 041 4313 777 | WhatsApp: 03279640897"
+            }
+        )
+        return obj
+    
+    def __str__(self):
+        return "Receipt Branding Settings"

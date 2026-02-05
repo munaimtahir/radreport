@@ -6,7 +6,6 @@ import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 import ErrorAlert from "../../ui/components/ErrorAlert";
 import SuccessAlert from "../../ui/components/SuccessAlert";
-import ServiceLinkage from "./ServiceLinkage";
 
 interface Modality {
     id: string;
@@ -208,9 +207,6 @@ export default function ServiceEditor() {
                 </div>
             </div>
 
-            {!isNew && (
-                <ServiceLinkage serviceId={id!} token={token} />
-            )}
         </div>
     );
 }

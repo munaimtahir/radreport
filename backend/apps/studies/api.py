@@ -1,8 +1,8 @@
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Study, Visit
-from .serializers import StudySerializer, VisitSerializer
+from .models import Study, Visit, ReceiptSettings
+from .serializers import StudySerializer, VisitSerializer, ReceiptSettingsSerializer
 
 LEGACY_DEPRECATION_HEADERS = {
     "X-Deprecated": "true",
@@ -203,3 +203,79 @@ class VisitViewSet(viewsets.ModelViewSet):
         serializer = UsgStudySerializer(usg_studies, many=True, context={'request': request})
         return Response(serializer.data)
 
+
+class ReceiptSettingsViewSet(viewsets.ViewSet):
+    """ViewSet for managing receipt branding settings (singleton)"""
+    serializer_class = ReceiptSettingsSerializer
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        """Override to allow public access to public_settings action"""
+        if self.action == 'public_settings':
+            return [permissions.AllowAny()]
+        return [permissions.IsAuthenticated()]
+    
+    def list(self, request):
+        """Get current receipt settings"""
+        settings_obj = ReceiptSettings.get_settings()
+        serializer = self.serializer_class(settings_obj, context={"request": request})
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=["get"], url_path="public", permission_classes=[permissions.AllowAny])
+    def public_settings(self, request):
+        """Get public receipt settings (logo only, no auth required)"""
+        settings_obj = ReceiptSettings.get_settings()
+        data = {
+            "logo_image_url": None,
+            "header_text": settings_obj.header_text if settings_obj else "Consultant Place Clinics",
+        }
+        if settings_obj and settings_obj.logo_image:
+            data["logo_image_url"] = request.build_absolute_uri(settings_obj.logo_image.url)
+        return Response(data)
+    
+    def retrieve(self, request, pk=None):
+        """Get current receipt settings (same as list for singleton)"""
+        settings_obj = ReceiptSettings.get_settings()
+        serializer = self.serializer_class(settings_obj, context={"request": request})
+        return Response(serializer.data)
+    
+    def update(self, request, pk=None):
+        """Update receipt settings (partial update supported)"""
+        settings_obj = ReceiptSettings.get_settings()
+        serializer = self.serializer_class(settings_obj, data=request.data, partial=True, context={"request": request})
+        if serializer.is_valid():
+            serializer.save(updated_by=request.user)
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def partial_update(self, request, pk=None):
+        """Partial update receipt settings"""
+        return self.update(request, pk)
+    
+    @action(detail=False, methods=["post"], url_path="logo")
+    def upload_logo(self, request):
+        """Upload logo image"""
+        settings_obj = ReceiptSettings.get_settings()
+        if "logo_image" not in request.FILES:
+            return Response({"error": "logo_image file is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        settings_obj.logo_image = request.FILES["logo_image"]
+        settings_obj.updated_by = request.user
+        settings_obj.save()
+        
+        serializer = self.get_serializer(settings_obj, context={"request": request})
+        return Response(serializer.data)
+    
+    @action(detail=False, methods=["post"], url_path="header-image")
+    def upload_header_image(self, request):
+        """Upload header image"""
+        settings_obj = ReceiptSettings.get_settings()
+        if "header_image" not in request.FILES:
+            return Response({"error": "header_image file is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        settings_obj.header_image = request.FILES["header_image"]
+        settings_obj.updated_by = request.user
+        settings_obj.save()
+        
+        serializer = self.get_serializer(settings_obj, context={"request": request})
+        return Response(serializer.data)

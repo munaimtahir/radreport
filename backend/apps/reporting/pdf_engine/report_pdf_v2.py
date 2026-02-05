@@ -13,7 +13,7 @@ from reportlab.lib.utils import ImageReader
 from django.conf import settings
 from django.utils import timezone
 
-from apps.reporting.models import ReportInstanceV2, PrintingConfig
+from apps.reporting.models import ReportInstanceV2, ReportingOrganizationConfig
 from .styles import ReportStyles
 
 logger = logging.getLogger(__name__)
@@ -91,7 +91,7 @@ class ReportPDFGeneratorV2:
         static_signatories = []
         
         # Load config
-        config = PrintingConfig.get()
+        config = ReportingOrganizationConfig.objects.first()
         if config:
             lab_details["lab_name"] = config.org_name
             if config.address:
@@ -99,9 +99,9 @@ class ReportPDFGeneratorV2:
             if config.phone:
                 lab_details["lab_contact"] = config.phone
             
-            if config.report_logo:
+            if config.logo:
                 try:
-                    lab_details["logo_path"] = config.report_logo.path
+                    lab_details["logo_path"] = config.logo.path
                 except Exception:
                     pass
             

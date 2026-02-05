@@ -47,10 +47,18 @@ class ServiceVisitItemSerializer(serializers.ModelSerializer):
     def get_profile_code(self, obj):
         from django.apps import apps
         try:
-            ServiceReportProfile = apps.get_model('reporting', 'ServiceReportProfile')
-            # Check mapping for service
-            srp = ServiceReportProfile.objects.filter(service=obj.service).select_related('profile').first()
-            return srp.profile.code if srp else None
+            ServiceReportTemplateV2 = apps.get_model('reporting', 'ServiceReportTemplateV2')
+            mapping = (
+                ServiceReportTemplateV2.objects.filter(
+                    service=obj.service,
+                    is_active=True,
+                    is_default=True,
+                    template__status="active",
+                )
+                .select_related("template")
+                .first()
+            )
+            return mapping.template.code if mapping else None
         except LookupError:
             return None
 
@@ -361,8 +369,8 @@ class ServiceVisitCreateSerializer(serializers.Serializer):
             # Receipt number is generated when invoice is created OR when receipt is printed
             # This ensures receipt number exists even if paid=0
             if not invoice.receipt_number:
-                from apps.reporting.models import PrintingSequence
-                invoice.receipt_number = PrintingSequence.next_number("receipt")
+                from apps.studies.models import ReceiptSequence
+                invoice.receipt_number = ReceiptSequence.get_next_receipt_number()
                 invoice.save()
             
             # Create payment if amount_paid > 0
