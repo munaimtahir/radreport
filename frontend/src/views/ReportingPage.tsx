@@ -23,6 +23,7 @@ import SchemaFormV2 from "../components/reporting/SchemaFormV2";
 import Button from "../ui/components/Button";
 import ErrorAlert from "../ui/components/ErrorAlert";
 import SuccessAlert from "../ui/components/SuccessAlert";
+import { resolveReportingErrorMessage } from "../utils/reporting/errors";
 
 export default function ReportingPage() {
     const { service_visit_item_id: id } = useParams<{ service_visit_item_id: string }>();
@@ -94,7 +95,7 @@ export default function ReportingPage() {
                 });
             }
         } catch (e: any) {
-            setError(e.message || "Failed to load report data");
+            setError(resolveReportingErrorMessage(e));
         } finally {
             setLoading(false);
         }

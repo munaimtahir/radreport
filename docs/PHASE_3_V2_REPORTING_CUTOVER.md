@@ -12,6 +12,8 @@
 - Narrative generation uses the V2 rules engine and V2 PDF generation pipeline.
 
 ## How to import templates
+- Default template directory: `backend/apps/reporting/seed_data/templates_v2/`
+- Default mapping file: `backend/apps/reporting/seed_data/templates_v2/service_template_map.csv`
 ```bash
 python manage.py import_templates_v2 --dry-run
 python manage.py import_templates_v2
@@ -31,3 +33,9 @@ python manage.py import_templates_v2
 - Update `backend/apps/reporting/seed_data/templates_v2/service_template_map.csv`.
 - Use `service_code` (preferred), or add optional `service_slug`/`service_name` columns if needed for matching.
 - Re-run `python manage.py import_templates_v2` to apply changes.
+
+
+## Command behavior
+- `python manage.py import_templates_v2` imports all `*.json` templates from the default seed directory and applies the default mapping CSV.
+- `python manage.py import_templates_v2 --dry-run` validates templates + mappings and rolls back the transaction.
+- Matching order for service mapping: `service_code` -> `service_slug` (normalized) -> `service_name` (normalized).

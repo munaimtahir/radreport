@@ -49,11 +49,11 @@ def seed_data():
     # Call app-specific seeders
     print("\n[3/3] Calling app seeders...")
     try:
-        print("Running seed_reporting...")
-        call_command('seed_reporting')
-        print("✓ seed_reporting complete")
+        print("Running seed_reporting_v2...")
+        call_command('seed_reporting_v2')
+        print("✓ seed_reporting_v2 complete")
     except Exception as e:
-        print(f"⚠ Error in seed_reporting: {e}")
+        print(f"⚠ Error in seed_reporting_v2: {e}")
 
     print("\n" + "=" * 60)
     print("✅ Data seeding completed!")
