@@ -1,30 +1,5 @@
 import { apiGet, apiPost, API_BASE } from "./api";
 
-export interface ReportParameterOption {
-    id: string;
-    label: string;
-    value: string;
-}
-
-export interface ReportParameter {
-    id: string; // Internal UUID
-    parameter_id: string; // The UUID that should be used for value mapping as per spec
-    name: string;
-    type: "number" | "dropdown" | "checklist" | "boolean" | "short_text" | "long_text" | "heading" | "separator" | "text" | "multiline";
-    unit: string | null;
-    normal_value: string | null;
-    is_required: boolean;
-    options: ReportParameterOption[];
-    section: string;
-}
-
-export interface ReportSchema {
-    id: string;
-    code: string;
-    name: string;
-    parameters: ReportParameter[];
-}
-
 export interface ReportSchemaV2 {
     id: string;
     code?: string;
@@ -34,26 +9,20 @@ export interface ReportSchemaV2 {
     ui_schema?: Record<string, any> | null;
 }
 
-export interface ReportValueEntry {
-    parameter_id: string;
-    value: any;
-}
-
 export interface ReportValuesResponse {
     status: "draft" | "submitted" | "verified";
     is_published?: boolean;
-    values?: ReportValueEntry[];
     values_json?: Record<string, any>;
+    narrative_json?: Record<string, any>;
     schema_version?: string;
     last_saved_at?: string;
-    narrative_updated_at?: string;
     last_published_at?: string;
 }
 
 export async function getReportSchema(
     serviceVisitItemId: string,
     token: string | null
-): Promise<ReportSchema | ReportSchemaV2> {
+): Promise<ReportSchemaV2> {
     return apiGet(`/reporting/workitems/${serviceVisitItemId}/schema/`, token);
 }
 
@@ -63,7 +32,7 @@ export async function getReportValues(serviceVisitItemId: string, token: string 
 
 export async function saveReport(
     serviceVisitItemId: string,
-    valuesPayload: { values: ReportValueEntry[] } | { schema_version: "v2"; values_json: Record<string, any> },
+    valuesPayload: { schema_version: "v2"; values_json: Record<string, any> },
     token: string | null
 ) {
     return apiPost(`/reporting/workitems/${serviceVisitItemId}/save/`, token, valuesPayload);
@@ -73,21 +42,17 @@ export async function submitReport(serviceVisitItemId: string, token: string | n
     return apiPost(`/reporting/workitems/${serviceVisitItemId}/submit/`, token, {});
 }
 
-export interface NarrativeResponse {
+export interface NarrativeResponseV2 {
+    schema_version: "v2";
     status: string;
-    narrative: {
-        version: string;
-        findings_text: string;
-        impression_text: string;
-        limitations_text: string;
-    };
+    narrative_json: Record<string, any>;
 }
 
-export async function generateNarrative(serviceVisitItemId: string, token: string | null): Promise<NarrativeResponse> {
+export async function generateNarrative(serviceVisitItemId: string, token: string | null): Promise<NarrativeResponseV2> {
     return apiPost(`/reporting/workitems/${serviceVisitItemId}/generate-narrative/`, token, {});
 }
 
-export async function getNarrative(serviceVisitItemId: string, token: string | null): Promise<NarrativeResponse> {
+export async function getNarrative(serviceVisitItemId: string, token: string | null): Promise<NarrativeResponseV2> {
     return apiGet(`/reporting/workitems/${serviceVisitItemId}/narrative/`, token);
 }
 
@@ -104,7 +69,6 @@ export async function fetchReportPdf(serviceVisitItemId: string, token: string |
     return response.blob();
 }
 
-// Stage 4 Additions
 export async function verifyReport(serviceVisitItemId: string, notes: string, token: string | null) {
     return apiPost(`/reporting/workitems/${serviceVisitItemId}/verify/`, token, { notes });
 }

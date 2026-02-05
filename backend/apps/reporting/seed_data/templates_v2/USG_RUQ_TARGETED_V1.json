@@ -1,0 +1,16 @@
+{
+  "code": "USG_RUQ_TARGETED_V1",
+  "name": "USG RUQ (Targeted)",
+  "modality": "USG",
+  "status": "active",
+  "is_frozen": false,
+  "json_schema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "ui_schema": {
+    "ui:order": []
+  },
+  "narrative_rules": {}
+}

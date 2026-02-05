@@ -9,6 +9,12 @@ import sys
 import django
 from datetime import datetime
 
+# Skip when invoked by pytest; this script is intended to be run manually.
+if "pytest" in sys.modules:
+    import pytest
+
+    pytest.skip("Integration script is not a pytest test module.", allow_module_level=True)
+
 # Setup Django
 sys.path.insert(0, '/home/munaim/srv/apps/radreport/backend')
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'rims_backend.settings')

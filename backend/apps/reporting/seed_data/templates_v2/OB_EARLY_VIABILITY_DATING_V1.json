@@ -1,0 +1,16 @@
+{
+  "code": "OB_EARLY_VIABILITY_DATING_V1",
+  "name": "OB Early Pregnancy (Viability & Dating)",
+  "modality": "USG",
+  "status": "active",
+  "is_frozen": false,
+  "json_schema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "ui_schema": {
+    "ui:order": []
+  },
+  "narrative_rules": {}
+}

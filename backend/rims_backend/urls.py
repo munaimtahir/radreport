@@ -179,7 +179,6 @@ urlpatterns = [
     path("api/dashboard/summary/", dashboard_summary, name="dashboard-summary"),
     path("api/dashboard/worklist/", dashboard_worklist, name="dashboard-worklist"),
     path("api/dashboard/flow/", dashboard_flow, name="dashboard-flow"),
-    path("api/admin/", include("apps.reporting.baseline_urls")),
     path("api/reporting/", include("apps.reporting.urls")),
     path("api/", include(router.urls)),
 

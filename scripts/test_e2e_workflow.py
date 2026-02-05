@@ -12,6 +12,12 @@ import json
 from datetime import datetime
 from decimal import Decimal
 
+# Skip when invoked by pytest; this script is intended to be run manually.
+if "pytest" in sys.modules:
+    import pytest
+
+    pytest.skip("Integration script is not a pytest test module.", allow_module_level=True)
+
 # Default configuration
 BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000")
 USERNAME = os.environ.get("TEST_USERNAME", "admin")

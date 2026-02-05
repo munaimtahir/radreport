@@ -13,15 +13,9 @@ import PatientsWorkflow from "../views/PatientsWorkflow";
 import AccessDenied from "../views/AccessDenied";
 import ReportingPage from "../views/ReportingPage";
 import ReportingWorklistPage from "../views/ReportingWorklistPage";
-import TemplatesList from "../views/admin/TemplatesList";
-import TemplateEditor from "../views/admin/TemplateEditor";
 import TemplatesV2 from "../views/admin/TemplatesV2";
 import ServicesList from "../views/admin/ServicesList";
 import ServiceEditor from "../views/admin/ServiceEditor";
-import ParametersList from "../views/admin/ParametersList";
-import ServiceTemplateLinksList from "../views/admin/ServiceTemplateLinksList";
-import BaselinePacks from "../views/admin/BaselinePacks";
-import AuditLogsPage from "../views/admin/AuditLogsPage";
 import TemplateV2Builder from "../views/admin/TemplateV2Builder";
 import BlockLibrary from "../views/admin/BlockLibrary";
 import ReportPrintingWorklist from "../views/ReportPrintingWorklist";
@@ -147,29 +141,14 @@ function Shell() {
                 }}>
                   CATALOG & TEMPLATES
                 </div>
-                <NavLink to="/settings/templates">
-                  Templates
-                </NavLink>
                 <NavLink to="/settings/templates-v2">
                   Templates V2
                 </NavLink>
                 <NavLink to="/settings/block-library">
                   Block Library
                 </NavLink>
-                <NavLink to="/settings/parameters">
-                  Parameters
-                </NavLink>
                 <NavLink to="/settings/services">
                   Services
-                </NavLink>
-                <NavLink to="/settings/service-template-links">
-                  Service-Template Links
-                </NavLink>
-                <NavLink to="/settings/baseline-packs">
-                  Baseline Packs
-                </NavLink>
-                <NavLink to="/settings/audit-logs">
-                  Audit Logs
                 </NavLink>
               </div>
             )}
@@ -280,17 +259,11 @@ function Shell() {
                 element={canAdmin ? <ConsultantsPage /> : <AccessDenied />}
               />
 
-              <Route path="/settings/parameters" element={canAdmin ? <ParametersList /> : <AccessDenied />} />
-              <Route path="/settings/templates" element={canAdmin ? <TemplatesList /> : <AccessDenied />} />
-              <Route path="/settings/templates/:id" element={canAdmin ? <TemplateEditor /> : <AccessDenied />} />
               <Route path="/settings/templates-v2" element={canAdmin ? <TemplatesV2 /> : <AccessDenied />} />
               <Route path="/settings/templates-v2/:id/builder" element={canAdmin ? <TemplateV2Builder /> : <AccessDenied />} />
               <Route path="/settings/block-library" element={canAdmin ? <BlockLibrary /> : <AccessDenied />} />
               <Route path="/settings/services" element={canAdmin ? <ServicesList /> : <AccessDenied />} />
               <Route path="/settings/services/:id" element={canAdmin ? <ServiceEditor /> : <AccessDenied />} />
-              <Route path="/settings/service-template-links" element={canAdmin ? <ServiceTemplateLinksList /> : <AccessDenied />} />
-              <Route path="/settings/baseline-packs" element={canAdmin ? <BaselinePacks /> : <AccessDenied />} />
-              <Route path="/settings/audit-logs" element={canAdmin ? <AuditLogsPage /> : <AccessDenied />} />
               <Route path="/settings/users" element={canAdmin ? <UserSettings /> : <AccessDenied />} />
 
               {/* Legacy Routes */}

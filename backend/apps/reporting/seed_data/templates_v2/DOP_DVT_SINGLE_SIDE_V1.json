@@ -1,0 +1,16 @@
+{
+  "code": "DOP_DVT_SINGLE_SIDE_V1",
+  "name": "Lower Limb Venous Doppler (Single Side)",
+  "modality": "USG",
+  "status": "active",
+  "is_frozen": false,
+  "json_schema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "ui_schema": {
+    "ui:order": []
+  },
+  "narrative_rules": {}
+}
