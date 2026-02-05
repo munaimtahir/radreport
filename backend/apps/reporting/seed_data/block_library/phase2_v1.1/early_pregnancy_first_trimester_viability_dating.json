@@ -1,0 +1,75 @@
+{
+  "code": "early_pregnancy_first_trimester_viability_dating",
+  "name": "Early pregnancy (first trimester viability & dating)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "early_pregnancy_first_trimester_viability_dating",
+    "name": "Early pregnancy (first trimester viability & dating)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "first trimester": {
+          "type": "string"
+        },
+        "pregnancy query": {
+          "type": "string"
+        },
+        "ep_visualized": {
+          "type": "boolean"
+        },
+        "ep_image_quality": {
+          "type": "string"
+        },
+        "ep_limitation_reason": {
+          "type": "string"
+        },
+        "ep_ius_seen": {
+          "type": "boolean"
+        },
+        "ep_msd_mm": {
+          "type": "number"
+        },
+        "ep_yolk_sac_seen": {
+          "type": "boolean"
+        },
+        "ep_fetal_pole_seen": {
+          "type": "boolean"
+        },
+        "ep_crl_mm": {
+          "type": "number"
+        },
+        "ep_cardiac_activity_present": {
+          "type": "boolean"
+        },
+        "ep_fhr_bpm": {
+          "type": "number"
+        },
+        "ep_sch_present": {
+          "type": "boolean"
+        },
+        "ep_ga_weeks_days": {
+          "type": "string"
+        },
+        "ep_edd_date": {
+          "type": "string"
+        },
+        "if IUP + cardiac activity": {
+          "type": "string"
+        },
+        "if no IUP; correlate \u03b2-hCG and follow-up": {
+          "type": "string"
+        },
+        "if fetal pole without cardiac activity; follow-up/criteria": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ep_visualized",
+        "ep_image_quality",
+        "ep_ius_seen"
+      ]
+    }
+  }
+}

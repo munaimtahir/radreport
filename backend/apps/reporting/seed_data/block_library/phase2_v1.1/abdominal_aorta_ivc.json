@@ -1,0 +1,41 @@
+{
+  "code": "abdominal_aorta_ivc",
+  "name": "Abdominal aorta & IVC",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "abdominal_aorta_ivc",
+    "name": "Abdominal aorta & IVC",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "extended abdomen": {
+          "type": "string"
+        },
+        "aiv_visualized": {
+          "type": "boolean"
+        },
+        "aiv_image_quality": {
+          "type": "string"
+        },
+        "aiv_limitation_reason": {
+          "type": "string"
+        },
+        "aiv_aorta_max_diameter_mm": {
+          "type": "number"
+        },
+        "aiv_aorta_plaque_present": {
+          "type": "boolean"
+        },
+        "aiv_ivc_thrombus_suspected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "aiv_visualized",
+        "aiv_image_quality"
+      ]
+    }
+  }
+}

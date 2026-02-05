@@ -1,0 +1,48 @@
+{
+  "code": "free_fluid_ascites_collection",
+  "name": "Free fluid / ascites / collection",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "free_fluid_ascites_collection",
+    "name": "Free fluid / ascites / collection",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "if pelvic views included": {
+          "type": "string"
+        },
+        "ff_visualized": {
+          "type": "boolean"
+        },
+        "ff_image_quality": {
+          "type": "string"
+        },
+        "ff_limitation_reason": {
+          "type": "string"
+        },
+        "ff_present": {
+          "type": "boolean"
+        },
+        "ff_amount": {
+          "type": "string"
+        },
+        "ff_distribution": {
+          "type": "string"
+        },
+        "ff_complex_present": {
+          "type": "boolean"
+        },
+        "ff_loculated_collection_suspected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "ff_visualized",
+        "ff_image_quality",
+        "ff_present"
+      ]
+    }
+  }
+}

@@ -1,0 +1,63 @@
+{
+  "code": "adnexal_mass_characterization",
+  "name": "Adnexal mass characterization",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "adnexal_mass_characterization",
+    "name": "Adnexal mass characterization",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "adnexal mass evaluation": {
+          "type": "string"
+        },
+        "adnx_visualized": {
+          "type": "boolean"
+        },
+        "adnx_image_quality": {
+          "type": "string"
+        },
+        "adnx_limitation_reason": {
+          "type": "string"
+        },
+        "adnx_mass_present": {
+          "type": "boolean"
+        },
+        "adnx_side": {
+          "type": "string"
+        },
+        "adnx_mass_max_mm": {
+          "type": "number"
+        },
+        "adnx_composition": {
+          "type": "string"
+        },
+        "adnx_septations_present": {
+          "type": "boolean"
+        },
+        "adnx_solid_component_present": {
+          "type": "boolean"
+        },
+        "adnx_papillary_projection_present": {
+          "type": "boolean"
+        },
+        "adnx_internal_echoes_present": {
+          "type": "boolean"
+        },
+        "adnx_vascularity": {
+          "type": "string"
+        },
+        "if suspicious features": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "adnx_visualized",
+        "adnx_image_quality",
+        "adnx_mass_present"
+      ]
+    }
+  }
+}

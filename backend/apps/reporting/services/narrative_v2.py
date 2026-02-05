@@ -96,26 +96,26 @@ def safe_eval(expr, context):
 
 def generate_narrative_v2(template_v2, values_json: dict) -> dict:
     narrative_rules = template_v2.narrative_rules or {}
-    
+
     # 1. Computed Fields
     computed_defs = narrative_rules.get("computed_fields", {})
     context_values = values_json.copy()
-    
+
     for field_name, expr in computed_defs.items():
         val = safe_eval(expr, context_values)
         if val is not None:
-             context_values[field_name] = val
+            context_values[field_name] = val
 
     result = {}
-    
-    # 2. Process Sections (Conditional Narrative)
+
+    # 2. Process Sections (Conditional Narrative) with deterministic ordering
     sections_def = narrative_rules.get("sections", [])
     result["sections"] = _process_sections(sections_def, context_values, template_v2.json_schema)
-    
-    # 3. Impression Synthesis
+
+    # 3. Impression Synthesis (multiple matches allowed)
     impression_rules = narrative_rules.get("impression_rules", [])
     result["impression"] = _process_impression(impression_rules, context_values, template_v2.json_schema)
-    
+
     # Store computed values for reference
     computed_values = {k: context_values[k] for k in computed_defs.keys() if k in context_values}
     if computed_values:
@@ -125,11 +125,11 @@ def generate_narrative_v2(template_v2, values_json: dict) -> dict:
 
 def _process_sections(sections_def, values, schema):
     rendered_sections = []
-    
+
     for section in sections_def:
         title = section.get("title", "")
         content_rules = section.get("content", [])
-        
+
         rendered_lines = []
         for rule in content_rules:
             text = _process_rule(rule, values, schema)
@@ -138,12 +138,11 @@ def _process_sections(sections_def, values, schema):
                     rendered_lines.extend(text)
                 else:
                     rendered_lines.append(text)
-        
+
         if rendered_lines:
-            rendered_sections.append({
-                "title": title,
-                "lines": rendered_lines
-            })
+            rendered_sections.append({"title": title, "lines": rendered_lines})
+
+    # Preserve input ordering; no further sort here to keep deterministic output aligned to definition order.
     return rendered_sections
 
 def _process_rule(rule, values, schema):
@@ -174,13 +173,11 @@ def _process_rule(rule, values, schema):
 
 def _process_impression(rules, values, schema):
     impressions = []
-    
-    # Sort by priority (ascending or descending? "ordered by priority" - usually 1 is high)
-    # Let's assume lower is higher priority or just simple sort.
-    # Spec: "priority": 1. 
-    sorted_rules = sorted(rules, key=lambda x: x.get("priority", 999))
-    
-    for rule in sorted_rules:
+
+    # Sort deterministically by priority (ascending). Stable sort preserves author order for ties.
+    sorted_rules = sorted(enumerate(rules), key=lambda x: (x[1].get("priority", 999), x[0]))
+
+    for _, rule in sorted_rules:
         when = rule.get("when")
         if _evaluate_condition(when, values):
             text = rule.get("text", "")
@@ -188,20 +185,11 @@ def _process_impression(rules, values, schema):
                 rendered = _render_template(text, values, schema)
                 if rendered:
                     impressions.append(rendered)
-            
-            # Check for continuation
+
+            # allow multiple matches; only stop when explicitly requested
             if not rule.get("continue", False):
-                 # Spec: "First match wins (unless continue:true)"
-                 pass 
-                 # Wait, "evaluated top-down. First match wins". implies we stop across all rules?
-                 # Or per "group"? usually impression is a list.
-                 # "impression_rules": [ ... ]
-                 # If rule matches and continue=False (default), do we stop processing *subsequent* rules?
-                 # Usually yes for "finding" generators, but for impression... 
-                 # Let's assume we stop unless continue=True.
-                 if not rule.get("continue", False):
-                     break
-                     
+                break
+
     return impressions
 
 def _evaluate_condition(condition, values):
@@ -237,19 +225,19 @@ def _evaluate_condition(condition, values):
 
 def _render_template(template: str, values: dict, json_schema: dict) -> str:
     # Find all {{field}} placeholders
-    pattern = r'\{\{(\w+)\}\}'
+    pattern = r"\{\{(\w+)\}\}"
     fields = re.findall(pattern, template)
-    
+
     for field in fields:
         value = values.get(field)
         if value is None or value == "" or value == []:
-            return "" # Strict rendering: if missing, skip line
-            
+            return ""  # Skip if any required placeholder is missing/empty
+
     def replace_field(match):
         field_name = match.group(1)
         value = values.get(field_name)
         return _format_value(value, field_name, json_schema)
-    
+
     return re.sub(pattern, replace_field, template).strip()
 
 def _format_value(value, field_name: str, json_schema: dict) -> str:
@@ -263,4 +251,3 @@ def _format_value(value, field_name: str, json_schema: dict) -> str:
         return ", ".join(str(v) for v in value)
         
     return str(value)
-

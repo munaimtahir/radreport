@@ -6,6 +6,9 @@ describe("resolveReportingErrorMessage", () => {
     expect(resolveReportingErrorMessage({ detail: { code: "no_active_template" } })).toBe(
       "No active template configured for this service"
     );
+    expect(resolveReportingErrorMessage({ detail: { error: "NO_ACTIVE_V2_TEMPLATE" } })).toBe(
+      "No active template configured for this service"
+    );
   });
 
   it("falls back to generic message", () => {

@@ -1,0 +1,57 @@
+{
+  "code": "urinary_bladder",
+  "name": "Urinary bladder",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "urinary_bladder",
+    "name": "Urinary bladder",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "bl_visualized": {
+          "type": "boolean"
+        },
+        "bl_image_quality": {
+          "type": "string"
+        },
+        "bl_limitation_reason": {
+          "type": "string"
+        },
+        "bl_distended": {
+          "type": "boolean"
+        },
+        "bl_wall_thickness_mm": {
+          "type": "number"
+        },
+        "bl_trabeculation_present": {
+          "type": "boolean"
+        },
+        "bl_stone_present": {
+          "type": "boolean"
+        },
+        "bl_mass_suspected": {
+          "type": "boolean"
+        },
+        "bl_debris_present": {
+          "type": "boolean"
+        },
+        "bl_prevoid_volume_ml": {
+          "type": "number"
+        },
+        "bl_pvr_ml": {
+          "type": "number"
+        },
+        "if clinically relevant": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "bl_visualized",
+        "bl_image_quality",
+        "bl_distended"
+      ]
+    }
+  }
+}

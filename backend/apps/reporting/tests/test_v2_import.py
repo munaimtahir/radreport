@@ -17,12 +17,16 @@ class V2TemplateImportTests(TestCase):
         Service.objects.all().delete()
         Modality.objects.all().delete()
         self.modality = Modality.objects.create(code="USG", name="Ultrasound")
+        # Active services for mapping
         self.service = Service.objects.create(code="USG-ABD", name="USG Abdomen", modality=self.modality)
-        self.seed_dir = Path(__file__).resolve().parents[1] / "seed_data" / "templates_v2"
+        self.service_kub = Service.objects.create(code="USG-KUB", name="USG KUB", modality=self.modality)
+        self.service_pelvis = Service.objects.create(code="USG-PELVIS", name="USG Pelvis", modality=self.modality)
+
+        self.seed_dir = Path(__file__).resolve().parents[1] / "seed_data" / "templates_v2" / "library" / "phase2_v1.1"
         self.active_codes = {"USG_ABD_V1", "USG_KUB_V1", "USG_PELVIS_V1"}
 
     def test_active_seed_templates_are_schema_valid(self):
-        files = list(self.seed_dir.glob("*.json"))
+        files = list(self.seed_dir.rglob("*.json"))
         payloads = [json.loads(p.read_text(encoding="utf-8")) for p in files]
         by_code = {p["code"]: p for p in payloads}
 

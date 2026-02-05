@@ -1,0 +1,63 @@
+{
+  "code": "appendix_bowel_focused",
+  "name": "Appendix / bowel focused",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "appendix_bowel_focused",
+    "name": "Appendix / bowel focused",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "appendix": {
+          "type": "string"
+        },
+        "RLQ pain": {
+          "type": "string"
+        },
+        "app_visualized": {
+          "type": "boolean"
+        },
+        "app_image_quality": {
+          "type": "string"
+        },
+        "app_limitation_reason": {
+          "type": "string"
+        },
+        "app_appendix_visualized": {
+          "type": "boolean"
+        },
+        "app_appendix_diameter_mm": {
+          "type": "number"
+        },
+        "app_compressible": {
+          "type": "boolean"
+        },
+        "app_appendicolith_present": {
+          "type": "boolean"
+        },
+        "app_hyperemia_present": {
+          "type": "boolean"
+        },
+        "app_periappendiceal_fluid_present": {
+          "type": "boolean"
+        },
+        "app_bowel_wall_thickening_present": {
+          "type": "boolean"
+        },
+        "app_hyperemia_present = true": {
+          "type": "string"
+        },
+        "enteritis/colitis pattern, correlate clinically": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "app_visualized",
+        "app_image_quality",
+        "app_appendix_visualized"
+      ]
+    }
+  }
+}

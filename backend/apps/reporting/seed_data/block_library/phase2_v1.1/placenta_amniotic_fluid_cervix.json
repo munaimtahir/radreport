@@ -1,0 +1,66 @@
+{
+  "code": "placenta_amniotic_fluid_cervix",
+  "name": "Placenta / amniotic fluid / cervix",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "placenta_amniotic_fluid_cervix",
+    "name": "Placenta / amniotic fluid / cervix",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "2nd/3rd trimester": {
+          "type": "string"
+        },
+        "pl_visualized": {
+          "type": "boolean"
+        },
+        "pl_image_quality": {
+          "type": "string"
+        },
+        "pl_limitation_reason": {
+          "type": "string"
+        },
+        "pl_location": {
+          "type": "string"
+        },
+        "pl_previa_present": {
+          "type": "boolean"
+        },
+        "pl_grade": {
+          "type": "string"
+        },
+        "pl_retroplacental_hematoma_present": {
+          "type": "boolean"
+        },
+        "pl_fluid_method": {
+          "type": "string"
+        },
+        "pl_afi_cm": {
+          "type": "number"
+        },
+        "pl_sdp_cm": {
+          "type": "number"
+        },
+        "pl_oligohydramnios_present": {
+          "type": "boolean"
+        },
+        "pl_polyhydramnios_present": {
+          "type": "boolean"
+        },
+        "pl_cervical_length_mm": {
+          "type": "number"
+        },
+        "pl_funneling_present": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "pl_visualized",
+        "pl_image_quality",
+        "pl_location"
+      ]
+    }
+  }
+}

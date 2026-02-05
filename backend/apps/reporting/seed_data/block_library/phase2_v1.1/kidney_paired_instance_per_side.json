@@ -1,0 +1,77 @@
+{
+  "code": "kidney_paired_instance_per_side",
+  "name": "Kidney (paired, instance per side)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "kidney_paired_instance_per_side",
+    "name": "Kidney (paired, instance per side)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "urinary tract": {
+          "type": "string"
+        },
+        "kid_visualized": {
+          "type": "boolean"
+        },
+        "kid_image_quality": {
+          "type": "string"
+        },
+        "kid_limitation_reason": {
+          "type": "string"
+        },
+        "kid_side": {
+          "type": "string"
+        },
+        "kid_length_cm": {
+          "type": "number"
+        },
+        "kid_cortical_echogenicity": {
+          "type": "string"
+        },
+        "kid_cmd": {
+          "type": "string"
+        },
+        "kid_hydronephrosis_grade": {
+          "type": "string"
+        },
+        "kid_calculus_present": {
+          "type": "boolean"
+        },
+        "kid_largest_calculus_mm": {
+          "type": "number"
+        },
+        "kid_simple_cyst_present": {
+          "type": "boolean"
+        },
+        "kid_largest_cyst_mm": {
+          "type": "number"
+        },
+        "kid_mass_suspected": {
+          "type": "boolean"
+        },
+        "kid_perinephric_collection_present": {
+          "type": "boolean"
+        },
+        "grade": {
+          "type": "string"
+        },
+        "if clinically relevant": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kid_visualized",
+        "kid_image_quality",
+        "kid_side",
+        "kid_cortical_echogenicity",
+        "kid_cmd",
+        "kid_hydronephrosis_grade",
+        "kid_calculus_present",
+        "kid_simple_cyst_present"
+      ]
+    }
+  }
+}

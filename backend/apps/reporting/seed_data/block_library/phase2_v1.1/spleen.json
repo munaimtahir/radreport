@@ -1,0 +1,46 @@
+{
+  "code": "spleen",
+  "name": "Spleen",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "spleen",
+    "name": "Spleen",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "extended upper abdomen": {
+          "type": "string"
+        },
+        "spl_visualized": {
+          "type": "boolean"
+        },
+        "spl_image_quality": {
+          "type": "string"
+        },
+        "spl_limitation_reason": {
+          "type": "string"
+        },
+        "spl_length_cm": {
+          "type": "number"
+        },
+        "spl_echotexture": {
+          "type": "string"
+        },
+        "spl_focal_lesion_present": {
+          "type": "boolean"
+        },
+        "s": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "spl_visualized",
+        "spl_image_quality",
+        "spl_echotexture",
+        "spl_focal_lesion_present"
+      ]
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "code": "fetal_biometry_growth_2nd_3rd_trimester",
+  "name": "Fetal biometry & growth (2nd/3rd trimester)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "fetal_biometry_growth_2nd_3rd_trimester",
+    "name": "Fetal biometry & growth (2nd/3rd trimester)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "2nd/3rd trimester": {
+          "type": "string"
+        },
+        "fb_visualized": {
+          "type": "boolean"
+        },
+        "fb_image_quality": {
+          "type": "string"
+        },
+        "fb_limitation_reason": {
+          "type": "string"
+        },
+        "fb_presentation": {
+          "type": "string"
+        },
+        "fb_bpd_mm": {
+          "type": "number"
+        },
+        "fb_hc_mm": {
+          "type": "number"
+        },
+        "fb_ac_mm": {
+          "type": "number"
+        },
+        "fb_fl_mm": {
+          "type": "number"
+        },
+        "fb_efw_g": {
+          "type": "number"
+        },
+        "fb_ga_weeks_days": {
+          "type": "string"
+        },
+        "fb_growth_percentile": {
+          "type": "number"
+        }
+      },
+      "required": [
+        "fb_visualized",
+        "fb_image_quality"
+      ]
+    }
+  }
+}

@@ -9,7 +9,7 @@ from apps.reporting.models import ReportTemplateV2, ServiceReportTemplateV2, Rep
 from apps.workflow.models import ServiceVisit, ServiceVisitItem
 
 
-@override_settings(ALLOWED_HOSTS=["testserver", "localhost"])
+@override_settings(ALLOWED_HOSTS=["testserver", "localhost"], MEDIA_ROOT="/tmp/radreport-test-media")
 class WorkItemV2MinimalFlowTests(TestCase):
     def setUp(self):
         user_model = get_user_model()

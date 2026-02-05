@@ -1,0 +1,55 @@
+{
+  "code": "pleural_effusion_lung_bases",
+  "name": "Pleural effusion (lung bases)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "pleural_effusion_lung_bases",
+    "name": "Pleural effusion (lung bases)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "incidental lung bases": {
+          "type": "string"
+        },
+        "pleff_visualized": {
+          "type": "boolean"
+        },
+        "pleff_image_quality": {
+          "type": "string"
+        },
+        "pleff_limitation_reason": {
+          "type": "string"
+        },
+        "pleff_side": {
+          "type": "string"
+        },
+        "pleff_present": {
+          "type": "boolean"
+        },
+        "pleff_amount": {
+          "type": "string"
+        },
+        "pleff_complex_present": {
+          "type": "boolean"
+        },
+        "pleff_adjacent_consolidation_suspected": {
+          "type": "boolean"
+        },
+        "if present": {
+          "type": "string"
+        },
+        "right and left": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pleff_visualized",
+        "pleff_image_quality",
+        "pleff_side",
+        "pleff_present"
+      ]
+    }
+  }
+}
