@@ -1,8 +1,3 @@
-import os
-import django
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rims_backend.settings")
-django.setup()
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
 from django.test import TestCase, override_settings

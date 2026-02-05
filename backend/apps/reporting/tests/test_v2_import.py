@@ -1,8 +1,3 @@
-import os
-import django
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "rims_backend.settings")
-django.setup()
-
 import csv
 import io
 import json
