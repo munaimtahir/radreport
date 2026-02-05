@@ -1,0 +1,4 @@
+template_code,service_code,is_active,is_default
+USG_ABD_V1,USG-ABD,true,true
+USG_KUB_V1,USG-KUB,true,true
+USG_PELVIS_V1,USG-PELVIS,true,true
