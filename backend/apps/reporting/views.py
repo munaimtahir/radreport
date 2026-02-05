@@ -111,7 +111,18 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             .first()
         )
         if not mapping:
-            raise exceptions.NotFound("No active V2 report template associated with this service.")
+            # V2-ONLY ENFORCEMENT
+            data = {
+                "error": "NO_ACTIVE_V2_TEMPLATE",
+                "detail": "No active default TemplateV2 is mapped to this service. Reporting is V2-only.",
+                "service_id": str(item.service.id),
+                "service_code": item.service.code
+            }
+            # Custom 409 exception
+            exc = exceptions.APIException(detail=data)
+            exc.status_code = status.HTTP_409_CONFLICT
+            exc.default_code = "conflict"
+            raise exc
         return mapping.template
 
     def _get_or_create_instance(self, item, template, user):

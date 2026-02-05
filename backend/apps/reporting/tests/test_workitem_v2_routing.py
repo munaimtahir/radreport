@@ -6,8 +6,6 @@ from apps.catalog.models import Modality, Service
 from apps.patients.models import Patient
 from apps.workflow.models import ServiceVisit, ServiceVisitItem
 from apps.reporting.models import (
-    ReportProfile,
-    ServiceReportProfile,
     ReportTemplateV2,
     ServiceReportTemplateV2,
 )
@@ -38,20 +36,13 @@ class WorkItemV2RoutingTests(TestCase):
             service=self.service,
             status="REGISTERED",
         )
-        self.profile = ReportProfile.objects.create(
-            code="CXR_V1",
-            name="CXR V1",
-            modality="XR",
-        )
-        ServiceReportProfile.objects.create(service=self.service, profile=self.profile)
 
-    def test_schema_defaults_to_v1_without_v2_mapping(self):
+    def test_schema_returns_409_without_v2_mapping(self):
         url = f"/api/reporting/workitems/{self.item.id}/schema/"
         response = self.client.get(url)
 
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data["schema_version"], "v1")
-        self.assertIn("parameters", response.data)
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.data["error"], "NO_ACTIVE_V2_TEMPLATE")
 
     def test_schema_returns_v2_when_mapping_exists(self):
         template = ReportTemplateV2.objects.create(

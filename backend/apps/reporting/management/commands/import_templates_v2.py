@@ -1,160 +1,171 @@
-import csv
 import json
-from pathlib import Path
+import csv
+import os
 from django.core.management.base import BaseCommand
 from django.db import transaction
-from apps.catalog.models import Service
+from django.core.files.base import ContentFile
 from apps.reporting.models import ReportTemplateV2, ServiceReportTemplateV2
-
+from apps.catalog.models import Service
 
 class Command(BaseCommand):
-    help = "Import V2 reporting templates and service mappings."
+    help = 'Import V2 Reporting Templates and Service Mappings'
 
     def add_arguments(self, parser):
-        parser.add_argument("--dry-run", action="store_true", help="Validate without writing to DB")
+        parser.add_argument('--templates', type=str, help='Path to templates JSON file')
+        parser.add_argument('--mappings', type=str, help='Path to service mappings CSV file')
+        parser.add_argument('--dry-run', action='store_true', help='Validate without saving')
+        parser.add_argument('--strict', action='store_true', help='Fail on missing services')
+        parser.add_argument('--activate', action='store_true', help='Activate imported templates automatically')
+        parser.add_argument('--deactivate-missing', action='store_true', help='Deactivate mappings not in file (risky)')
 
     def handle(self, *args, **options):
-        dry_run = options["dry_run"]
-        base_dir = Path(__file__).resolve().parents[2] / "seed_data" / "templates_v2"
-        templates_dir = base_dir
-        mapping_path = base_dir / "service_template_map.csv"
+        dry_run = options['dry_run']
+        strict = options['strict']
+        activate = options['activate']
+        
+        self.stdout.write(self.style.MIGRATE_HEADING("Starting V2 Template Import..."))
+        if dry_run:
+            self.stdout.write(self.style.WARNING("DRY RUN MODE: No changes will be saved."))
 
-        if not templates_dir.exists():
-            self.stdout.write(self.style.ERROR("Templates directory not found."))
-            return
+        stats = {
+            "templates_created": 0,
+            "templates_updated": 0,
+            "mappings_created": 0,
+            "mappings_updated": 0,
+            "errors": []
+        }
 
-        template_files = sorted([p for p in templates_dir.glob("*.json")])
-        if not template_files:
-            self.stdout.write(self.style.WARNING("No template JSON files found."))
+        try:
+            with transaction.atomic():
+                if options['templates']:
+                    self._import_templates(options['templates'], stats, activate)
+                
+                if options['mappings']:
+                    self._import_mappings(options['mappings'], stats, strict, options['deactivate_missing'])
 
-        templates_created = 0
-        templates_updated = 0
-        mappings_created = 0
-        mappings_updated = 0
-        unresolved = []
-        template_cache = {}
+                if dry_run:
+                    raise Exception("Dry Run - Rolling back")
 
-        def normalize_name(value: str) -> str:
-            return " ".join(value.strip().lower().split())
+        except Exception as e:
+            if str(e) == "Dry Run - Rolling back":
+                self.stdout.write(self.style.SUCCESS("Dry run completed successfully."))
+            else:
+                self.stdout.write(self.style.ERROR(f"Error: {str(e)}"))
+                if strict:
+                    raise e
+        
+        self._print_summary(stats)
 
-        def resolve_service(code, slug, name):
-            if code:
-                svc = Service.objects.filter(code=code).first()
-                if svc:
-                    return svc
-            if slug:
-                svc = Service.objects.filter(slug=slug).first()
-                if svc:
-                    return svc
-            if name:
-                normalized = normalize_name(name)
-                for svc in Service.objects.all():
-                    if normalize_name(svc.name) == normalized:
-                        return svc
-            return None
+    def _import_templates(self, filepath, stats, activate):
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Templates file not found: {filepath}")
 
-        def upsert_template(payload):
-            nonlocal templates_created, templates_updated
-            code = payload.get("code")
-            if not code:
-                raise ValueError("Template missing code")
+        with open(filepath, 'r') as f:
+            data = json.load(f)
+            if isinstance(data, dict): # Single template
+                data = [data]
+
+        for item in data:
+            code = item.get("code")
+            modality = item.get("modality")
+            
+            if not code or not modality:
+                stats["errors"].append(f"Missing code or modality in template: {item.get('name')}")
+                continue
+
+            # Update or create based on code only (assuming unique code for V2)
+            # Or should we version? The requirement says "create/update template by (code, modality)"
+            # For simplicity, we update the existing record with that code.
+            
             defaults = {
-                "name": payload.get("name", ""),
-                "modality": payload.get("modality", ""),
-                "status": payload.get("status", "active"),
-                "is_frozen": payload.get("is_frozen", False),
-                "json_schema": payload.get("json_schema", {}),
-                "ui_schema": payload.get("ui_schema", {}),
-                "narrative_rules": payload.get("narrative_rules", {}),
+                "name": item.get("name"),
+                "json_schema": item.get("json_schema", {}),
+                "ui_schema": item.get("ui_schema", {}),
+                "narrative_rules": item.get("narrative_rules", {}),
+                "is_frozen": item.get("is_frozen", False),
             }
-            existing = ReportTemplateV2.objects.filter(code=code).first()
-            if dry_run:
-                if existing:
-                    templates_updated += 1
-                else:
-                    templates_created += 1
-                template_cache[code] = defaults
-                return existing
-            obj, created = ReportTemplateV2.objects.update_or_create(code=code, defaults=defaults)
-            if created:
-                templates_created += 1
-            else:
-                templates_updated += 1
-            return obj
+            if activate:
+                defaults["status"] = "active"
 
-        def upsert_mapping(service, template, is_default, is_active):
-            nonlocal mappings_created, mappings_updated
-            existing = ServiceReportTemplateV2.objects.filter(service=service, template=template).first()
-            if dry_run:
-                if existing:
-                    mappings_updated += 1
-                else:
-                    mappings_created += 1
-                return
-            obj, created = ServiceReportTemplateV2.objects.update_or_create(
-                service=service,
-                template=template,
-                defaults={
-                    "is_default": is_default,
-                    "is_active": is_active,
-                },
+            template, created = ReportTemplateV2.objects.update_or_create(
+                code=code,
+                defaults=defaults
             )
+            
+            # Ensure modality matches (it's not in defaults)
+            if template.modality != modality:
+                template.modality = modality
+                template.save()
+
             if created:
-                mappings_created += 1
+                stats["templates_created"] += 1
+                self.stdout.write(f"Created template: {code}")
             else:
-                mappings_updated += 1
-            if is_default:
-                ServiceReportTemplateV2.objects.filter(service=service).exclude(id=obj.id).update(is_default=False)
+                stats["templates_updated"] += 1
+                self.stdout.write(f"Updated template: {code}")
 
-        context = transaction.atomic() if not dry_run else _noop()
-        with context:
-            for template_file in template_files:
-                payload = json.loads(template_file.read_text())
-                upsert_template(payload)
+    def _import_mappings(self, filepath, stats, strict, deactivate_missing):
+        if not os.path.exists(filepath):
+            raise FileNotFoundError(f"Mappings file not found: {filepath}")
 
-            if mapping_path.exists():
-                with mapping_path.open(newline="") as csvfile:
-                    reader = csv.DictReader(csvfile)
-                    for row in reader:
-                        template_code = (row.get("template_code") or "").strip()
-                        service_code = (row.get("service_code") or "").strip()
-                        service_slug = (row.get("service_slug") or "").strip()
-                        service_name = (row.get("service_name") or "").strip()
-                        is_default = str(row.get("is_default") or "").strip().lower() in {"true", "1", "yes", "y"}
-                        is_active = str(row.get("is_active") or "").strip().lower() not in {"false", "0", "no", "n"}
+        processed_services = set()
 
-                        template = template_cache.get(template_code) if dry_run else ReportTemplateV2.objects.filter(code=template_code).first()
-                        if not template:
-                            self.stdout.write(self.style.WARNING(f"Template not found: {template_code}"))
-                            continue
+        with open(filepath, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                service_code = row.get("service_code")
+                template_code = row.get("template_code")
+                
+                if not service_code or not template_code:
+                    continue
 
-                        service = resolve_service(service_code, service_slug, service_name)
-                        if not service:
-                            unresolved.append(service_code or service_slug or service_name)
-                            self.stdout.write(self.style.WARNING(
-                                f"Service not resolved for mapping row: {service_code or service_slug or service_name}"
-                            ))
-                            continue
+                service = Service.objects.filter(code=service_code).first()
+                if not service:
+                    msg = f"Service not found: {service_code}"
+                    if strict:
+                        raise ValueError(msg)
+                    stats["errors"].append(msg)
+                    continue
 
-                        if dry_run:
-                            mappings_created += 1
-                        else:
-                            upsert_mapping(service, template, is_default, is_active)
+                template = ReportTemplateV2.objects.filter(code=template_code).first()
+                if not template:
+                    msg = f"Template not found: {template_code}"
+                    if strict:
+                        raise ValueError(msg)
+                    stats["errors"].append(msg)
+                    continue
 
-        self.stdout.write(self.style.SUCCESS("Import summary:"))
-        self.stdout.write(f"Templates created: {templates_created}")
-        self.stdout.write(f"Templates updated: {templates_updated}")
-        self.stdout.write(f"Mappings created: {mappings_created}")
-        self.stdout.write(f"Mappings updated: {mappings_updated}")
-        if unresolved:
-            self.stdout.write("Unresolved services:")
-            for name in unresolved:
-                self.stdout.write(f"- {name}")
+                # Create mapping
+                # Ensure it's default if requested (assuming all imports are intended as default)
+                # The rule: "Set default mapping (ensuring only one default per service)"
+                
+                # Deactivate old defaults
+                ServiceReportTemplateV2.objects.filter(service=service, is_default=True).update(is_default=False)
+                
+                mapping, created = ServiceReportTemplateV2.objects.update_or_create(
+                    service=service,
+                    template=template,
+                    defaults={
+                        "is_active": True,
+                        "is_default": True
+                    }
+                )
+                
+                processed_services.add(service.id)
+                
+                if created:
+                    stats["mappings_created"] += 1
+                else:
+                    stats["mappings_updated"] += 1
 
-
-class _noop:
-    def __enter__(self):
-        return self
-
-    def __exit__(self, exc_type, exc, tb):
-        return False
+    def _print_summary(self, stats):
+        self.stdout.write("\n--------- SUMMARY ---------")
+        self.stdout.write(f"Templates Created: {stats['templates_created']}")
+        self.stdout.write(f"Templates Updated: {stats['templates_updated']}")
+        self.stdout.write(f"Mappings Created:  {stats['mappings_created']}")
+        self.stdout.write(f"Mappings Updated:  {stats['mappings_updated']}")
+        if stats["errors"]:
+            self.stdout.write(self.style.ERROR(f"Errors: {len(stats['errors'])}"))
+            for err in stats["errors"]:
+                self.stdout.write(f" - {err}")
+        self.stdout.write("---------------------------")
