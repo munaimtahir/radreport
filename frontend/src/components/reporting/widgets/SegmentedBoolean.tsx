@@ -33,19 +33,35 @@ export default function SegmentedBoolean({
     });
 
     return (
-        <div style={{ display: "flex", borderRadius: theme.radius.md, overflow: "hidden", border: `1px solid ${theme.colors.border}` }}>
+        <div data-testid="segmented-boolean" style={{ display: "flex", borderRadius: theme.radius.md, overflow: "hidden", border: `1px solid ${theme.colors.border}` }}>
             <div
+                role="button"
+                tabIndex={disabled ? -1 : 0}
+                data-testid="segmented-boolean-yes"
                 style={buttonStyle(isTrue)}
                 onClick={() => !disabled && onChange(true)}
+                onKeyDown={(e) => {
+                    if (!disabled && (e.key === "Enter" || e.key === " ")) {
+                        e.preventDefault();
+                        onChange(true);
+                    }
+                }}
             >
                 {trueLabel}
             </div>
+            <div style={{ width: 1, backgroundColor: theme.colors.border }} />
             <div
-                style={{ width: 1, backgroundColor: theme.colors.border }}
-            />
-            <div
+                role="button"
+                tabIndex={disabled ? -1 : 0}
+                data-testid="segmented-boolean-no"
                 style={buttonStyle(isFalse)}
                 onClick={() => !disabled && onChange(false)}
+                onKeyDown={(e) => {
+                    if (!disabled && (e.key === "Enter" || e.key === " ")) {
+                        e.preventDefault();
+                        onChange(false);
+                    }
+                }}
             >
                 {falseLabel}
             </div>
