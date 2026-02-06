@@ -52,10 +52,13 @@ class V2TemplateImportTests(TestCase):
 
     def test_mapping_created_when_service_exists(self):
         call_command("import_templates_v2")
-        self.assertTrue(ServiceReportTemplateV2.objects.filter(service=self.service).exists())
+        self.assertEqual(
+            ServiceReportTemplateV2.objects.filter(service__code__in=["USG-ABD", "USG-KUB", "USG-PELVIS"]).count(),
+            3,
+        )
 
     def test_unresolved_service_is_reported_without_crashing(self):
-        mapping_file = self.seed_dir / "tmp_unresolved_map.csv"
+        mapping_file = self.seed_dir / "activation" / "tmp_unresolved_map.csv"
         with mapping_file.open("w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(
                 f,

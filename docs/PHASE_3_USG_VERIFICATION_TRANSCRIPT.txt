@@ -1,64 +1,301 @@
-# Phase 3 USG Verification Transcript
+$ docker compose -f docker-compose.dev.yml up -d --build
+bash: docker: command not found
 
-## Backend
-$ source backend/.venv/bin/activate
-$ cd backend && python manage.py migrate --noinput
-(see output above)
+$ cd backend && python manage.py test apps.reporting.tests.test_v2_import apps.reporting.tests.test_workitem_v2_minimal_flow -v 2
+Found 6 test(s).
+Creating test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+Operations to perform:
+  Synchronize unmigrated apps: corsheaders, django_filters, drf_spectacular, messages, rest_framework, staticfiles
+  Apply all migrations: admin, audit, auth, authtoken, catalog, consultants, contenttypes, patients, reporting, sessions, studies, workflow
+Synchronizing apps without migrations:
+  Creating tables...
+    Running deferred SQL...
+Running migrations:
+  Applying contenttypes.0001_initial... OK
+  Applying auth.0001_initial... OK
+  Applying admin.0001_initial... OK
+  Applying admin.0002_logentry_remove_auto_add... OK
+  Applying admin.0003_logentry_add_action_flag_choices... OK
+  Applying audit.0001_initial... OK
+  Applying contenttypes.0002_remove_content_type_name... OK
+  Applying auth.0002_alter_permission_name_max_length... OK
+  Applying auth.0003_alter_user_email_max_length... OK
+  Applying auth.0004_alter_user_username_opts... OK
+  Applying auth.0005_alter_user_last_login_null... OK
+  Applying auth.0006_require_contenttypes_0002... OK
+  Applying auth.0007_alter_validators_add_error_messages... OK
+  Applying auth.0008_alter_user_username_max_length... OK
+  Applying auth.0009_alter_user_last_name_max_length... OK
+  Applying auth.0010_alter_group_name_max_length... OK
+  Applying auth.0011_update_proxy_permissions... OK
+  Applying auth.0012_alter_user_first_name_max_length... OK
+  Applying authtoken.0001_initial... OK
+  Applying authtoken.0002_auto_20160226_1747... OK
+  Applying authtoken.0003_tokenproxy... OK
+  Applying authtoken.0004_alter_tokenproxy_options... OK
+  Applying catalog.0001_initial... OK
+  Applying catalog.0002_service_category_service_charges_service_code_and_more... OK
+  Applying catalog.0003_service_default_price_turnaround_time... OK
+  Applying patients.0001_initial... OK
+  Applying patients.0002_patient_date_of_birth_alter_patient_mrn... OK
+  Applying workflow.0001_initial... OK
+  Applying workflow.0004_phase_b_c_combined... OK
+  Applying workflow.0005_phase_d_canonical_usg_report... OK
+  Applying workflow.0006_migrate_service_catalog_to_catalog_service... OK
+  Applying consultants.0001_initial... OK
+  Applying consultants.0002_consultantbillingrule_service_and_more... OK
+  Applying consultants.0003_consultantbillingrule_consultant_fixed_amount_and_more... OK
+  Applying patients.0003_patient_patient_reg_no... OK
+  Applying patients.0004_rename_patients_pa_patient_idx_patients_pa_patient_42dea5_idx... OK
+  Applying workflow.0007_receipt_snapshot... OK
+  Applying workflow.0008_alter_servicecatalog_options_and_more... OK
+  Applying workflow.0009_alter_usgreport_scan_quality... OK
+  Applying workflow.0010_delete_usgreport... OK
+  Applying workflow.0011_servicevisit_referring_consultant... OK
+  Applying workflow.0012_receiptsnapshot_referring_consultant... OK
+  Applying reporting.0001_initial... OK
+  Applying reporting.0002_reportinstance_findings_text_and_more... OK
+  Applying reporting.0003_reportactionlog_reportpublishsnapshot... OK
+  Applying reporting.0004_reportingorganizationconfig_and_more... OK
+  Applying reporting.0005_alter_reportvalue_unique_together_and_more... OK
+  Applying reporting.0006_alter_reportparameter_unique_together... OK
+  Applying reporting.0007_template_governance... OK
+  Applying reporting.0008_reporting_v2_models... OK
+  Applying reporting.0009_add_v2_publish_snapshot_and_narrative_rules... OK
+  Applying reporting.0010_rename_reporting_r_report__b8e9b5_idx_reporting_r_report__9d129f_idx_and_more... OK
+  Applying reporting.0011_reporttemplatev2_is_frozen_reportactionlogv2... OK
+  Applying reporting.0012_reportinstancev2_narrative_json... OK
+  Applying reporting.0013_reportblocklibrary... OK
+  Applying reporting.0014_remove_legacy_reporting... OK
+  Applying sessions.0001_initial... OK
+  Applying studies.0001_initial... OK
+  Applying studies.0002_orderitem_study_order_item_visit_orderitem_visit_and_more... OK
+  Applying studies.0003_receiptsequence_receiptsettings_and_more... OK
+  Applying studies.0004_receiptsettings_footer_text... OK
+  Applying studies.0005_backfill_receipt_settings... OK
+  Applying studies.0006_alter_receiptsettings_footer_text_and_more... OK
+System check identified no issues (0 silenced).
+test_active_seed_templates_are_schema_valid (apps.reporting.tests.test_v2_import.V2TemplateImportTests.test_active_seed_templates_are_schema_valid) ... ok
+test_import_command_dry_run_makes_no_writes (apps.reporting.tests.test_v2_import.V2TemplateImportTests.test_import_command_dry_run_makes_no_writes) ... Starting V2 template import
+Templates source: /workspace/radreport/backend/apps/reporting/seed_data/templates_v2/library/phase2_v1.1
+Mappings source:  /workspace/radreport/backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv
+DRY RUN MODE: no changes will be persisted.
 
-$ cd backend && python manage.py seed_reporting_v2
-Seeded USG Services: 3 created, 0 updated.
-USG basic services seeded.
-Importing block library seeds
-Source: backend/apps/reporting/seed_data/block_library/phase2_v1.1
---- Block Library Import Summary ---
-Created:   30
-Updated:   0
-Unchanged: 0
-------------------------------------
-Block library imported.
-Starting V2 template import
-Templates source: backend/apps/reporting/seed_data/templates_v2/library/phase2_v1.1
-Mappings source:  backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv
 --------- SUMMARY ---------
-Templates Created: 18
+Templates Created: 3
 Templates Updated: 0
 Mappings Created:  3
 Mappings Updated:  0
 ---------------------------
-V2 reporting templates imported.
+ok
+test_import_command_is_idempotent (apps.reporting.tests.test_v2_import.V2TemplateImportTests.test_import_command_is_idempotent) ... Starting V2 template import
+Templates source: /workspace/radreport/backend/apps/reporting/seed_data/templates_v2/library/phase2_v1.1
+Mappings source:  /workspace/radreport/backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv
 
-$ cd backend && python manage.py import_templates_v2 --dry-run
+--------- SUMMARY ---------
+Templates Created: 3
+Templates Updated: 0
+Mappings Created:  3
+Mappings Updated:  0
+---------------------------
 Starting V2 template import
-Templates source: backend/apps/reporting/seed_data/templates_v2/library/phase2_v1.1
-Mappings source:  backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv
-DRY RUN MODE: no changes will be persisted.
+Templates source: /workspace/radreport/backend/apps/reporting/seed_data/templates_v2/library/phase2_v1.1
+Mappings source:  /workspace/radreport/backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv
+
 --------- SUMMARY ---------
 Templates Created: 0
-Templates Updated: 18
+Templates Updated: 3
 Mappings Created:  0
 Mappings Updated:  3
 ---------------------------
+ok
+test_mapping_created_when_service_exists (apps.reporting.tests.test_v2_import.V2TemplateImportTests.test_mapping_created_when_service_exists) ... Starting V2 template import
+Templates source: /workspace/radreport/backend/apps/reporting/seed_data/templates_v2/library/phase2_v1.1
+Mappings source:  /workspace/radreport/backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv
 
-$ cd backend && python manage.py import_templates_v2
-Starting V2 template import
-Templates source: backend/apps/reporting/seed_data/templates_v2/library/phase2_v1.1
-Mappings source:  backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv
 --------- SUMMARY ---------
-Templates Created: 0
-Templates Updated: 18
-Mappings Created:  0
-Mappings Updated:  3
+Templates Created: 3
+Templates Updated: 0
+Mappings Created:  3
+Mappings Updated:  0
 ---------------------------
+ok
+test_unresolved_service_is_reported_without_crashing (apps.reporting.tests.test_v2_import.V2TemplateImportTests.test_unresolved_service_is_reported_without_crashing) ... ok
+test_v2_flow (apps.reporting.tests.test_workitem_v2_minimal_flow.WorkItemV2MinimalFlowTests.test_v2_flow) ... /root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/core/handlers/base.py:61: UserWarning: No directory at: /workspace/radreport/backend/staticfiles/
+  mw_instance = middleware(adapted_handler)
+ok
+
+----------------------------------------------------------------------
+Ran 6 tests in 1.285s
+
+OK
+Destroying test database for alias 'default' ('file:memorydb_default?mode=memory&cache=shared')...
+
+$ cd frontend && npm test -- --run src/utils/reporting/__tests__/errors.test.ts
+npm warn Unknown env config "http-proxy". This will stop working in the next major version of npm.
+
+> rims-frontend@0.1.0 test
+> vitest --run src/utils/reporting/__tests__/errors.test.ts
+
 
 $ cd backend && python manage.py test apps.reporting.tests.test_v2_import apps.reporting.tests.test_workitem_v2_minimal_flow
 OK (6 tests)
 
-$ cd backend && python manage.py test apps.reporting.tests.test_block_library_import
-OK (3 tests)
+ ✓ src/utils/reporting/__tests__/errors.test.ts (2 tests) 3ms
 
-## Frontend
-$ cd frontend && npm test -- --run src/utils/reporting/__tests__/errors.test.ts
-✓ errors.test.ts (2 tests)
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+   Start at  19:26:06
+   Duration  334ms (transform 61ms, setup 0ms, import 82ms, tests 3ms, environment 0ms)
 
-## UI smoke
-Opened USG workitem, ran schema→save→narrative→pdf→publish flow (see automated test coverage)
+
+$ cd backend && python manage.py import_templates_v2 --dry-run
+Starting V2 template import
+Templates source: /workspace/radreport/backend/apps/reporting/seed_data/templates_v2/library/phase2_v1.1
+Mappings source:  /workspace/radreport/backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv
+DRY RUN MODE: no changes will be persisted.
+Traceback (most recent call last):
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 360, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: reporting_reporttemplatev2
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/radreport/backend/manage.py", line 11, in <module>
+    main()
+  File "/workspace/radreport/backend/manage.py", line 8, in main
+    execute_from_command_line(sys.argv)
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/core/management/__init__.py", line 436, in execute
+    self.fetch_command(subcommand).run_from_argv(self.argv)
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/core/management/base.py", line 420, in run_from_argv
+    self.execute(*args, **cmd_options)
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/core/management/base.py", line 464, in execute
+    output = self.handle(*args, **options)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/radreport/backend/apps/reporting/management/commands/import_templates_v2.py", line 53, in handle
+    self._import_templates(templates_path, stats)
+  File "/workspace/radreport/backend/apps/reporting/management/commands/import_templates_v2.py", line 94, in _import_templates
+    _, created = ReportTemplateV2.objects.update_or_create(code=code, defaults=defaults)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/query.py", line 990, in update_or_create
+    obj, created = self.select_for_update().get_or_create(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/query.py", line 948, in get_or_create
+    return self.get(**kwargs), False
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/query.py", line 631, in get
+    num = len(clone)
+          ^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/query.py", line 368, in __len__
+    self._fetch_all()
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 360, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: reporting_reporttemplatev2
+
+$ cd backend && python manage.py import_templates_v2
+Starting V2 template import
+Templates source: /workspace/radreport/backend/apps/reporting/seed_data/templates_v2/library/phase2_v1.1
+Mappings source:  /workspace/radreport/backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv
+Traceback (most recent call last):
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 360, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+sqlite3.OperationalError: no such table: reporting_reporttemplatev2
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/workspace/radreport/backend/manage.py", line 11, in <module>
+    main()
+  File "/workspace/radreport/backend/manage.py", line 8, in main
+    execute_from_command_line(sys.argv)
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/core/management/__init__.py", line 442, in execute_from_command_line
+    utility.execute()
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/core/management/__init__.py", line 436, in execute
+    self.fetch_command(subcommand).run_from_argv(self.argv)
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/core/management/base.py", line 420, in run_from_argv
+    self.execute(*args, **cmd_options)
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/core/management/base.py", line 464, in execute
+    output = self.handle(*args, **options)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/radreport/backend/apps/reporting/management/commands/import_templates_v2.py", line 53, in handle
+    self._import_templates(templates_path, stats)
+  File "/workspace/radreport/backend/apps/reporting/management/commands/import_templates_v2.py", line 94, in _import_templates
+    _, created = ReportTemplateV2.objects.update_or_create(code=code, defaults=defaults)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/manager.py", line 87, in manager_method
+    return getattr(self.get_queryset(), name)(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/query.py", line 990, in update_or_create
+    obj, created = self.select_for_update().get_or_create(
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/query.py", line 948, in get_or_create
+    return self.get(**kwargs), False
+           ^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/query.py", line 631, in get
+    num = len(clone)
+          ^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/query.py", line 368, in __len__
+    self._fetch_all()
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/query.py", line 1954, in _fetch_all
+    self._result_cache = list(self._iterable_class(self))
+                         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/query.py", line 93, in __iter__
+    results = compiler.execute_sql(
+              ^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/models/sql/compiler.py", line 1623, in execute_sql
+    cursor.execute(sql, params)
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 79, in execute
+    return self._execute_with_wrappers(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 92, in _execute_with_wrappers
+    return executor(sql, params, many, context)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 100, in _execute
+    with self.db.wrap_database_errors:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/utils.py", line 91, in __exit__
+    raise dj_exc_value.with_traceback(traceback) from exc_value
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
+    return self.cursor.execute(sql, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/sqlite3/base.py", line 360, in execute
+    return super().execute(query, params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+django.db.utils.OperationalError: no such table: reporting_reporttemplatev2
