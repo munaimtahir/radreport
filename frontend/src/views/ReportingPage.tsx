@@ -20,6 +20,8 @@ import {
     NarrativeResponseV2
 } from "../ui/reporting";
 import SchemaFormV2 from "../components/reporting/SchemaFormV2";
+import SmartSchemaFormV2 from "../components/reporting/SmartSchemaFormV2";
+import { getUiSpec } from "../reporting_ui/registry";
 import Button from "../ui/components/Button";
 import ErrorAlert from "../ui/components/ErrorAlert";
 import SuccessAlert from "../ui/components/SuccessAlert";
@@ -247,12 +249,13 @@ export default function ReportingPage() {
             )}
 
             <div style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 8, padding: 12 }}>
-                <SchemaFormV2
+                <SmartSchemaFormV2
                     jsonSchema={schema.json_schema}
                     uiSchema={schema.ui_schema}
                     values={valuesJson}
                     onChange={(data: any) => setValuesJson(data)}
                     isReadOnly={status !== "draft"}
+                    uiSpec={getUiSpec(schema.code || "")}
                 />
             </div>
 
