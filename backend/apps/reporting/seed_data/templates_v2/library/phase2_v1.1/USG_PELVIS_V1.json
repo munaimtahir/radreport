@@ -7,43 +7,134 @@
   "json_schema": {
     "type": "object",
     "properties": {
-      "bl_image_quality": {"type": "string"},
-      "bl_distended": {"type": "boolean"},
-      "bl_wall_thickness_mm": {"type": "number"},
-      "bl_trabeculation_present": {"type": "boolean"},
-      "bl_stone_present": {"type": "boolean"},
-      "bl_mass_suspected": {"type": "boolean"},
-      "bl_debris_present": {"type": "boolean"},
-      "bl_pvr_ml": {"type": "number"},
-
-      "ut_image_quality": {"type": "string"},
-      "ut_size_cm": {"type": "string"},
-      "ut_contour": {"type": "string"},
-      "ut_echotexture": {"type": "string"},
-      "ut_fibroid_present": {"type": "boolean"},
-      "ut_fibroid_largest_mm": {"type": "number"},
-      "ut_endometrium_appearance": {"type": "string"},
-
-      "ov_r_image_quality": {"type": "string"},
-      "ov_r_simple_cyst_present": {"type": "boolean"},
-      "ov_r_complex_cyst_suspected": {"type": "boolean"},
-      "ov_r_solid_mass_suspected": {"type": "boolean"},
-
-      "ov_l_image_quality": {"type": "string"},
-      "ov_l_simple_cyst_present": {"type": "boolean"},
-      "ov_l_complex_cyst_suspected": {"type": "boolean"},
-      "ov_l_solid_mass_suspected": {"type": "boolean"},
-
-      "adnx_image_quality": {"type": "string"},
-      "adnx_mass_present": {"type": "boolean"},
-      "adnx_side": {"type": "string"},
-      "adnx_papillary_projection_present": {"type": "boolean"},
-      "adnx_solid_component_present": {"type": "boolean"},
-      "adnx_vascularity": {"type": "string"},
-
-      "ff_image_quality": {"type": "string"},
-      "ff_present": {"type": "boolean"},
-      "ff_amount": {"type": "string"}
+      "bl_image_quality": {
+        "type": "string",
+        "title": "Bladder Image Quality"
+      },
+      "bl_distended": {
+        "type": "boolean",
+        "title": "Bladder Distended"
+      },
+      "bl_wall_thickness_mm": {
+        "type": "number",
+        "title": "Wall Thickness (mm)"
+      },
+      "bl_trabeculation_present": {
+        "type": "boolean",
+        "title": "Trabeculation Present"
+      },
+      "bl_stone_present": {
+        "type": "boolean",
+        "title": "Bladder Stone Present"
+      },
+      "bl_mass_suspected": {
+        "type": "boolean",
+        "title": "Bladder Mass Suspected"
+      },
+      "bl_debris_present": {
+        "type": "boolean",
+        "title": "Bladder Debris Present"
+      },
+      "bl_pvr_ml": {
+        "type": "number",
+        "title": "Post-void Residual (mL)"
+      },
+      "ut_image_quality": {
+        "type": "string",
+        "title": "Uterus Image Quality"
+      },
+      "ut_size_cm": {
+        "type": "string",
+        "title": "Uterus Size (cm)"
+      },
+      "ut_contour": {
+        "type": "string",
+        "title": "Uterus Contour"
+      },
+      "ut_echotexture": {
+        "type": "string",
+        "title": "Uterus Echotexture"
+      },
+      "ut_fibroid_present": {
+        "type": "boolean",
+        "title": "Fibroid Present"
+      },
+      "ut_fibroid_largest_mm": {
+        "type": "number",
+        "title": "Largest Fibroid (mm)"
+      },
+      "ut_endometrium_appearance": {
+        "type": "string",
+        "title": "Endometrium Appearance"
+      },
+      "ov_r_image_quality": {
+        "type": "string",
+        "title": "Right Ovary Image Quality"
+      },
+      "ov_r_simple_cyst_present": {
+        "type": "boolean",
+        "title": "Right Simple Cyst Present"
+      },
+      "ov_r_complex_cyst_suspected": {
+        "type": "boolean",
+        "title": "Right Complex Cyst Suspected"
+      },
+      "ov_r_solid_mass_suspected": {
+        "type": "boolean",
+        "title": "Right Solid Mass Suspected"
+      },
+      "ov_l_image_quality": {
+        "type": "string",
+        "title": "Left Ovary Image Quality"
+      },
+      "ov_l_simple_cyst_present": {
+        "type": "boolean",
+        "title": "Left Simple Cyst Present"
+      },
+      "ov_l_complex_cyst_suspected": {
+        "type": "boolean",
+        "title": "Left Complex Cyst Suspected"
+      },
+      "ov_l_solid_mass_suspected": {
+        "type": "boolean",
+        "title": "Left Solid Mass Suspected"
+      },
+      "adnx_image_quality": {
+        "type": "string",
+        "title": "Adnexa Image Quality"
+      },
+      "adnx_mass_present": {
+        "type": "boolean",
+        "title": "Adnexal Mass Present"
+      },
+      "adnx_side": {
+        "type": "string",
+        "title": "Adnexa Side"
+      },
+      "adnx_papillary_projection_present": {
+        "type": "boolean",
+        "title": "Papillary Projection Present"
+      },
+      "adnx_solid_component_present": {
+        "type": "boolean",
+        "title": "Solid Component Present"
+      },
+      "adnx_vascularity": {
+        "type": "string",
+        "title": "Adnexa Vascularity"
+      },
+      "ff_image_quality": {
+        "type": "string",
+        "title": "Free Fluid Image Quality"
+      },
+      "ff_present": {
+        "type": "boolean",
+        "title": "Free Fluid Present"
+      },
+      "ff_amount": {
+        "type": "string",
+        "title": "Free Fluid Amount"
+      }
     },
     "required": [
       "bl_image_quality",
@@ -55,6 +146,70 @@
     ]
   },
   "ui_schema": {
+    "sections": [
+      {
+        "title": "Bladder",
+        "fields": [
+          "bl_image_quality",
+          "bl_distended",
+          "bl_wall_thickness_mm",
+          "bl_trabeculation_present",
+          "bl_stone_present",
+          "bl_mass_suspected",
+          "bl_debris_present",
+          "bl_pvr_ml"
+        ]
+      },
+      {
+        "title": "Uterus",
+        "fields": [
+          "ut_image_quality",
+          "ut_size_cm",
+          "ut_contour",
+          "ut_echotexture",
+          "ut_fibroid_present",
+          "ut_fibroid_largest_mm",
+          "ut_endometrium_appearance"
+        ]
+      },
+      {
+        "title": "Right Ovary",
+        "fields": [
+          "ov_r_image_quality",
+          "ov_r_simple_cyst_present",
+          "ov_r_complex_cyst_suspected",
+          "ov_r_solid_mass_suspected"
+        ]
+      },
+      {
+        "title": "Left Ovary",
+        "fields": [
+          "ov_l_image_quality",
+          "ov_l_simple_cyst_present",
+          "ov_l_complex_cyst_suspected",
+          "ov_l_solid_mass_suspected"
+        ]
+      },
+      {
+        "title": "Adnexa",
+        "fields": [
+          "adnx_image_quality",
+          "adnx_mass_present",
+          "adnx_side",
+          "adnx_papillary_projection_present",
+          "adnx_solid_component_present",
+          "adnx_vascularity"
+        ]
+      },
+      {
+        "title": "Free Fluid",
+        "fields": [
+          "ff_image_quality",
+          "ff_present",
+          "ff_amount"
+        ]
+      }
+    ],
     "ui:order": [
       "bl_image_quality",
       "bl_distended",
@@ -64,7 +219,6 @@
       "bl_mass_suspected",
       "bl_debris_present",
       "bl_pvr_ml",
-
       "ut_image_quality",
       "ut_size_cm",
       "ut_contour",
@@ -72,24 +226,20 @@
       "ut_fibroid_present",
       "ut_fibroid_largest_mm",
       "ut_endometrium_appearance",
-
       "ov_r_image_quality",
       "ov_r_simple_cyst_present",
       "ov_r_complex_cyst_suspected",
       "ov_r_solid_mass_suspected",
-
       "ov_l_image_quality",
       "ov_l_simple_cyst_present",
       "ov_l_complex_cyst_suspected",
       "ov_l_solid_mass_suspected",
-
       "adnx_image_quality",
       "adnx_mass_present",
       "adnx_side",
       "adnx_papillary_projection_present",
       "adnx_solid_component_present",
       "adnx_vascularity",
-
       "ff_image_quality",
       "ff_present",
       "ff_amount"
@@ -100,75 +250,319 @@
       {
         "title": "Technique / Limitations",
         "content": [
-          {"if": {"field": "ut_image_quality", "not_equals": "limited"}, "then": "Assessment is satisfactory.", "else": "Assessment is limited due to suboptimal acoustic window."}
+          {
+            "if": {
+              "field": "ut_image_quality",
+              "not_equals": "limited"
+            },
+            "then": "Assessment is satisfactory.",
+            "else": "Assessment is limited due to suboptimal acoustic window."
+          }
         ]
       },
       {
         "title": "Urinary bladder",
         "content": [
-          {"if": {"field": "bl_distended", "equals": true}, "then": "Urinary bladder adequately distended with wall thickness {{bl_wall_thickness_mm}} mm."},
-          {"if": {"field": "bl_trabeculation_present", "equals": true}, "then": "Bladder wall trabeculation is noted."},
-          {"if": {"field": "bl_stone_present", "equals": true}, "then": "Vesical calculus is present."},
-          {"if": {"field": "bl_mass_suspected", "equals": true}, "then": "Polypoid bladder lesion is suspected."},
-          {"if": {"field": "bl_debris_present", "equals": true}, "then": "Suspended debris seen within the bladder."},
-          {"if": {"field": "bl_pvr_ml", "is_not_empty": true}, "then": "Post-void residual urine: {{bl_pvr_ml}} mL."}
+          {
+            "if": {
+              "field": "bl_distended",
+              "equals": true
+            },
+            "then": [
+              "Urinary bladder adequately distended.",
+              {
+                "if": {
+                  "field": "bl_wall_thickness_mm",
+                  "gt": 0
+                },
+                "then": "Wall thickness is {{bl_wall_thickness_mm}} mm."
+              }
+            ]
+          },
+          {
+            "if": {
+              "field": "bl_trabeculation_present",
+              "equals": true
+            },
+            "then": "Bladder wall trabeculation is noted."
+          },
+          {
+            "if": {
+              "field": "bl_stone_present",
+              "equals": true
+            },
+            "then": "Vesical calculus is present."
+          },
+          {
+            "if": {
+              "field": "bl_mass_suspected",
+              "equals": true
+            },
+            "then": "Polypoid bladder lesion is suspected."
+          },
+          {
+            "if": {
+              "field": "bl_debris_present",
+              "equals": true
+            },
+            "then": "Suspended debris seen within the bladder."
+          },
+          {
+            "if": {
+              "field": "bl_pvr_ml",
+              "is_not_empty": true
+            },
+            "then": "Post-void residual urine: {{bl_pvr_ml}} mL."
+          }
         ]
       },
       {
         "title": "Uterus & endometrium",
         "content": [
-          {"if": {"field": "ut_size_cm", "is_not_empty": true}, "then": "Uterus measures {{ut_size_cm}}."},
-          {"if": {"field": "ut_contour", "is_not_empty": true}, "then": "Contour {{ut_contour}}."},
-          {"if": {"field": "ut_echotexture", "is_not_empty": true}, "then": "Echotexture {{ut_echotexture}}."},
-          {"if": {"field": "ut_fibroid_present", "equals": true}, "then": "Uterine fibroid(s) noted; largest {{ut_fibroid_largest_mm}} mm."},
-          {"if": {"field": "ut_endometrium_appearance", "is_not_empty": true}, "then": "Endometrium appearance: {{ut_endometrium_appearance}}."}
+          {
+            "if": {
+              "field": "ut_size_cm",
+              "is_not_empty": true
+            },
+            "then": "Uterus measures {{ut_size_cm}}."
+          },
+          {
+            "if": {
+              "field": "ut_contour",
+              "is_not_empty": true
+            },
+            "then": "Contour {{ut_contour}}."
+          },
+          {
+            "if": {
+              "field": "ut_echotexture",
+              "is_not_empty": true
+            },
+            "then": "Echotexture {{ut_echotexture}}."
+          },
+          {
+            "if": {
+              "field": "ut_fibroid_present",
+              "equals": true
+            },
+            "then": "Uterine fibroid(s) noted; largest {{ut_fibroid_largest_mm}} mm."
+          },
+          {
+            "if": {
+              "field": "ut_endometrium_appearance",
+              "is_not_empty": true
+            },
+            "then": "Endometrium appearance: {{ut_endometrium_appearance}}."
+          }
         ]
       },
       {
         "title": "Right ovary",
         "content": [
-          {"if": {"field": "ov_r_simple_cyst_present", "equals": true}, "then": "Right ovarian simple cyst present."},
-          {"if": {"field": "ov_r_complex_cyst_suspected", "equals": true}, "then": "Complex right ovarian cyst is noted."},
-          {"if": {"field": "ov_r_solid_mass_suspected", "equals": true}, "then": "Right adnexal mass is suspected."}
+          {
+            "if": {
+              "field": "ov_r_simple_cyst_present",
+              "equals": true
+            },
+            "then": "Right ovarian simple cyst present."
+          },
+          {
+            "if": {
+              "field": "ov_r_complex_cyst_suspected",
+              "equals": true
+            },
+            "then": "Complex right ovarian cyst is noted."
+          },
+          {
+            "if": {
+              "field": "ov_r_solid_mass_suspected",
+              "equals": true
+            },
+            "then": "Right adnexal mass is suspected."
+          }
         ]
       },
       {
         "title": "Left ovary",
         "content": [
-          {"if": {"field": "ov_l_simple_cyst_present", "equals": true}, "then": "Left ovarian simple cyst present."},
-          {"if": {"field": "ov_l_complex_cyst_suspected", "equals": true}, "then": "Complex left ovarian cyst is noted."},
-          {"if": {"field": "ov_l_solid_mass_suspected", "equals": true}, "then": "Left adnexal mass is suspected."}
+          {
+            "if": {
+              "field": "ov_l_simple_cyst_present",
+              "equals": true
+            },
+            "then": "Left ovarian simple cyst present."
+          },
+          {
+            "if": {
+              "field": "ov_l_complex_cyst_suspected",
+              "equals": true
+            },
+            "then": "Complex left ovarian cyst is noted."
+          },
+          {
+            "if": {
+              "field": "ov_l_solid_mass_suspected",
+              "equals": true
+            },
+            "then": "Left adnexal mass is suspected."
+          }
         ]
       },
       {
         "title": "Adnexa",
         "content": [
-          {"if": {"field": "adnx_mass_present", "equals": true}, "then": "Adnexal mass present on {{adnx_side}} side."},
-          {"if": {"field": "adnx_papillary_projection_present", "equals": true}, "then": "Papillary projections within the lesion."},
-          {"if": {"field": "adnx_solid_component_present", "equals": true}, "then": "Solid component within the lesion."},
-          {"if": {"field": "adnx_vascularity", "is_not_empty": true}, "then": "Vascularity: {{adnx_vascularity}}."}
+          {
+            "if": {
+              "field": "adnx_mass_present",
+              "equals": true
+            },
+            "then": "Adnexal mass present on {{adnx_side}} side."
+          },
+          {
+            "if": {
+              "field": "adnx_papillary_projection_present",
+              "equals": true
+            },
+            "then": "Papillary projections within the lesion."
+          },
+          {
+            "if": {
+              "field": "adnx_solid_component_present",
+              "equals": true
+            },
+            "then": "Solid component within the lesion."
+          },
+          {
+            "if": {
+              "field": "adnx_vascularity",
+              "is_not_empty": true
+            },
+            "then": "Vascularity: {{adnx_vascularity}}."
+          }
         ]
       },
       {
         "title": "Free fluid",
         "content": [
-          {"if": {"field": "ff_present", "equals": true}, "then": "Free fluid present ({{ff_amount}})."}
+          {
+            "if": {
+              "field": "ff_present",
+              "equals": true
+            },
+            "then": "Free fluid present ({{ff_amount}})."
+          }
         ]
       }
     ],
     "impression_rules": [
-      {"priority": 80, "when": {"field": "ut_fibroid_present", "equals": true}, "text": "Uterine fibroid(s).", "continue": true},
-      {"priority": 82, "when": {"field": "ut_endometrium_appearance", "equals": "thickened"}, "text": "Thickened endometrium.", "continue": true},
-      {"priority": 84, "when": {"field": "ut_endometrium_appearance", "equals": "polypoid"}, "text": "Polypoid endometrial lesion suspected.", "continue": true},
-      {"priority": 86, "when": {"field": "ov_r_complex_cyst_suspected", "equals": true}, "text": "Complex right ovarian cyst.", "continue": true},
-      {"priority": 87, "when": {"field": "ov_l_complex_cyst_suspected", "equals": true}, "text": "Complex left ovarian cyst.", "continue": true},
-      {"priority": 88, "when": {"field": "ov_r_solid_mass_suspected", "equals": true}, "text": "Right adnexal mass suspected.", "continue": true},
-      {"priority": 89, "when": {"field": "ov_l_solid_mass_suspected", "equals": true}, "text": "Left adnexal mass suspected.", "continue": true},
-      {"priority": 90, "when": {"field": "adnx_mass_present", "equals": true}, "text": "Adnexal mass on {{adnx_side}} side.", "continue": true},
-      {"priority": 91, "when": {"field": "adnx_papillary_projection_present", "equals": true}, "text": "Adnexal lesion with papillary projections.", "continue": true},
-      {"priority": 92, "when": {"field": "adnx_solid_component_present", "equals": true}, "text": "Adnexal lesion with solid component.", "continue": true},
-      {"priority": 93, "when": {"field": "ff_present", "equals": true}, "text": "Free fluid ({{ff_amount}}).", "continue": true},
-      {"priority": 94, "when": {"field": "bl_pvr_ml", "gte": 100}, "text": "Significant post-void residual urine.", "continue": true}
+      {
+        "priority": 80,
+        "when": {
+          "field": "ut_fibroid_present",
+          "equals": true
+        },
+        "text": "Uterine fibroid(s).",
+        "continue": true
+      },
+      {
+        "priority": 82,
+        "when": {
+          "field": "ut_endometrium_appearance",
+          "equals": "thickened"
+        },
+        "text": "Thickened endometrium.",
+        "continue": true
+      },
+      {
+        "priority": 84,
+        "when": {
+          "field": "ut_endometrium_appearance",
+          "equals": "polypoid"
+        },
+        "text": "Polypoid endometrial lesion suspected.",
+        "continue": true
+      },
+      {
+        "priority": 86,
+        "when": {
+          "field": "ov_r_complex_cyst_suspected",
+          "equals": true
+        },
+        "text": "Complex right ovarian cyst.",
+        "continue": true
+      },
+      {
+        "priority": 87,
+        "when": {
+          "field": "ov_l_complex_cyst_suspected",
+          "equals": true
+        },
+        "text": "Complex left ovarian cyst.",
+        "continue": true
+      },
+      {
+        "priority": 88,
+        "when": {
+          "field": "ov_r_solid_mass_suspected",
+          "equals": true
+        },
+        "text": "Right adnexal mass suspected.",
+        "continue": true
+      },
+      {
+        "priority": 89,
+        "when": {
+          "field": "ov_l_solid_mass_suspected",
+          "equals": true
+        },
+        "text": "Left adnexal mass suspected.",
+        "continue": true
+      },
+      {
+        "priority": 90,
+        "when": {
+          "field": "adnx_mass_present",
+          "equals": true
+        },
+        "text": "Adnexal mass on {{adnx_side}} side.",
+        "continue": true
+      },
+      {
+        "priority": 91,
+        "when": {
+          "field": "adnx_papillary_projection_present",
+          "equals": true
+        },
+        "text": "Adnexal lesion with papillary projections.",
+        "continue": true
+      },
+      {
+        "priority": 92,
+        "when": {
+          "field": "adnx_solid_component_present",
+          "equals": true
+        },
+        "text": "Adnexal lesion with solid component.",
+        "continue": true
+      },
+      {
+        "priority": 93,
+        "when": {
+          "field": "ff_present",
+          "equals": true
+        },
+        "text": "Free fluid ({{ff_amount}}).",
+        "continue": true
+      },
+      {
+        "priority": 94,
+        "when": {
+          "field": "bl_pvr_ml",
+          "gte": 100
+        },
+        "text": "Significant post-void residual urine.",
+        "continue": true
+      }
     ]
   }
 }

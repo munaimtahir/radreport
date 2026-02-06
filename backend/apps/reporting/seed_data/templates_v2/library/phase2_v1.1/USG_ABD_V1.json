@@ -386,7 +386,6 @@
       "liv_focal_lesion_present",
       "liv_ihbd_present",
       "liv_portal_vein_diameter_mm",
-
       "gb_visualized",
       "gb_status",
       "gb_stones_present",
@@ -396,16 +395,13 @@
       "gb_pericholecystic_fluid_present",
       "gb_cbd_diameter_mm",
       "gb_cbd_stone_suspected",
-
       "panc_visualized",
       "panc_echotexture",
       "panc_mpd_diameter_mm",
       "panc_focal_lesion_present",
-
       "spl_visualized",
       "spl_length_cm",
       "spl_echotexture",
-
       "kid_r_visualized",
       "kid_r_length_cm",
       "kid_r_cortical_echogenicity",
@@ -414,7 +410,6 @@
       "kid_r_calculus_present",
       "kid_r_largest_calculus_mm",
       "kid_r_mass_suspected",
-
       "kid_l_visualized",
       "kid_l_length_cm",
       "kid_l_cortical_echogenicity",
@@ -423,7 +418,6 @@
       "kid_l_calculus_present",
       "kid_l_largest_calculus_mm",
       "kid_l_mass_suspected",
-
       "aiv_visualized",
       "aiv_aorta_max_diameter_mm",
       "ff_present",
@@ -440,7 +434,29 @@
               "field": "liv_visualized",
               "equals": "Satisfactory"
             },
-            "then": "Liver measures {{liv_size_cm}} cm in mid-clavicular line. The surface is {{liv_contour}} and parenchymal echogenicity is {{liv_echogenicity}} with {{liv_echotexture}} echotexture."
+            "then": [
+              {
+                "if": {
+                  "field": "liv_size_cm",
+                  "is_not_empty": true
+                },
+                "then": "Liver measures {{liv_size_cm}} cm in mid-clavicular line."
+              },
+              {
+                "if": {
+                  "field": "liv_contour",
+                  "is_not_empty": true
+                },
+                "then": "The surface is {{liv_contour}}."
+              },
+              {
+                "if": {
+                  "field": "liv_echogenicity",
+                  "is_not_empty": true
+                },
+                "then": "Parenchymal echogenicity is {{liv_echogenicity}}."
+              }
+            ]
           },
           {
             "if": {
@@ -473,7 +489,22 @@
               "field": "gb_visualized",
               "not_equals": "No"
             },
-            "then": "Gallbladder is {{gb_status}}. Wall thickness is {{gb_wall_thickness_mm}} mm."
+            "then": [
+              {
+                "if": {
+                  "field": "gb_status",
+                  "is_not_empty": true
+                },
+                "then": "Gallbladder is {{gb_status}}."
+              },
+              {
+                "if": {
+                  "field": "gb_wall_thickness_mm",
+                  "gt": 0
+                },
+                "then": "Wall thickness is {{gb_wall_thickness_mm}} mm."
+              }
+            ]
           },
           {
             "if": {
@@ -513,7 +544,16 @@
               "field": "panc_visualized",
               "equals": "Satisfactory"
             },
-            "then": "Pancreas appears {{panc_echotexture}} in echotexture. No focal lesion is seen."
+            "then": [
+              {
+                "if": {
+                  "field": "panc_echotexture",
+                  "is_not_empty": true
+                },
+                "then": "Pancreas appears {{panc_echotexture}} in echotexture."
+              },
+              "No focal lesion is seen."
+            ]
           }
         ]
       },
@@ -525,7 +565,22 @@
               "field": "spl_visualized",
               "equals": "Satisfactory"
             },
-            "then": "Spleen is {{spl_echotexture}} with a bipolar length of {{spl_length_cm}} cm."
+            "then": [
+              {
+                "if": {
+                  "field": "spl_echotexture",
+                  "is_not_empty": true
+                },
+                "then": "Spleen is {{spl_echotexture}}."
+              },
+              {
+                "if": {
+                  "field": "spl_length_cm",
+                  "is_not_empty": true
+                },
+                "then": "Bipolar length is {{spl_length_cm}} cm."
+              }
+            ]
           }
         ]
       },
@@ -537,7 +592,29 @@
               "field": "kid_r_visualized",
               "equals": "Satisfactory"
             },
-            "then": "Right kidney measures {{kid_r_length_cm}} cm. Cortical echogenicity is {{kid_r_cortical_echogenicity}} with {{kid_r_cmd}} CMD."
+            "then": [
+              {
+                "if": {
+                  "field": "kid_r_length_cm",
+                  "is_not_empty": true
+                },
+                "then": "Right kidney measures {{kid_r_length_cm}} cm."
+              },
+              {
+                "if": {
+                  "field": "kid_r_cortical_echogenicity",
+                  "is_not_empty": true
+                },
+                "then": "Cortical echogenicity is {{kid_r_cortical_echogenicity}}."
+              },
+              {
+                "if": {
+                  "field": "kid_r_cmd",
+                  "is_not_empty": true
+                },
+                "then": "Corticomedullary differentiation is {{kid_r_cmd}}."
+              }
+            ]
           },
           {
             "if": {
@@ -563,7 +640,29 @@
               "field": "kid_l_visualized",
               "equals": "Satisfactory"
             },
-            "then": "Left kidney measures {{kid_l_length_cm}} cm. Cortical echogenicity is {{kid_l_cortical_echogenicity}} with {{kid_l_cmd}} CMD."
+            "then": [
+              {
+                "if": {
+                  "field": "kid_l_length_cm",
+                  "is_not_empty": true
+                },
+                "then": "Left kidney measures {{kid_l_length_cm}} cm."
+              },
+              {
+                "if": {
+                  "field": "kid_l_cortical_echogenicity",
+                  "is_not_empty": true
+                },
+                "then": "Cortical echogenicity is {{kid_l_cortical_echogenicity}}."
+              },
+              {
+                "if": {
+                  "field": "kid_l_cmd",
+                  "is_not_empty": true
+                },
+                "then": "Corticomedullary differentiation is {{kid_l_cmd}}."
+              }
+            ]
           },
           {
             "if": {
@@ -589,7 +688,16 @@
               "field": "aiv_visualized",
               "equals": "Satisfactory"
             },
-            "then": "Abdominal aorta and IVC follow a normal course. Aorta measures {{aiv_aorta_max_diameter_mm}} mm."
+            "then": [
+              "Abdominal aorta and IVC follow a normal course.",
+              {
+                "if": {
+                  "field": "aiv_aorta_max_diameter_mm",
+                  "gt": 0
+                },
+                "then": "Aorta measures {{aiv_aorta_max_diameter_mm}} mm."
+              }
+            ]
           }
         ]
       }

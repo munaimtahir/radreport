@@ -153,6 +153,17 @@ def _process_rule(rule, values, schema):
     if isinstance(rule, str):
         return _render_template(rule, values, schema)
     
+    if isinstance(rule, list):
+        results = []
+        for r in rule:
+            res = _process_rule(r, values, schema)
+            if res:
+                if isinstance(res, list):
+                    results.extend(res)
+                else:
+                    results.append(res)
+        return results if results else None
+
     if isinstance(rule, dict):
         # Conditional
         if "if" in rule:
@@ -164,10 +175,9 @@ def _process_rule(rule, values, schema):
                 if "else" in rule:
                     return _process_rule(rule["else"], values, schema)
         
-        # Or recursive list?
+        # Or recursive list via "rules" key
         if "rules" in rule:
-            # Handle nested list? Not explicitly in spec but good for structures
-            pass
+             return _process_rule(rule["rules"], values, schema)
             
     return None
 

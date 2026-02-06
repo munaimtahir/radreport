@@ -335,17 +335,21 @@ class ReportPDFGeneratorV2:
         story.append(self.build_patient_table())
         story.append(Spacer(1, 15))
         
-        # Render narrative if available
+        # Render narrative if available and has content
         narrative = self.data.get('narrative', {})
-        if narrative:
+        has_content = narrative.get('sections') or narrative.get('impression')
+        
+        if narrative and has_content:
             self._render_narrative(story, narrative)
         else:
             # Fallback: render values as table
-            story.append(Paragraph("REPORT VALUES", self.styles['SectionHeading']))
+            story.append(Paragraph("REPORT FINDINGS", self.styles['SectionHeading']))
             story.append(Spacer(1, 5))
             values_table = self.build_values_table()
             if values_table:
                 story.append(values_table)
+            else:
+                story.append(Paragraph("No reportable values provided.", self.styles['BodyText']))
         
         doc.build(story)
         

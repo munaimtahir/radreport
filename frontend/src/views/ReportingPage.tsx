@@ -250,9 +250,9 @@ export default function ReportingPage() {
                 <SchemaFormV2
                     jsonSchema={schema.json_schema}
                     uiSchema={schema.ui_schema}
-                    formData={valuesJson}
+                    values={valuesJson}
                     onChange={(data: any) => setValuesJson(data)}
-                    disabled={status !== "draft"}
+                    isReadOnly={status !== "draft"}
                 />
             </div>
 

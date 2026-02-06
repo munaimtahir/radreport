@@ -7,69 +7,242 @@
   "json_schema": {
     "type": "object",
     "properties": {
-      "kid_r_visualized": {"type": "boolean"},
-      "kid_r_image_quality": {"type": "string"},
-      "kid_r_limitation_reason": {"type": "string"},
-      "kid_r_side": {"type": "string"},
-      "kid_r_length_cm": {"type": "number"},
-      "kid_r_cortical_echogenicity": {"type": "string"},
-      "kid_r_cmd": {"type": "string"},
-      "kid_r_hydronephrosis_grade": {"type": "string"},
-      "kid_r_calculus_present": {"type": "boolean"},
-      "kid_r_largest_calculus_mm": {"type": "number"},
-      "kid_r_simple_cyst_present": {"type": "boolean"},
-      "kid_r_largest_cyst_mm": {"type": "number"},
-      "kid_r_mass_suspected": {"type": "boolean"},
-      "kid_r_perinephric_collection_present": {"type": "boolean"},
-
-      "kid_l_visualized": {"type": "boolean"},
-      "kid_l_image_quality": {"type": "string"},
-      "kid_l_limitation_reason": {"type": "string"},
-      "kid_l_side": {"type": "string"},
-      "kid_l_length_cm": {"type": "number"},
-      "kid_l_cortical_echogenicity": {"type": "string"},
-      "kid_l_cmd": {"type": "string"},
-      "kid_l_hydronephrosis_grade": {"type": "string"},
-      "kid_l_calculus_present": {"type": "boolean"},
-      "kid_l_largest_calculus_mm": {"type": "number"},
-      "kid_l_simple_cyst_present": {"type": "boolean"},
-      "kid_l_largest_cyst_mm": {"type": "number"},
-      "kid_l_mass_suspected": {"type": "boolean"},
-      "kid_l_perinephric_collection_present": {"type": "boolean"},
-
-      "ure_r_visualized": {"type": "boolean"},
-      "ure_r_image_quality": {"type": "string"},
-      "ure_r_limitation_reason": {"type": "string"},
-      "ure_r_side": {"type": "string"},
-      "ure_r_segment_assessed": {"type": "string"},
-      "ure_r_hydroureter_present": {"type": "boolean"},
-      "ure_r_stone_suspected": {"type": "boolean"},
-      "ure_r_stone_location": {"type": "string"},
-      "ure_r_stone_size_mm": {"type": "number"},
-      "ure_r_jet_seen": {"type": "boolean"},
-
-      "ure_l_visualized": {"type": "boolean"},
-      "ure_l_image_quality": {"type": "string"},
-      "ure_l_limitation_reason": {"type": "string"},
-      "ure_l_side": {"type": "string"},
-      "ure_l_segment_assessed": {"type": "string"},
-      "ure_l_hydroureter_present": {"type": "boolean"},
-      "ure_l_stone_suspected": {"type": "boolean"},
-      "ure_l_stone_location": {"type": "string"},
-      "ure_l_stone_size_mm": {"type": "number"},
-      "ure_l_jet_seen": {"type": "boolean"},
-
-      "bl_visualized": {"type": "boolean"},
-      "bl_image_quality": {"type": "string"},
-      "bl_limitation_reason": {"type": "string"},
-      "bl_distended": {"type": "boolean"},
-      "bl_wall_thickness_mm": {"type": "number"},
-      "bl_trabeculation_present": {"type": "boolean"},
-      "bl_stone_present": {"type": "boolean"},
-      "bl_mass_suspected": {"type": "boolean"},
-      "bl_debris_present": {"type": "boolean"},
-      "bl_prevoid_volume_ml": {"type": "number"},
-      "bl_pvr_ml": {"type": "number"}
+      "kid_r_visualized": {
+        "type": "boolean",
+        "title": "Right Kidney Visualized"
+      },
+      "kid_r_image_quality": {
+        "type": "string",
+        "title": "Right Kidney Image Quality"
+      },
+      "kid_r_limitation_reason": {
+        "type": "string",
+        "title": "Right Kidney Limitation Reason"
+      },
+      "kid_r_side": {
+        "type": "string",
+        "title": "Side (R)"
+      },
+      "kid_r_length_cm": {
+        "type": "number",
+        "title": "Right Kidney Length (cm)"
+      },
+      "kid_r_cortical_echogenicity": {
+        "type": "string",
+        "title": "Right Kidney Cortical Echogenicity"
+      },
+      "kid_r_cmd": {
+        "type": "string",
+        "title": "Right Kidney CMD"
+      },
+      "kid_r_hydronephrosis_grade": {
+        "type": "string",
+        "title": "Right Kidney Hydronephrosis Grade"
+      },
+      "kid_r_calculus_present": {
+        "type": "boolean",
+        "title": "Right Kidney Calculus Present"
+      },
+      "kid_r_largest_calculus_mm": {
+        "type": "number",
+        "title": "Right Kidney Largest Calculus (mm)"
+      },
+      "kid_r_simple_cyst_present": {
+        "type": "boolean",
+        "title": "Right Kidney Simple Cyst Present"
+      },
+      "kid_r_largest_cyst_mm": {
+        "type": "number",
+        "title": "Right Kidney Largest Cyst (mm)"
+      },
+      "kid_r_mass_suspected": {
+        "type": "boolean",
+        "title": "Right Kidney Mass Suspected"
+      },
+      "kid_r_perinephric_collection_present": {
+        "type": "boolean",
+        "title": "Right Kidney Perinephric Collection"
+      },
+      "kid_l_visualized": {
+        "type": "boolean",
+        "title": "Left Kidney Visualized"
+      },
+      "kid_l_image_quality": {
+        "type": "string",
+        "title": "Left Kidney Image Quality"
+      },
+      "kid_l_limitation_reason": {
+        "type": "string",
+        "title": "Left Kidney Limitation Reason"
+      },
+      "kid_l_side": {
+        "type": "string",
+        "title": "Side (L)"
+      },
+      "kid_l_length_cm": {
+        "type": "number",
+        "title": "Left Kidney Length (cm)"
+      },
+      "kid_l_cortical_echogenicity": {
+        "type": "string",
+        "title": "Left Kidney Cortical Echogenicity"
+      },
+      "kid_l_cmd": {
+        "type": "string",
+        "title": "Left Kidney CMD"
+      },
+      "kid_l_hydronephrosis_grade": {
+        "type": "string",
+        "title": "Left Kidney Hydronephrosis Grade"
+      },
+      "kid_l_calculus_present": {
+        "type": "boolean",
+        "title": "Left Kidney Calculus Present"
+      },
+      "kid_l_largest_calculus_mm": {
+        "type": "number",
+        "title": "Left Kidney Largest Calculus (mm)"
+      },
+      "kid_l_simple_cyst_present": {
+        "type": "boolean",
+        "title": "Left Kidney Simple Cyst Present"
+      },
+      "kid_l_largest_cyst_mm": {
+        "type": "number",
+        "title": "Left Kidney Largest Cyst (mm)"
+      },
+      "kid_l_mass_suspected": {
+        "type": "boolean",
+        "title": "Left Kidney Mass Suspected"
+      },
+      "kid_l_perinephric_collection_present": {
+        "type": "boolean",
+        "title": "Left Kidney Perinephric Collection"
+      },
+      "ure_r_visualized": {
+        "type": "boolean",
+        "title": "Right Ureter Visualized"
+      },
+      "ure_r_image_quality": {
+        "type": "string",
+        "title": "Right Ureter Image Quality"
+      },
+      "ure_r_limitation_reason": {
+        "type": "string",
+        "title": "Right Ureter Limitation Reason"
+      },
+      "ure_r_side": {
+        "type": "string",
+        "title": "Side (R)"
+      },
+      "ure_r_segment_assessed": {
+        "type": "string",
+        "title": "Segment Assessed (R)"
+      },
+      "ure_r_hydroureter_present": {
+        "type": "boolean",
+        "title": "Right Hydroureter Present"
+      },
+      "ure_r_stone_suspected": {
+        "type": "boolean",
+        "title": "Right Stone Suspected"
+      },
+      "ure_r_stone_location": {
+        "type": "string",
+        "title": "Stone Location (R)"
+      },
+      "ure_r_stone_size_mm": {
+        "type": "number",
+        "title": "Stone Size (mm) (R)"
+      },
+      "ure_r_jet_seen": {
+        "type": "boolean",
+        "title": "Right Ureteric Jet Seen"
+      },
+      "ure_l_visualized": {
+        "type": "boolean",
+        "title": "Left Ureter Visualized"
+      },
+      "ure_l_image_quality": {
+        "type": "string",
+        "title": "Left Ureter Image Quality"
+      },
+      "ure_l_limitation_reason": {
+        "type": "string",
+        "title": "Left Ureter Limitation Reason"
+      },
+      "ure_l_side": {
+        "type": "string",
+        "title": "Side (L)"
+      },
+      "ure_l_segment_assessed": {
+        "type": "string",
+        "title": "Segment Assessed (L)"
+      },
+      "ure_l_hydroureter_present": {
+        "type": "boolean",
+        "title": "Left Hydroureter Present"
+      },
+      "ure_l_stone_suspected": {
+        "type": "boolean",
+        "title": "Left Stone Suspected"
+      },
+      "ure_l_stone_location": {
+        "type": "string",
+        "title": "Stone Location (L)"
+      },
+      "ure_l_stone_size_mm": {
+        "type": "number",
+        "title": "Stone Size (mm) (L)"
+      },
+      "ure_l_jet_seen": {
+        "type": "boolean",
+        "title": "Left Ureteric Jet Seen"
+      },
+      "bl_visualized": {
+        "type": "boolean",
+        "title": "Bladder Visualized"
+      },
+      "bl_image_quality": {
+        "type": "string",
+        "title": "Bladder Image Quality"
+      },
+      "bl_limitation_reason": {
+        "type": "string",
+        "title": "Bladder Limitation Reason"
+      },
+      "bl_distended": {
+        "type": "boolean",
+        "title": "Bladder Distended"
+      },
+      "bl_wall_thickness_mm": {
+        "type": "number",
+        "title": "Wall Thickness (mm)"
+      },
+      "bl_trabeculation_present": {
+        "type": "boolean",
+        "title": "Trabeculation Present"
+      },
+      "bl_stone_present": {
+        "type": "boolean",
+        "title": "Bladder Stone Present"
+      },
+      "bl_mass_suspected": {
+        "type": "boolean",
+        "title": "Bladder Mass Suspected"
+      },
+      "bl_debris_present": {
+        "type": "boolean",
+        "title": "Bladder Debris Present"
+      },
+      "bl_prevoid_volume_ml": {
+        "type": "number",
+        "title": "Pre-void Volume (mL)"
+      },
+      "bl_pvr_ml": {
+        "type": "number",
+        "title": "Post-void Residual (mL)"
+      }
     },
     "required": [
       "kid_r_visualized",
@@ -89,6 +262,78 @@
     ]
   },
   "ui_schema": {
+    "sections": [
+      {
+        "title": "Right Kidney",
+        "fields": [
+          "kid_r_visualized",
+          "kid_r_length_cm",
+          "kid_r_cortical_echogenicity",
+          "kid_r_cmd",
+          "kid_r_hydronephrosis_grade",
+          "kid_r_calculus_present",
+          "kid_r_largest_calculus_mm",
+          "kid_r_simple_cyst_present",
+          "kid_r_largest_cyst_mm",
+          "kid_r_mass_suspected",
+          "kid_r_perinephric_collection_present"
+        ]
+      },
+      {
+        "title": "Left Kidney",
+        "fields": [
+          "kid_l_visualized",
+          "kid_l_length_cm",
+          "kid_l_cortical_echogenicity",
+          "kid_l_cmd",
+          "kid_l_hydronephrosis_grade",
+          "kid_l_calculus_present",
+          "kid_l_largest_calculus_mm",
+          "kid_l_simple_cyst_present",
+          "kid_l_largest_cyst_mm",
+          "kid_l_mass_suspected",
+          "kid_l_perinephric_collection_present"
+        ]
+      },
+      {
+        "title": "Right Ureter",
+        "fields": [
+          "ure_r_visualized",
+          "ure_r_segment_assessed",
+          "ure_r_hydroureter_present",
+          "ure_r_stone_suspected",
+          "ure_r_stone_location",
+          "ure_r_stone_size_mm",
+          "ure_r_jet_seen"
+        ]
+      },
+      {
+        "title": "Left Ureter",
+        "fields": [
+          "ure_l_visualized",
+          "ure_l_segment_assessed",
+          "ure_l_hydroureter_present",
+          "ure_l_stone_suspected",
+          "ure_l_stone_location",
+          "ure_l_stone_size_mm",
+          "ure_l_jet_seen"
+        ]
+      },
+      {
+        "title": "Bladder",
+        "fields": [
+          "bl_visualized",
+          "bl_distended",
+          "bl_wall_thickness_mm",
+          "bl_trabeculation_present",
+          "bl_stone_present",
+          "bl_mass_suspected",
+          "bl_debris_present",
+          "bl_prevoid_volume_ml",
+          "bl_pvr_ml"
+        ]
+      }
+    ],
     "ui:order": [
       "kid_r_visualized",
       "kid_r_image_quality",
@@ -104,7 +349,6 @@
       "kid_r_largest_cyst_mm",
       "kid_r_mass_suspected",
       "kid_r_perinephric_collection_present",
-
       "kid_l_visualized",
       "kid_l_image_quality",
       "kid_l_limitation_reason",
@@ -119,7 +363,6 @@
       "kid_l_largest_cyst_mm",
       "kid_l_mass_suspected",
       "kid_l_perinephric_collection_present",
-
       "ure_r_visualized",
       "ure_r_image_quality",
       "ure_r_limitation_reason",
@@ -130,7 +373,6 @@
       "ure_r_stone_location",
       "ure_r_stone_size_mm",
       "ure_r_jet_seen",
-
       "ure_l_visualized",
       "ure_l_image_quality",
       "ure_l_limitation_reason",
@@ -141,7 +383,6 @@
       "ure_l_stone_location",
       "ure_l_stone_size_mm",
       "ure_l_jet_seen",
-
       "bl_visualized",
       "bl_image_quality",
       "bl_limitation_reason",
@@ -173,67 +414,369 @@
       {
         "title": "Right kidney",
         "content": [
-          {"if": {"field": "kid_r_visualized", "equals": true}, "then": "Right kidney measures {{kid_r_length_cm}} cm with corticomedullary differentiation {{kid_r_cmd}} and cortical echogenicity {{kid_r_cortical_echogenicity}}."},
-          {"if": {"field": "kid_r_hydronephrosis_grade", "not_equals": "none"}, "then": "Right hydronephrosis grade {{kid_r_hydronephrosis_grade}} is present."},
-          {"if": {"field": "kid_r_calculus_present", "equals": true}, "then": "Right renal calculus noted (largest {{kid_r_largest_calculus_mm}} mm)."},
-          {"if": {"field": "kid_r_simple_cyst_present", "equals": true}, "then": "Right renal simple cyst present (up to {{kid_r_largest_cyst_mm}} mm)."},
-          {"if": {"field": "kid_r_mass_suspected", "equals": true}, "then": "Right renal mass is suspected."},
-          {"if": {"field": "kid_r_perinephric_collection_present", "equals": true}, "then": "Perinephric collection on the right is present."}
+          {
+            "if": {
+              "field": "kid_r_visualized",
+              "equals": true
+            },
+            "then": [
+              {
+                "if": {
+                  "field": "kid_r_length_cm",
+                  "is_not_empty": true
+                },
+                "then": "Right kidney measures {{kid_r_length_cm}} cm."
+              },
+              {
+                "if": {
+                  "field": "kid_r_cmd",
+                  "is_not_empty": true
+                },
+                "then": "Corticomedullary differentiation is {{kid_r_cmd}}."
+              },
+              {
+                "if": {
+                  "field": "kid_r_cortical_echogenicity",
+                  "is_not_empty": true
+                },
+                "then": "Cortical echogenicity is {{kid_r_cortical_echogenicity}}."
+              }
+            ]
+          },
+          {
+            "if": {
+              "field": "kid_r_hydronephrosis_grade",
+              "not_equals": "none"
+            },
+            "then": "Right hydronephrosis grade {{kid_r_hydronephrosis_grade}} is present."
+          },
+          {
+            "if": {
+              "field": "kid_r_calculus_present",
+              "equals": true
+            },
+            "then": "Right renal calculus noted (largest {{kid_r_largest_calculus_mm}} mm)."
+          },
+          {
+            "if": {
+              "field": "kid_r_simple_cyst_present",
+              "equals": true
+            },
+            "then": "Right renal simple cyst present (up to {{kid_r_largest_cyst_mm}} mm)."
+          },
+          {
+            "if": {
+              "field": "kid_r_mass_suspected",
+              "equals": true
+            },
+            "then": "Right renal mass is suspected."
+          },
+          {
+            "if": {
+              "field": "kid_r_perinephric_collection_present",
+              "equals": true
+            },
+            "then": "Perinephric collection on the right is present."
+          }
         ]
       },
       {
         "title": "Left kidney",
         "content": [
-          {"if": {"field": "kid_l_visualized", "equals": true}, "then": "Left kidney measures {{kid_l_length_cm}} cm with corticomedullary differentiation {{kid_l_cmd}} and cortical echogenicity {{kid_l_cortical_echogenicity}}."},
-          {"if": {"field": "kid_l_hydronephrosis_grade", "not_equals": "none"}, "then": "Left hydronephrosis grade {{kid_l_hydronephrosis_grade}} is present."},
-          {"if": {"field": "kid_l_calculus_present", "equals": true}, "then": "Left renal calculus noted (largest {{kid_l_largest_calculus_mm}} mm)."},
-          {"if": {"field": "kid_l_simple_cyst_present", "equals": true}, "then": "Left renal simple cyst present (up to {{kid_l_largest_cyst_mm}} mm)."},
-          {"if": {"field": "kid_l_mass_suspected", "equals": true}, "then": "Left renal mass is suspected."},
-          {"if": {"field": "kid_l_perinephric_collection_present", "equals": true}, "then": "Perinephric collection on the left is present."}
+          {
+            "if": {
+              "field": "kid_l_visualized",
+              "equals": true
+            },
+            "then": [
+              {
+                "if": {
+                  "field": "kid_l_length_cm",
+                  "is_not_empty": true
+                },
+                "then": "Left kidney measures {{kid_l_length_cm}} cm."
+              },
+              {
+                "if": {
+                  "field": "kid_l_cmd",
+                  "is_not_empty": true
+                },
+                "then": "Corticomedullary differentiation is {{kid_l_cmd}}."
+              },
+              {
+                "if": {
+                  "field": "kid_l_cortical_echogenicity",
+                  "is_not_empty": true
+                },
+                "then": "Cortical echogenicity is {{kid_l_cortical_echogenicity}}."
+              }
+            ]
+          },
+          {
+            "if": {
+              "field": "kid_l_hydronephrosis_grade",
+              "not_equals": "none"
+            },
+            "then": "Left hydronephrosis grade {{kid_l_hydronephrosis_grade}} is present."
+          },
+          {
+            "if": {
+              "field": "kid_l_calculus_present",
+              "equals": true
+            },
+            "then": "Left renal calculus noted (largest {{kid_l_largest_calculus_mm}} mm)."
+          },
+          {
+            "if": {
+              "field": "kid_l_simple_cyst_present",
+              "equals": true
+            },
+            "then": "Left renal simple cyst present (up to {{kid_l_largest_cyst_mm}} mm)."
+          },
+          {
+            "if": {
+              "field": "kid_l_mass_suspected",
+              "equals": true
+            },
+            "then": "Left renal mass is suspected."
+          },
+          {
+            "if": {
+              "field": "kid_l_perinephric_collection_present",
+              "equals": true
+            },
+            "then": "Perinephric collection on the left is present."
+          }
         ]
       },
       {
         "title": "Right ureter/UVJ",
         "content": [
-          {"if": {"field": "ure_r_visualized", "equals": true}, "then": "Right ureteric segment assessed: {{ure_r_segment_assessed}}."},
-          {"if": {"field": "ure_r_hydroureter_present", "equals": true}, "then": "Right hydroureter is present."},
-          {"if": {"field": "ure_r_stone_suspected", "equals": true}, "then": "Right ureteric calculus is suspected at {{ure_r_stone_location}} ({{ure_r_stone_size_mm}} mm)."},
-          {"if": {"field": "ure_r_jet_seen", "equals": true}, "then": "Right ureteric jet is seen at the UVJ."}
+          {
+            "if": {
+              "field": "ure_r_visualized",
+              "equals": true
+            },
+            "then": "Right ureteric segment assessed: {{ure_r_segment_assessed}}."
+          },
+          {
+            "if": {
+              "field": "ure_r_hydroureter_present",
+              "equals": true
+            },
+            "then": "Right hydroureter is present."
+          },
+          {
+            "if": {
+              "field": "ure_r_stone_suspected",
+              "equals": true
+            },
+            "then": "Right ureteric calculus is suspected at {{ure_r_stone_location}} ({{ure_r_stone_size_mm}} mm)."
+          },
+          {
+            "if": {
+              "field": "ure_r_jet_seen",
+              "equals": true
+            },
+            "then": "Right ureteric jet is seen at the UVJ."
+          }
         ]
       },
       {
         "title": "Left ureter/UVJ",
         "content": [
-          {"if": {"field": "ure_l_visualized", "equals": true}, "then": "Left ureteric segment assessed: {{ure_l_segment_assessed}}."},
-          {"if": {"field": "ure_l_hydroureter_present", "equals": true}, "then": "Left hydroureter is present."},
-          {"if": {"field": "ure_l_stone_suspected", "equals": true}, "then": "Left ureteric calculus is suspected at {{ure_l_stone_location}} ({{ure_l_stone_size_mm}} mm)."},
-          {"if": {"field": "ure_l_jet_seen", "equals": true}, "then": "Left ureteric jet is seen at the UVJ."}
+          {
+            "if": {
+              "field": "ure_l_visualized",
+              "equals": true
+            },
+            "then": "Left ureteric segment assessed: {{ure_l_segment_assessed}}."
+          },
+          {
+            "if": {
+              "field": "ure_l_hydroureter_present",
+              "equals": true
+            },
+            "then": "Left hydroureter is present."
+          },
+          {
+            "if": {
+              "field": "ure_l_stone_suspected",
+              "equals": true
+            },
+            "then": "Left ureteric calculus is suspected at {{ure_l_stone_location}} ({{ure_l_stone_size_mm}} mm)."
+          },
+          {
+            "if": {
+              "field": "ure_l_jet_seen",
+              "equals": true
+            },
+            "then": "Left ureteric jet is seen at the UVJ."
+          }
         ]
       },
       {
         "title": "Urinary bladder",
         "content": [
-          {"if": {"field": "bl_visualized", "equals": true}, "then": "Urinary bladder is assessed; distension: {{bl_distended}}; wall thickness {{bl_wall_thickness_mm}} mm."},
-          {"if": {"field": "bl_trabeculation_present", "equals": true}, "then": "Bladder wall trabeculation is noted."},
-          {"if": {"field": "bl_stone_present", "equals": true}, "then": "Vesical calculus is noted."},
-          {"if": {"field": "bl_mass_suspected", "equals": true}, "then": "A polypoid bladder lesion is suspected."},
-          {"if": {"field": "bl_debris_present", "equals": true}, "then": "Suspended debris is noted in the bladder."},
-          {"if": {"field": "bl_prevoid_volume_ml", "is_not_empty": true}, "then": "Pre-void volume: {{bl_prevoid_volume_ml}} mL."},
-          {"if": {"field": "bl_pvr_ml", "is_not_empty": true}, "then": "Post-void residual urine: {{bl_pvr_ml}} mL."}
+          {
+            "if": {
+              "field": "bl_visualized",
+              "equals": true
+            },
+            "then": [
+              "Urinary bladder is assessed.",
+              {
+                "if": {
+                  "field": "bl_distended",
+                  "equals": true
+                },
+                "then": "It is adequately distended."
+              },
+              {
+                "if": {
+                  "field": "bl_wall_thickness_mm",
+                  "gt": 0
+                },
+                "then": "Wall thickness is {{bl_wall_thickness_mm}} mm."
+              }
+            ]
+          },
+          {
+            "if": {
+              "field": "bl_trabeculation_present",
+              "equals": true
+            },
+            "then": "Bladder wall trabeculation is noted."
+          },
+          {
+            "if": {
+              "field": "bl_stone_present",
+              "equals": true
+            },
+            "then": "Vesical calculus is noted."
+          },
+          {
+            "if": {
+              "field": "bl_mass_suspected",
+              "equals": true
+            },
+            "then": "A polypoid bladder lesion is suspected."
+          },
+          {
+            "if": {
+              "field": "bl_debris_present",
+              "equals": true
+            },
+            "then": "Suspended debris is noted in the bladder."
+          },
+          {
+            "if": {
+              "field": "bl_prevoid_volume_ml",
+              "is_not_empty": true
+            },
+            "then": "Pre-void volume: {{bl_prevoid_volume_ml}} mL."
+          },
+          {
+            "if": {
+              "field": "bl_pvr_ml",
+              "is_not_empty": true
+            },
+            "then": "Post-void residual urine: {{bl_pvr_ml}} mL."
+          }
         ]
       }
     ],
     "impression_rules": [
-      {"priority": 80, "when": {"field": "kid_r_hydronephrosis_grade", "not_equals": "none"}, "text": "Right hydronephrosis grade {{kid_r_hydronephrosis_grade}}.", "continue": true},
-      {"priority": 81, "when": {"field": "kid_l_hydronephrosis_grade", "not_equals": "none"}, "text": "Left hydronephrosis grade {{kid_l_hydronephrosis_grade}}.", "continue": true},
-      {"priority": 82, "when": {"field": "kid_r_calculus_present", "equals": true}, "text": "Right renal calculus (largest {{kid_r_largest_calculus_mm}} mm).", "continue": true},
-      {"priority": 83, "when": {"field": "kid_l_calculus_present", "equals": true}, "text": "Left renal calculus (largest {{kid_l_largest_calculus_mm}} mm).", "continue": true},
-      {"priority": 84, "when": {"field": "kid_r_mass_suspected", "equals": true}, "text": "Right renal mass suspected.", "continue": true},
-      {"priority": 85, "when": {"field": "kid_l_mass_suspected", "equals": true}, "text": "Left renal mass suspected.", "continue": true},
-      {"priority": 86, "when": {"field": "ure_r_stone_suspected", "equals": true}, "text": "Right ureteric calculus suspected.", "continue": true},
-      {"priority": 87, "when": {"field": "ure_l_stone_suspected", "equals": true}, "text": "Left ureteric calculus suspected.", "continue": true},
-      {"priority": 88, "when": {"field": "bl_mass_suspected", "equals": true}, "text": "Suspicious bladder lesion.", "continue": true},
-      {"priority": 89, "when": {"field": "bl_pvr_ml", "gte": 100}, "text": "Significant post-void residual urine.", "continue": true}
+      {
+        "priority": 80,
+        "when": {
+          "field": "kid_r_hydronephrosis_grade",
+          "not_equals": "none"
+        },
+        "text": "Right hydronephrosis grade {{kid_r_hydronephrosis_grade}}.",
+        "continue": true
+      },
+      {
+        "priority": 81,
+        "when": {
+          "field": "kid_l_hydronephrosis_grade",
+          "not_equals": "none"
+        },
+        "text": "Left hydronephrosis grade {{kid_l_hydronephrosis_grade}}.",
+        "continue": true
+      },
+      {
+        "priority": 82,
+        "when": {
+          "field": "kid_r_calculus_present",
+          "equals": true
+        },
+        "text": "Right renal calculus (largest {{kid_r_largest_calculus_mm}} mm).",
+        "continue": true
+      },
+      {
+        "priority": 83,
+        "when": {
+          "field": "kid_l_calculus_present",
+          "equals": true
+        },
+        "text": "Left renal calculus (largest {{kid_l_largest_calculus_mm}} mm).",
+        "continue": true
+      },
+      {
+        "priority": 84,
+        "when": {
+          "field": "kid_r_mass_suspected",
+          "equals": true
+        },
+        "text": "Right renal mass suspected.",
+        "continue": true
+      },
+      {
+        "priority": 85,
+        "when": {
+          "field": "kid_l_mass_suspected",
+          "equals": true
+        },
+        "text": "Left renal mass suspected.",
+        "continue": true
+      },
+      {
+        "priority": 86,
+        "when": {
+          "field": "ure_r_stone_suspected",
+          "equals": true
+        },
+        "text": "Right ureteric calculus suspected.",
+        "continue": true
+      },
+      {
+        "priority": 87,
+        "when": {
+          "field": "ure_l_stone_suspected",
+          "equals": true
+        },
+        "text": "Left ureteric calculus suspected.",
+        "continue": true
+      },
+      {
+        "priority": 88,
+        "when": {
+          "field": "bl_mass_suspected",
+          "equals": true
+        },
+        "text": "Suspicious bladder lesion.",
+        "continue": true
+      },
+      {
+        "priority": 89,
+        "when": {
+          "field": "bl_pvr_ml",
+          "gte": 100
+        },
+        "text": "Significant post-void residual urine.",
+        "continue": true
+      }
     ]
   }
 }
