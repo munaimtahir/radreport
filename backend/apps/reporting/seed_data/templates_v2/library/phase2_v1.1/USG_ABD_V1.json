@@ -8,384 +8,373 @@
     "type": "object",
     "properties": {
       "liv_visualized": {
-        "type": "string"
+        "type": "string",
+        "title": "Liver Visualized",
+        "enum": [
+          "Satisfactory",
+          "Partially",
+          "No"
+        ]
       },
       "liv_image_quality": {
-        "type": "string"
+        "type": "string",
+        "title": "Liver Image Quality",
+        "enum": [
+          "Satisfactory",
+          "Limited"
+        ]
       },
       "liv_limitation_reason": {
-        "type": "string"
+        "type": "string",
+        "title": "Limitation Reason"
       },
       "liv_size_cm": {
-        "type": "number"
+        "type": "number",
+        "title": "Liver Size (cm)"
       },
       "liv_contour": {
-        "type": "string"
+        "type": "string",
+        "title": "Liver Contour",
+        "enum": [
+          "Smooth",
+          "Irregular",
+          "Nodular"
+        ]
       },
       "liv_echotexture": {
-        "type": "string"
+        "type": "string",
+        "title": "Liver Echotexture",
+        "enum": [
+          "Homogeneous",
+          "Coarse",
+          "Heterogeneous"
+        ]
       },
       "liv_echogenicity": {
-        "type": "string"
+        "type": "string",
+        "title": "Liver Echogenicity",
+        "enum": [
+          "Normal",
+          "Increased (Fatty)",
+          "Decreased"
+        ]
       },
       "liv_focal_lesion_present": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "Focal Lesion Present"
       },
       "liv_ihbd_present": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "IHBD Dilatation"
       },
       "liv_portal_vein_diameter_mm": {
-        "type": "number"
+        "type": "number",
+        "title": "PV Diameter (mm)"
       },
       "gb_visualized": {
-        "type": "string"
-      },
-      "gb_image_quality": {
-        "type": "string"
-      },
-      "gb_limitation_reason": {
-        "type": "string"
+        "type": "string",
+        "title": "Gallbladder Visualized",
+        "enum": [
+          "Satisfactory",
+          "Contracted",
+          "Post-cholecystectomy",
+          "No"
+        ]
       },
       "gb_status": {
-        "type": "string"
+        "type": "string",
+        "title": "Gallbladder Status",
+        "enum": [
+          "Normal",
+          "Distended",
+          "Contracted"
+        ]
       },
       "gb_stones_present": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "Stones Present"
       },
       "gb_sludge_present": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "Sludge Present"
       },
       "gb_wall_thickness_mm": {
-        "type": "number"
+        "type": "number",
+        "title": "Wall Thickness (mm)"
       },
       "gb_murphy_sign_positive": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "Murphy Sign Positive"
       },
       "gb_pericholecystic_fluid_present": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "Pericholecystic Fluid"
       },
       "gb_cbd_diameter_mm": {
-        "type": "number"
+        "type": "number",
+        "title": "CBD Diameter (mm)"
       },
       "gb_cbd_stone_suspected": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "CBD Stone Suspected"
       },
       "panc_visualized": {
-        "type": "string"
-      },
-      "panc_image_quality": {
-        "type": "string"
-      },
-      "panc_limitation_reason": {
-        "type": "string"
-      },
-      "panc_visualized_extent": {
-        "type": "string"
-      },
-      "panc_size": {
-        "type": "number"
+        "type": "string",
+        "title": "Pancreas Visualized",
+        "enum": [
+          "Satisfactory",
+          "Partially",
+          "Obscured by bowel gas"
+        ]
       },
       "panc_echotexture": {
-        "type": "string"
+        "type": "string",
+        "title": "Pancreas Echotexture",
+        "enum": [
+          "Normal",
+          "Bulkier",
+          "Atrophic"
+        ]
       },
       "panc_mpd_diameter_mm": {
-        "type": "number"
-      },
-      "panc_peripancreatic_fluid_present": {
-        "type": "boolean"
+        "type": "number",
+        "title": "MPD Diameter (mm)"
       },
       "panc_focal_lesion_present": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "Focal Lesion Present"
       },
       "spl_visualized": {
-        "type": "string"
-      },
-      "spl_image_quality": {
-        "type": "string"
-      },
-      "spl_limitation_reason": {
-        "type": "string"
+        "type": "string",
+        "title": "Spleen Visualized",
+        "enum": [
+          "Satisfactory",
+          "No"
+        ]
       },
       "spl_length_cm": {
-        "type": "number"
+        "type": "number",
+        "title": "Spleen Length (cm)"
       },
       "spl_echotexture": {
-        "type": "string"
-      },
-      "spl_focal_lesion_present": {
-        "type": "boolean"
-      },
-      "aiv_visualized": {
-        "type": "string"
-      },
-      "aiv_image_quality": {
-        "type": "string"
-      },
-      "aiv_limitation_reason": {
-        "type": "string"
-      },
-      "aiv_aorta_max_diameter_mm": {
-        "type": "number"
-      },
-      "aiv_aorta_plaque_present": {
-        "type": "boolean"
-      },
-      "aiv_ivc_thrombus_suspected": {
-        "type": "boolean"
+        "type": "string",
+        "title": "Spleen Echotexture",
+        "enum": [
+          "Homogeneous",
+          "Heterogeneous"
+        ]
       },
       "kid_r_visualized": {
-        "type": "string"
-      },
-      "kid_r_image_quality": {
-        "type": "string"
-      },
-      "kid_r_limitation_reason": {
-        "type": "string"
-      },
-      "kid_r_side": {
-        "type": "string"
+        "type": "string",
+        "title": "R Kidney Visualized",
+        "enum": [
+          "Satisfactory",
+          "No"
+        ]
       },
       "kid_r_length_cm": {
-        "type": "number"
+        "type": "number",
+        "title": "R Kidney Length (cm)"
       },
       "kid_r_cortical_echogenicity": {
-        "type": "string"
+        "type": "string",
+        "title": "R Kidney Echogenicity",
+        "enum": [
+          "Normal",
+          "Increased",
+          "Decreased"
+        ]
       },
       "kid_r_cmd": {
-        "type": "string"
+        "type": "string",
+        "title": "R Kidney CMD",
+        "enum": [
+          "Maintained",
+          "Blurred",
+          "Lost"
+        ]
       },
       "kid_r_hydronephrosis_grade": {
-        "type": "number"
+        "type": "number",
+        "title": "R Kidney Hydronephrosis Grade"
       },
       "kid_r_calculus_present": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "R Kidney Calculus Present"
       },
       "kid_r_largest_calculus_mm": {
-        "type": "number"
-      },
-      "kid_r_simple_cyst_present": {
-        "type": "boolean"
-      },
-      "kid_r_largest_cyst_mm": {
-        "type": "number"
+        "type": "number",
+        "title": "R Kidney Largest Calculus (mm)"
       },
       "kid_r_mass_suspected": {
-        "type": "boolean"
-      },
-      "kid_r_perinephric_collection_present": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "R Kidney Mass Suspected"
       },
       "kid_l_visualized": {
-        "type": "string"
-      },
-      "kid_l_image_quality": {
-        "type": "string"
-      },
-      "kid_l_limitation_reason": {
-        "type": "string"
-      },
-      "kid_l_side": {
-        "type": "string"
+        "type": "string",
+        "title": "L Kidney Visualized",
+        "enum": [
+          "Satisfactory",
+          "No"
+        ]
       },
       "kid_l_length_cm": {
-        "type": "number"
+        "type": "number",
+        "title": "L Kidney Length (cm)"
       },
       "kid_l_cortical_echogenicity": {
-        "type": "string"
+        "type": "string",
+        "title": "L Kidney Echogenicity",
+        "enum": [
+          "Normal",
+          "Increased",
+          "Decreased"
+        ]
       },
       "kid_l_cmd": {
-        "type": "string"
+        "type": "string",
+        "title": "L Kidney CMD",
+        "enum": [
+          "Maintained",
+          "Blurred",
+          "Lost"
+        ]
       },
       "kid_l_hydronephrosis_grade": {
-        "type": "number"
+        "type": "number",
+        "title": "L Kidney Hydronephrosis Grade"
       },
       "kid_l_calculus_present": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "L Kidney Calculus Present"
       },
       "kid_l_largest_calculus_mm": {
-        "type": "number"
-      },
-      "kid_l_simple_cyst_present": {
-        "type": "boolean"
-      },
-      "kid_l_largest_cyst_mm": {
-        "type": "number"
+        "type": "number",
+        "title": "L Kidney Largest Calculus (mm)"
       },
       "kid_l_mass_suspected": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "L Kidney Mass Suspected"
       },
-      "kid_l_perinephric_collection_present": {
-        "type": "boolean"
+      "aiv_visualized": {
+        "type": "string",
+        "title": "Aorta/IVC Visualized",
+        "enum": [
+          "Satisfactory",
+          "Partially",
+          "Obscured"
+        ]
       },
-      "ure_r_visualized": {
-        "type": "string"
-      },
-      "ure_r_image_quality": {
-        "type": "string"
-      },
-      "ure_r_limitation_reason": {
-        "type": "string"
-      },
-      "ure_r_side": {
-        "type": "string"
-      },
-      "ure_r_segment_assessed": {
-        "type": "string"
-      },
-      "ure_r_hydroureter_present": {
-        "type": "boolean"
-      },
-      "ure_r_stone_suspected": {
-        "type": "boolean"
-      },
-      "ure_r_stone_location": {
-        "type": "string"
-      },
-      "ure_r_stone_size_mm": {
-        "type": "number"
-      },
-      "ure_r_jet_seen": {
-        "type": "boolean"
-      },
-      "ure_l_visualized": {
-        "type": "string"
-      },
-      "ure_l_image_quality": {
-        "type": "string"
-      },
-      "ure_l_limitation_reason": {
-        "type": "string"
-      },
-      "ure_l_side": {
-        "type": "string"
-      },
-      "ure_l_segment_assessed": {
-        "type": "string"
-      },
-      "ure_l_hydroureter_present": {
-        "type": "boolean"
-      },
-      "ure_l_stone_suspected": {
-        "type": "boolean"
-      },
-      "ure_l_stone_location": {
-        "type": "string"
-      },
-      "ure_l_stone_size_mm": {
-        "type": "number"
-      },
-      "ure_l_jet_seen": {
-        "type": "boolean"
-      },
-      "bl_visualized": {
-        "type": "string"
-      },
-      "bl_image_quality": {
-        "type": "string"
-      },
-      "bl_limitation_reason": {
-        "type": "string"
-      },
-      "bl_distended": {
-        "type": "string"
-      },
-      "bl_wall_thickness_mm": {
-        "type": "number"
-      },
-      "bl_trabeculation_present": {
-        "type": "boolean"
-      },
-      "bl_stone_present": {
-        "type": "boolean"
-      },
-      "bl_mass_suspected": {
-        "type": "boolean"
-      },
-      "bl_debris_present": {
-        "type": "boolean"
-      },
-      "bl_prevoid_volume_ml": {
-        "type": "number"
-      },
-      "bl_pvr_ml": {
-        "type": "number"
-      },
-      "ff_visualized": {
-        "type": "string"
-      },
-      "ff_image_quality": {
-        "type": "string"
-      },
-      "ff_limitation_reason": {
-        "type": "string"
+      "aiv_aorta_max_diameter_mm": {
+        "type": "number",
+        "title": "Aorta Max Diameter (mm)"
       },
       "ff_present": {
-        "type": "boolean"
+        "type": "boolean",
+        "title": "Free Fluid Present"
       },
       "ff_amount": {
-        "type": "string"
-      },
-      "ff_distribution": {
-        "type": "string"
-      },
-      "ff_complex_present": {
-        "type": "boolean"
-      },
-      "ff_loculated_collection_suspected": {
-        "type": "boolean"
-      },
-      "pleff_r_visualized": {
-        "type": "string"
-      },
-      "pleff_r_image_quality": {
-        "type": "string"
-      },
-      "pleff_r_limitation_reason": {
-        "type": "string"
-      },
-      "pleff_r_side": {
-        "type": "string"
-      },
-      "pleff_r_present": {
-        "type": "boolean"
-      },
-      "pleff_r_amount": {
-        "type": "string"
-      },
-      "pleff_r_complex_present": {
-        "type": "boolean"
-      },
-      "pleff_r_adjacent_consolidation_suspected": {
-        "type": "boolean"
-      },
-      "pleff_l_visualized": {
-        "type": "string"
-      },
-      "pleff_l_image_quality": {
-        "type": "string"
-      },
-      "pleff_l_limitation_reason": {
-        "type": "string"
-      },
-      "pleff_l_side": {
-        "type": "string"
-      },
-      "pleff_l_present": {
-        "type": "boolean"
-      },
-      "pleff_l_amount": {
-        "type": "string"
-      },
-      "pleff_l_complex_present": {
-        "type": "boolean"
-      },
-      "pleff_l_adjacent_consolidation_suspected": {
-        "type": "boolean"
+        "type": "string",
+        "title": "Free Fluid Amount",
+        "enum": [
+          "Trace",
+          "Minor",
+          "Moderate",
+          "Gross"
+        ]
       }
     },
-    "required": []
+    "required": [
+      "liv_visualized",
+      "gb_visualized",
+      "kid_r_visualized",
+      "kid_l_visualized"
+    ]
   },
   "ui_schema": {
+    "sections": [
+      {
+        "title": "Liver",
+        "fields": [
+          "liv_visualized",
+          "liv_image_quality",
+          "liv_limitation_reason",
+          "liv_size_cm",
+          "liv_contour",
+          "liv_echotexture",
+          "liv_echogenicity",
+          "liv_focal_lesion_present",
+          "liv_ihbd_present",
+          "liv_portal_vein_diameter_mm"
+        ]
+      },
+      {
+        "title": "Gallbladder & Biliary",
+        "fields": [
+          "gb_visualized",
+          "gb_status",
+          "gb_stones_present",
+          "gb_sludge_present",
+          "gb_wall_thickness_mm",
+          "gb_murphy_sign_positive",
+          "gb_pericholecystic_fluid_present",
+          "gb_cbd_diameter_mm",
+          "gb_cbd_stone_suspected"
+        ]
+      },
+      {
+        "title": "Pancreas",
+        "fields": [
+          "panc_visualized",
+          "panc_echotexture",
+          "panc_mpd_diameter_mm",
+          "panc_focal_lesion_present"
+        ]
+      },
+      {
+        "title": "Spleen",
+        "fields": [
+          "spl_visualized",
+          "spl_length_cm",
+          "spl_echotexture"
+        ]
+      },
+      {
+        "title": "Right Kidney",
+        "fields": [
+          "kid_r_visualized",
+          "kid_r_length_cm",
+          "kid_r_cortical_echogenicity",
+          "kid_r_cmd",
+          "kid_r_hydronephrosis_grade",
+          "kid_r_calculus_present",
+          "kid_r_largest_calculus_mm",
+          "kid_r_mass_suspected"
+        ]
+      },
+      {
+        "title": "Left Kidney",
+        "fields": [
+          "kid_l_visualized",
+          "kid_l_length_cm",
+          "kid_l_cortical_echogenicity",
+          "kid_l_cmd",
+          "kid_l_hydronephrosis_grade",
+          "kid_l_calculus_present",
+          "kid_l_largest_calculus_mm",
+          "kid_l_mass_suspected"
+        ]
+      },
+      {
+        "title": "Vessels & Others",
+        "fields": [
+          "aiv_visualized",
+          "aiv_aorta_max_diameter_mm",
+          "ff_present",
+          "ff_amount"
+        ]
+      }
+    ],
     "ui:order": [
       "liv_visualized",
       "liv_image_quality",
@@ -397,9 +386,8 @@
       "liv_focal_lesion_present",
       "liv_ihbd_present",
       "liv_portal_vein_diameter_mm",
+
       "gb_visualized",
-      "gb_image_quality",
-      "gb_limitation_reason",
       "gb_status",
       "gb_stones_present",
       "gb_sludge_present",
@@ -408,111 +396,221 @@
       "gb_pericholecystic_fluid_present",
       "gb_cbd_diameter_mm",
       "gb_cbd_stone_suspected",
+
       "panc_visualized",
-      "panc_image_quality",
-      "panc_limitation_reason",
-      "panc_visualized_extent",
-      "panc_size",
       "panc_echotexture",
       "panc_mpd_diameter_mm",
-      "panc_peripancreatic_fluid_present",
       "panc_focal_lesion_present",
+
       "spl_visualized",
-      "spl_image_quality",
-      "spl_limitation_reason",
       "spl_length_cm",
       "spl_echotexture",
-      "spl_focal_lesion_present",
-      "aiv_visualized",
-      "aiv_image_quality",
-      "aiv_limitation_reason",
-      "aiv_aorta_max_diameter_mm",
-      "aiv_aorta_plaque_present",
-      "aiv_ivc_thrombus_suspected",
+
       "kid_r_visualized",
-      "kid_r_image_quality",
-      "kid_r_limitation_reason",
-      "kid_r_side",
       "kid_r_length_cm",
       "kid_r_cortical_echogenicity",
       "kid_r_cmd",
       "kid_r_hydronephrosis_grade",
       "kid_r_calculus_present",
       "kid_r_largest_calculus_mm",
-      "kid_r_simple_cyst_present",
-      "kid_r_largest_cyst_mm",
       "kid_r_mass_suspected",
-      "kid_r_perinephric_collection_present",
+
       "kid_l_visualized",
-      "kid_l_image_quality",
-      "kid_l_limitation_reason",
-      "kid_l_side",
       "kid_l_length_cm",
       "kid_l_cortical_echogenicity",
       "kid_l_cmd",
       "kid_l_hydronephrosis_grade",
       "kid_l_calculus_present",
       "kid_l_largest_calculus_mm",
-      "kid_l_simple_cyst_present",
-      "kid_l_largest_cyst_mm",
       "kid_l_mass_suspected",
-      "kid_l_perinephric_collection_present",
-      "ure_r_visualized",
-      "ure_r_image_quality",
-      "ure_r_limitation_reason",
-      "ure_r_side",
-      "ure_r_segment_assessed",
-      "ure_r_hydroureter_present",
-      "ure_r_stone_suspected",
-      "ure_r_stone_location",
-      "ure_r_stone_size_mm",
-      "ure_r_jet_seen",
-      "ure_l_visualized",
-      "ure_l_image_quality",
-      "ure_l_limitation_reason",
-      "ure_l_side",
-      "ure_l_segment_assessed",
-      "ure_l_hydroureter_present",
-      "ure_l_stone_suspected",
-      "ure_l_stone_location",
-      "ure_l_stone_size_mm",
-      "ure_l_jet_seen",
-      "bl_visualized",
-      "bl_image_quality",
-      "bl_limitation_reason",
-      "bl_distended",
-      "bl_wall_thickness_mm",
-      "bl_trabeculation_present",
-      "bl_stone_present",
-      "bl_mass_suspected",
-      "bl_debris_present",
-      "bl_prevoid_volume_ml",
-      "bl_pvr_ml",
-      "ff_visualized",
-      "ff_image_quality",
-      "ff_limitation_reason",
+
+      "aiv_visualized",
+      "aiv_aorta_max_diameter_mm",
       "ff_present",
-      "ff_amount",
-      "ff_distribution",
-      "ff_complex_present",
-      "ff_loculated_collection_suspected",
-      "pleff_r_visualized",
-      "pleff_r_image_quality",
-      "pleff_r_limitation_reason",
-      "pleff_r_side",
-      "pleff_r_present",
-      "pleff_r_amount",
-      "pleff_r_complex_present",
-      "pleff_r_adjacent_consolidation_suspected",
-      "pleff_l_visualized",
-      "pleff_l_image_quality",
-      "pleff_l_limitation_reason",
-      "pleff_l_side",
-      "pleff_l_present",
-      "pleff_l_amount",
-      "pleff_l_complex_present",
-      "pleff_l_adjacent_consolidation_suspected"
+      "ff_amount"
     ]
   },
-  "narrative_rules": {}
+  "narrative_rules": {
+    "sections": [
+      {
+        "title": "Liver",
+        "content": [
+          {
+            "if": {
+              "field": "liv_visualized",
+              "equals": "Satisfactory"
+            },
+            "then": "Liver measures {{liv_size_cm}} cm in mid-clavicular line. The surface is {{liv_contour}} and parenchymal echogenicity is {{liv_echogenicity}} with {{liv_echotexture}} echotexture."
+          },
+          {
+            "if": {
+              "field": "liv_focal_lesion_present",
+              "equals": true
+            },
+            "then": "A focal hepatic lesion is noted."
+          },
+          {
+            "if": {
+              "field": "liv_ihbd_present",
+              "equals": true
+            },
+            "then": "Intrahepatic biliary duct dilatation is seen."
+          },
+          {
+            "if": {
+              "field": "liv_portal_vein_diameter_mm",
+              "gt": 0
+            },
+            "then": "Main portal vein measures {{liv_portal_vein_diameter_mm}} mm."
+          }
+        ]
+      },
+      {
+        "title": "Gallbladder & Biliary System",
+        "content": [
+          {
+            "if": {
+              "field": "gb_visualized",
+              "not_equals": "No"
+            },
+            "then": "Gallbladder is {{gb_status}}. Wall thickness is {{gb_wall_thickness_mm}} mm."
+          },
+          {
+            "if": {
+              "field": "gb_stones_present",
+              "equals": true
+            },
+            "then": "Echo-genic calculus/calculi noted within the gallbladder lumen with acoustic shadowing."
+          },
+          {
+            "if": {
+              "field": "gb_sludge_present",
+              "equals": true
+            },
+            "then": "Luminal sludge is present."
+          },
+          {
+            "if": {
+              "field": "gb_cbd_diameter_mm",
+              "gt": 0
+            },
+            "then": "Common Bile Duct measures {{gb_cbd_diameter_mm}} mm."
+          },
+          {
+            "if": {
+              "field": "gb_cbd_stone_suspected",
+              "equals": true
+            },
+            "then": "Choledocholithiasis is suspected."
+          }
+        ]
+      },
+      {
+        "title": "Pancreas",
+        "content": [
+          {
+            "if": {
+              "field": "panc_visualized",
+              "equals": "Satisfactory"
+            },
+            "then": "Pancreas appears {{panc_echotexture}} in echotexture. No focal lesion is seen."
+          }
+        ]
+      },
+      {
+        "title": "Spleen",
+        "content": [
+          {
+            "if": {
+              "field": "spl_visualized",
+              "equals": "Satisfactory"
+            },
+            "then": "Spleen is {{spl_echotexture}} with a bipolar length of {{spl_length_cm}} cm."
+          }
+        ]
+      },
+      {
+        "title": "Right Kidney",
+        "content": [
+          {
+            "if": {
+              "field": "kid_r_visualized",
+              "equals": "Satisfactory"
+            },
+            "then": "Right kidney measures {{kid_r_length_cm}} cm. Cortical echogenicity is {{kid_r_cortical_echogenicity}} with {{kid_r_cmd}} CMD."
+          },
+          {
+            "if": {
+              "field": "kid_r_calculus_present",
+              "equals": true
+            },
+            "then": "Calculus measuring {{kid_r_largest_calculus_mm}} mm noted."
+          },
+          {
+            "if": {
+              "field": "kid_r_hydronephrosis_grade",
+              "gt": 0
+            },
+            "then": "Grade {{kid_r_hydronephrosis_grade}} hydronephrosis is present."
+          }
+        ]
+      },
+      {
+        "title": "Left Kidney",
+        "content": [
+          {
+            "if": {
+              "field": "kid_l_visualized",
+              "equals": "Satisfactory"
+            },
+            "then": "Left kidney measures {{kid_l_length_cm}} cm. Cortical echogenicity is {{kid_l_cortical_echogenicity}} with {{kid_l_cmd}} CMD."
+          },
+          {
+            "if": {
+              "field": "kid_l_calculus_present",
+              "equals": true
+            },
+            "then": "Calculus measuring {{kid_l_largest_calculus_mm}} mm noted."
+          },
+          {
+            "if": {
+              "field": "kid_l_hydronephrosis_grade",
+              "gt": 0
+            },
+            "then": "Grade {{kid_l_hydronephrosis_grade}} hydronephrosis is present."
+          }
+        ]
+      },
+      {
+        "title": "Large Vessels",
+        "content": [
+          {
+            "if": {
+              "field": "aiv_visualized",
+              "equals": "Satisfactory"
+            },
+            "then": "Abdominal aorta and IVC follow a normal course. Aorta measures {{aiv_aorta_max_diameter_mm}} mm."
+          }
+        ]
+      }
+    ],
+    "impression_rules": [
+      {
+        "priority": 10,
+        "when": {
+          "field": "gb_stones_present",
+          "equals": true
+        },
+        "text": "Cholelithiasis."
+      },
+      {
+        "priority": 20,
+        "when": {
+          "field": "liv_echogenicity",
+          "equals": "Increased (Fatty)"
+        },
+        "text": "Fatty Liver changes."
+      }
+    ]
+  }
 }
