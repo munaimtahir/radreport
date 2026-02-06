@@ -196,7 +196,6 @@ def _process_impression(rules, values, schema):
                 if rendered:
                     impressions.append(rendered)
 
-<<<<<<< HEAD
             # Explicit stop/continue semantics:
             # - `stop: true` means stop evaluation immediately
             # - `continue: false` (legacy) means stop evaluation 
@@ -205,10 +204,6 @@ def _process_impression(rules, values, schema):
                 "continue" in rule and rule.get("continue") is False
             )
             if explicit_stop:
-=======
-            # allow multiple matches; only stop when explicitly requested
-            if not rule.get("continue", False):
->>>>>>> codex/implement-usg-core-phase-3-reporting
                 break
 
     return impressions
