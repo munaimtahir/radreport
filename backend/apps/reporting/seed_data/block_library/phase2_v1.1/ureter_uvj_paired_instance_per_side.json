@@ -1,0 +1,68 @@
+{
+  "code": "ureter_uvj_paired_instance_per_side",
+  "name": "Ureter / UVJ (paired, instance per side)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "ureter_uvj_paired_instance_per_side",
+    "name": "Ureter / UVJ (paired, instance per side)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "renal colic": {
+          "type": "string"
+        },
+        "distal ureter/UVJ": {
+          "type": "string"
+        },
+        "ure_visualized": {
+          "type": "boolean"
+        },
+        "ure_image_quality": {
+          "type": "string"
+        },
+        "ure_limitation_reason": {
+          "type": "string"
+        },
+        "ure_side": {
+          "type": "string"
+        },
+        "ure_segment_assessed": {
+          "type": "string"
+        },
+        "ure_hydroureter_present": {
+          "type": "boolean"
+        },
+        "ure_stone_suspected": {
+          "type": "boolean"
+        },
+        "ure_stone_location": {
+          "type": "string"
+        },
+        "ure_stone_size_mm": {
+          "type": "number"
+        },
+        "ure_jet_seen": {
+          "type": "boolean"
+        },
+        "when assessed": {
+          "type": "string"
+        },
+        "location": {
+          "type": "string"
+        },
+        "when paired with hydronephrosis": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ure_visualized",
+        "ure_image_quality",
+        "ure_side",
+        "ure_segment_assessed",
+        "ure_hydroureter_present"
+      ]
+    }
+  }
+}

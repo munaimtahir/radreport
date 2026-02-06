@@ -1,0 +1,73 @@
+{
+  "code": "uterus_endometrium",
+  "name": "Uterus & endometrium",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "uterus_endometrium",
+    "name": "Uterus & endometrium",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "background uterine assessment": {
+          "type": "string"
+        },
+        "ut_visualized": {
+          "type": "boolean"
+        },
+        "ut_image_quality": {
+          "type": "string"
+        },
+        "ut_limitation_reason": {
+          "type": "string"
+        },
+        "ut_length_cm": {
+          "type": "number"
+        },
+        "ut_ap_cm": {
+          "type": "number"
+        },
+        "ut_width_cm": {
+          "type": "number"
+        },
+        "ut_position": {
+          "type": "string"
+        },
+        "ut_myometrium_echotexture": {
+          "type": "string"
+        },
+        "ut_fibroid_present": {
+          "type": "boolean"
+        },
+        "ut_endometrial_thickness_mm": {
+          "type": "number"
+        },
+        "ut_endometrium_appearance": {
+          "type": "string"
+        },
+        "ut_iud_present": {
+          "type": "boolean"
+        },
+        "s": {
+          "type": "string"
+        },
+        "template should set context": {
+          "type": "string"
+        },
+        "if polypoid": {
+          "type": "string"
+        },
+        "premenopausal vs postmenopausal": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ut_visualized",
+        "ut_image_quality",
+        "ut_myometrium_echotexture",
+        "ut_fibroid_present"
+      ]
+    }
+  }
+}

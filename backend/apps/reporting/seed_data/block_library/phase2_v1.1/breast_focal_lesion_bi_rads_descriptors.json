@@ -1,0 +1,63 @@
+{
+  "code": "breast_focal_lesion_bi_rads_descriptors",
+  "name": "Breast focal lesion (BI-RADS descriptors)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "breast_focal_lesion_bi_rads_descriptors",
+    "name": "Breast focal lesion (BI-RADS descriptors)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "brl_visualized": {
+          "type": "boolean"
+        },
+        "brl_image_quality": {
+          "type": "string"
+        },
+        "brl_limitation_reason": {
+          "type": "string"
+        },
+        "brl_lesion_present": {
+          "type": "boolean"
+        },
+        "brl_lesion_max_mm": {
+          "type": "number"
+        },
+        "brl_location_clock_face": {
+          "type": "string"
+        },
+        "brl_distance_from_nipple_mm": {
+          "type": "number"
+        },
+        "brl_shape": {
+          "type": "string"
+        },
+        "brl_orientation": {
+          "type": "string"
+        },
+        "brl_margins": {
+          "type": "string"
+        },
+        "brl_echo_pattern": {
+          "type": "string"
+        },
+        "brl_posterior_features": {
+          "type": "string"
+        },
+        "brl_vascularity": {
+          "type": "string"
+        },
+        "brl_birads": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "brl_visualized",
+        "brl_image_quality",
+        "brl_lesion_present"
+      ]
+    }
+  }
+}

@@ -1,0 +1,62 @@
+{
+  "code": "carotid_doppler_paired_instance_per_side",
+  "name": "Carotid Doppler (paired, instance per side)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "carotid_doppler_paired_instance_per_side",
+    "name": "Carotid Doppler (paired, instance per side)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "car_visualized": {
+          "type": "boolean"
+        },
+        "car_image_quality": {
+          "type": "string"
+        },
+        "car_limitation_reason": {
+          "type": "string"
+        },
+        "car_side": {
+          "type": "string"
+        },
+        "car_plaque_present": {
+          "type": "boolean"
+        },
+        "car_plaque_type": {
+          "type": "string"
+        },
+        "car_ica_psv_cm_s": {
+          "type": "number"
+        },
+        "car_ica_edv_cm_s": {
+          "type": "number"
+        },
+        "car_cca_psv_cm_s": {
+          "type": "number"
+        },
+        "car_ica_cca_ratio": {
+          "type": "number"
+        },
+        "car_stenosis_category": {
+          "type": "string"
+        },
+        "car_vertebral_flow": {
+          "type": "string"
+        },
+        "if retrograde vertebral flow": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "car_visualized",
+        "car_image_quality",
+        "car_side",
+        "car_plaque_present",
+        "car_stenosis_category"
+      ]
+    }
+  }
+}

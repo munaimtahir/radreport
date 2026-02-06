@@ -1,0 +1,63 @@
+{
+  "code": "scrotum_single_side_per_instance",
+  "name": "Scrotum (single side per instance)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "scrotum_single_side_per_instance",
+    "name": "Scrotum (single side per instance)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "scr_visualized": {
+          "type": "boolean"
+        },
+        "scr_image_quality": {
+          "type": "string"
+        },
+        "scr_limitation_reason": {
+          "type": "string"
+        },
+        "scr_side": {
+          "type": "string"
+        },
+        "scr_testis_echotexture": {
+          "type": "string"
+        },
+        "scr_intratesticular_lesion_present": {
+          "type": "boolean"
+        },
+        "scr_testicular_flow": {
+          "type": "string"
+        },
+        "scr_epididymis_enlarged": {
+          "type": "boolean"
+        },
+        "scr_epididymis_hypervascular": {
+          "type": "boolean"
+        },
+        "scr_hydrocele": {
+          "type": "string"
+        },
+        "scr_varicocele": {
+          "type": "string"
+        },
+        "urgent correlation": {
+          "type": "string"
+        },
+        "right and left": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "scr_visualized",
+        "scr_image_quality",
+        "scr_side",
+        "scr_testis_echotexture",
+        "scr_intratesticular_lesion_present",
+        "scr_testicular_flow"
+      ]
+    }
+  }
+}

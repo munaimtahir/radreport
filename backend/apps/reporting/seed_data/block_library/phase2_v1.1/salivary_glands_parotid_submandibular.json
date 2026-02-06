@@ -1,0 +1,56 @@
+{
+  "code": "salivary_glands_parotid_submandibular",
+  "name": "Salivary glands (parotid/submandibular)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "salivary_glands_parotid_submandibular",
+    "name": "Salivary glands (parotid/submandibular)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "sal_visualized": {
+          "type": "boolean"
+        },
+        "sal_image_quality": {
+          "type": "string"
+        },
+        "sal_limitation_reason": {
+          "type": "string"
+        },
+        "sal_gland": {
+          "type": "string"
+        },
+        "sal_side": {
+          "type": "string"
+        },
+        "sal_size": {
+          "type": "string"
+        },
+        "sal_echotexture": {
+          "type": "string"
+        },
+        "sal_hypervascularity_present": {
+          "type": "boolean"
+        },
+        "sal_duct_dilatation_present": {
+          "type": "boolean"
+        },
+        "sal_sialolith_present": {
+          "type": "boolean"
+        },
+        "sal_focal_lesion_present": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "sal_visualized",
+        "sal_image_quality",
+        "sal_gland",
+        "sal_side",
+        "sal_echotexture"
+      ]
+    }
+  }
+}

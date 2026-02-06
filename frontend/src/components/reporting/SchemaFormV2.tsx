@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import { theme } from "../../theme";
 import Button from "../../ui/components/Button";
 
-interface SchemaFormV2Props {
+export interface SchemaFormV2Props {
   jsonSchema: Record<string, any>;
   uiSchema?: Record<string, any> | null;
   values: Record<string, any>;

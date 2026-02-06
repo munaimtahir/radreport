@@ -1,0 +1,61 @@
+{
+  "code": "ovary_paired_instance_per_side",
+  "name": "Ovary (paired, instance per side)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "ovary_paired_instance_per_side",
+    "name": "Ovary (paired, instance per side)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "adnexal assessment": {
+          "type": "string"
+        },
+        "ov_visualized": {
+          "type": "boolean"
+        },
+        "ov_image_quality": {
+          "type": "string"
+        },
+        "ov_limitation_reason": {
+          "type": "string"
+        },
+        "ov_side": {
+          "type": "string"
+        },
+        "ov_volume_ml": {
+          "type": "number"
+        },
+        "ov_simple_cyst_present": {
+          "type": "boolean"
+        },
+        "ov_largest_simple_cyst_mm": {
+          "type": "number"
+        },
+        "ov_complex_cyst_suspected": {
+          "type": "boolean"
+        },
+        "ov_solid_mass_suspected": {
+          "type": "boolean"
+        },
+        "ov_pcom_pattern_present": {
+          "type": "boolean"
+        },
+        "simple/complex if clinically significant": {
+          "type": "string"
+        },
+        "correlate clinically": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "ov_visualized",
+        "ov_image_quality",
+        "ov_side",
+        "ov_simple_cyst_present"
+      ]
+    }
+  }
+}

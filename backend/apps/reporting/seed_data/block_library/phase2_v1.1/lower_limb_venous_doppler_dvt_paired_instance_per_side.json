@@ -1,0 +1,79 @@
+{
+  "code": "lower_limb_venous_doppler_dvt_paired_instance_per_side",
+  "name": "Lower limb venous Doppler (DVT) (paired, instance per side)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "lower_limb_venous_doppler_dvt_paired_instance_per_side",
+    "name": "Lower limb venous Doppler (DVT) (paired, instance per side)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "dvt_visualized": {
+          "type": "boolean"
+        },
+        "dvt_image_quality": {
+          "type": "string"
+        },
+        "dvt_limitation_reason": {
+          "type": "string"
+        },
+        "dvt_side": {
+          "type": "string"
+        },
+        "dvt_cfv_compressible": {
+          "type": "boolean"
+        },
+        "dvt_fv_compressible": {
+          "type": "boolean"
+        },
+        "dvt_popliteal_compressible": {
+          "type": "boolean"
+        },
+        "dvt_calf_veins_assessed": {
+          "type": "string"
+        },
+        "dvt_thrombus_present": {
+          "type": "boolean"
+        },
+        "dvt_thrombus_location": {
+          "type": "string"
+        },
+        "dvt_thrombus_chronicity": {
+          "type": "string"
+        },
+        "dvt_thrombus_present = true": {
+          "type": "string"
+        },
+        "{location}": {
+          "type": "string"
+        },
+        "if limited": {
+          "type": "string"
+        },
+        "for lines/arm swelling workflows": {
+          "type": "string"
+        },
+        "HTN/renal stenosis protocols": {
+          "type": "string"
+        },
+        "arterial/venous waveform fields": {
+          "type": "string"
+        },
+        "if you plan MSK services": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "dvt_visualized",
+        "dvt_image_quality",
+        "dvt_side",
+        "dvt_cfv_compressible",
+        "dvt_fv_compressible",
+        "dvt_popliteal_compressible",
+        "dvt_thrombus_present"
+      ]
+    }
+  }
+}

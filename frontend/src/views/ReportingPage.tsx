@@ -20,6 +20,9 @@ import {
     NarrativeResponseV2
 } from "../ui/reporting";
 import SchemaFormV2 from "../components/reporting/SchemaFormV2";
+import SmartSchemaFormV2 from "../components/reporting/SmartSchemaFormV2";
+import { getUiSpec } from "../reporting_ui/registry";
+import { specLint } from "../reporting_ui/specLint";
 import Button from "../ui/components/Button";
 import ErrorAlert from "../ui/components/ErrorAlert";
 import SuccessAlert from "../ui/components/SuccessAlert";
@@ -100,6 +103,15 @@ export default function ReportingPage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if ((import.meta as any).env.DEV && schema) {
+            const uiSpec = getUiSpec(schema.code || "");
+            if (uiSpec) {
+                specLint(schema.code || "", schema.json_schema, uiSpec);
+            }
+        }
+    }, [schema]);
 
     const preparePayload = () => ({ schema_version: "v2" as const, values_json: valuesJson });
 
@@ -247,12 +259,13 @@ export default function ReportingPage() {
             )}
 
             <div style={{ border: `1px solid ${theme.colors.border}`, borderRadius: 8, padding: 12 }}>
-                <SchemaFormV2
+                <SmartSchemaFormV2
                     jsonSchema={schema.json_schema}
                     uiSchema={schema.ui_schema}
-                    formData={valuesJson}
+                    values={valuesJson}
                     onChange={(data: any) => setValuesJson(data)}
-                    disabled={status !== "draft"}
+                    isReadOnly={status !== "draft"}
+                    uiSpec={getUiSpec(schema.code || "")}
                 />
             </div>
 

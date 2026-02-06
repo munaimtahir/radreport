@@ -19,17 +19,30 @@ class Command(BaseCommand):
     help = "Import V2 Reporting Templates and Service Mappings"
 
     def add_arguments(self, parser):
-        parser.add_argument("--templates", type=str, help="Path to templates JSON file or directory")
-        parser.add_argument("--mappings", type=str, help="Path to service mappings CSV file")
+        parser.add_argument(
+            "--templates-path",
+            "--templates",
+            dest="templates_path",
+            type=str,
+            help="Path to templates JSON file or directory",
+        )
+        parser.add_argument(
+            "--mapping",
+            "--mappings",
+            dest="mapping_path",
+            type=str,
+            help="Path to service mappings CSV file",
+        )
         parser.add_argument("--dry-run", action="store_true", help="Validate without saving")
         parser.add_argument("--strict", action="store_true", help="Fail on missing services")
 
     def handle(self, *args, **options):
-        base_dir = Path(__file__).resolve().parents[2] / "seed_data" / "templates_v2"
-        default_templates = base_dir / "library" / "phase2_v1.1"
-        default_mappings = base_dir / "activation" / "phase3_usg_core.csv"
-        templates_path = Path(options.get("templates") or default_templates)
-        mappings_path = Path(options.get("mappings") or default_mappings)
+        seed_root = Path(__file__).resolve().parents[2] / "seed_data" / "templates_v2"
+        default_templates_dir = seed_root / "library" / "phase2_v1.1"
+        default_mapping_csv = seed_root / "activation" / "phase3_usg_core.csv"
+
+        templates_path = Path(options.get("templates_path") or default_templates_dir)
+        mappings_path = Path(options.get("mapping_path") or default_mapping_csv)
         dry_run = options["dry_run"]
         strict = options["strict"]
 
@@ -132,7 +145,11 @@ class Command(BaseCommand):
             raise CommandError(f"Mappings file not found: {filepath}")
 
         services = list(Service.objects.all())
-        norm_index = {self._norm(s.name): s for s in services}
+        norm_index = {}
+        for s in services:
+            norm_index[self._norm(s.name)] = s
+            if s.code:
+                norm_index[self._norm(s.code)] = s
         service_names = [s.name for s in services]
 
         with filepath.open("r", encoding="utf-8-sig") as f:
@@ -160,16 +177,25 @@ class Command(BaseCommand):
                         raise CommandError(msg)
                     continue
 
-                is_active = str(row.get("is_active", "true")).strip().lower() in {"1", "true", "yes"}
-                is_default = str(row.get("is_default", "false")).strip().lower() in {"1", "true", "yes"}
+                is_active_supported = hasattr(ServiceReportTemplateV2, "is_active")
+                is_default_supported = hasattr(ServiceReportTemplateV2, "is_default")
 
-                if is_default:
+                is_active = str(row.get("is_active", "true")).strip().lower() in {"1", "true", "yes"} if is_active_supported else True
+                is_default = str(row.get("is_default", "false")).strip().lower() in {"1", "true", "yes"} if is_default_supported else False
+
+                defaults = {}
+                if is_active_supported:
+                    defaults["is_active"] = is_active
+                if is_default_supported:
+                    defaults["is_default"] = is_default
+
+                if is_default_supported and is_default:
                     ServiceReportTemplateV2.objects.filter(service=service, is_default=True).exclude(template=template).update(is_default=False)
 
                 _, created = ServiceReportTemplateV2.objects.update_or_create(
                     service=service,
                     template=template,
-                    defaults={"is_active": is_active, "is_default": is_default},
+                    defaults=defaults,
                 )
                 key = "mappings_created" if created else "mappings_updated"
                 stats[key] += 1

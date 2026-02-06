@@ -1,0 +1,63 @@
+{
+  "code": "liver",
+  "name": "Liver",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "liver",
+    "name": "Liver",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "extended upper abdomen": {
+          "type": "string"
+        },
+        "liv_visualized": {
+          "type": "boolean"
+        },
+        "liv_image_quality": {
+          "type": "string"
+        },
+        "liv_limitation_reason": {
+          "type": "string"
+        },
+        "liv_size_cm": {
+          "type": "number"
+        },
+        "liv_contour": {
+          "type": "string"
+        },
+        "liv_echotexture": {
+          "type": "string"
+        },
+        "liv_echogenicity": {
+          "type": "string"
+        },
+        "liv_focal_lesion_present": {
+          "type": "boolean"
+        },
+        "liv_ihbd_present": {
+          "type": "boolean"
+        },
+        "liv_portal_vein_diameter_mm": {
+          "type": "number"
+        },
+        "s": {
+          "type": "string"
+        },
+        "suggestive of portal hypertension in context": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "liv_visualized",
+        "liv_image_quality",
+        "liv_echotexture",
+        "liv_echogenicity",
+        "liv_focal_lesion_present",
+        "liv_ihbd_present"
+      ]
+    }
+  }
+}

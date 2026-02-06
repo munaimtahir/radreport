@@ -54,3 +54,6 @@ backend/reports/
 artifacts/
 **/*.log
 **/*.pdf
+
+!.env.e2e.example
+e2e/.auth/

@@ -1,34 +1,34 @@
 from django.core.management.base import BaseCommand
-
-from apps.catalog.models import Modality, Service
-
+from apps.catalog.models import Service, Modality
 
 class Command(BaseCommand):
-    help = "Seed minimal USG core services (Abdomen/KUB/Pelvis)."
+    help = "Seeds basic USG services (Phase 3 Core)"
 
     def handle(self, *args, **options):
-        modality, _ = Modality.objects.get_or_create(
-            code="USG",
-            defaults={"name": "Ultrasound"},
-        )
+        # Ensure Modality USG exists
+        modality, _ = Modality.objects.get_or_create(code="USG", defaults={"name": "Ultrasound"})
 
         services = [
-            ("USG-ABD", "USG Abdomen"),
-            ("USG-KUB", "USG KUB"),
-            ("USG-PELVIS", "USG Pelvis"),
+            {"code": "USG-ABD", "name": "USG Abdomen"},
+            {"code": "USG-KUB", "name": "USG KUB"},
+            {"code": "USG-PELVIS", "name": "USG Pelvis"},
         ]
 
-        for code, name in services:
-            _, created = Service.objects.update_or_create(
-                code=code,
+        created_count = 0
+        updated_count = 0
+
+        for s in services:
+            obj, created = Service.objects.update_or_create(
+                code=s["code"],
                 defaults={
+                    "name": s["name"],
                     "modality": modality,
-                    "name": name,
-                    "category": "Radiology",
-                    "price": 0,
-                    "charges": 0,
-                    "default_price": 0,
-                },
+                    "is_active": True
+                }
             )
-            status = "Created" if created else "Updated"
-            self.stdout.write(self.style.SUCCESS(f"{status} {code} -> {name}"))
+            if created:
+                created_count += 1
+            else:
+                updated_count += 1
+
+        self.stdout.write(self.style.SUCCESS(f"Seeded USG Services: {created_count} created, {updated_count} updated."))

@@ -12,74 +12,87 @@ class _DryRunRollback(Exception):
 
 
 class Command(BaseCommand):
-    help = "Import Phase-2 v1.1 block library seed JSON"
+    help = "Import block library seeds (v1.x) into ReportBlockLibrary"
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--path",
+            dest="path",
             type=str,
-            help="Path to a block-library seed JSON file or directory",
+            help="Directory containing block JSON seeds (default: phase2_v1.1)",
         )
-        parser.add_argument("--dry-run", action="store_true", help="Validate without persisting")
+        parser.add_argument(
+            "--dry-run",
+            action="store_true",
+            help="Validate without persisting changes",
+        )
 
     def handle(self, *args, **options):
-        base_dir = Path(__file__).resolve().parents[2] / "seed_data" / "block_library" / "phase2_v1.1"
-        path = Path(options.get("path") or base_dir)
-        dry_run = options["dry_run"]
+        default_dir = Path(__file__).resolve().parents[2] / "seed_data" / "block_library" / "phase2_v1.1"
+        seeds_dir = Path(options.get("path") or default_dir)
+        dry_run = options.get("dry_run", False)
 
-        stats = {"created": 0, "updated": 0}
+        if not seeds_dir.exists() or not seeds_dir.is_dir():
+            raise CommandError(f"Seed directory not found: {seeds_dir}")
+
+        self.stdout.write(self.style.MIGRATE_HEADING("Importing block library seeds"))
+        self.stdout.write(f"Source: {seeds_dir}")
+        if dry_run:
+            self.stdout.write(self.style.WARNING("DRY RUN: no database writes"))
+
+        stats = {"created": 0, "updated": 0, "unchanged": 0, "errors": []}
 
         try:
             with transaction.atomic():
-                for file_path in self._seed_files(path):
-                    payload = json.loads(file_path.read_text(encoding="utf-8"))
-                    rows = payload if isinstance(payload, list) else [payload]
-                    for row in rows:
-                        name = (row.get("name") or "").strip()
-                        if not name:
-                            raise CommandError(f"Invalid block row in {file_path}: missing name")
-                        block_code = (row.get("block_code") or "").strip()
-                        if block_code:
-                            existing = ReportBlockLibrary.objects.filter(content__block_code=block_code).first()
-                            if existing:
-                                for field, value in {
-                                    "name": name,
-                                    "category": row.get("category") or "",
-                                    "block_type": row.get("block_type") or "narrative",
-                                    "content": row.get("content") or {},
-                                }.items():
-                                    setattr(existing, field, value)
-                                existing.save(update_fields=["name", "category", "block_type", "content", "updated_at"])
-                                stats["updated"] += 1
-                                continue
-
-                        _, created = ReportBlockLibrary.objects.update_or_create(
-                            name=name,
-                            defaults={
-                                "category": row.get("category") or "",
-                                "block_type": row.get("block_type") or "narrative",
-                                "content": row.get("content") or {},
-                            },
-                        )
-                        stats["created" if created else "updated"] += 1
-
+                for path in sorted(seeds_dir.glob("*.json")):
+                    self._import_file(path, stats)
                 if dry_run:
                     raise _DryRunRollback()
         except _DryRunRollback:
             pass
 
-        self.stdout.write(
-            self.style.SUCCESS(
-                f"Block library import complete. created={stats['created']} updated={stats['updated']} dry_run={dry_run}"
-            )
-        )
+        self._print_summary(stats)
 
-    def _seed_files(self, path: Path):
-        if not path.exists():
-            raise CommandError(f"Block library path not found: {path}")
-        if path.is_dir():
-            files = sorted(path.glob("*.json"))
-            if not files:
-                raise CommandError(f"No block-library JSON files found under: {path}")
-            return files
-        return [path]
+    def _import_file(self, path: Path, stats: dict):
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except Exception as exc:  # pragma: no cover - unlikely
+            stats["errors"].append(f"{path.name}: invalid JSON ({exc})")
+            return
+
+        code = payload.get("code") or payload.get("content", {}).get("code")
+        name = payload.get("name")
+        if not name:
+            stats["errors"].append(f"{path.name}: missing name")
+            return
+
+        defaults = {
+            "name": name,
+            "category": payload.get("category", "USG"),
+            "block_type": payload.get("block_type", "ui"),
+            "content": payload.get("content", {}),
+        }
+
+        lookup = {"name": name}
+        if code:
+            lookup = {"content__code": code}
+
+        obj, created = ReportBlockLibrary.objects.update_or_create(defaults=defaults, **lookup)
+        if created:
+            stats["created"] += 1
+        else:
+            if obj.name == name and obj.content == defaults["content"] and obj.category == defaults["category"] and obj.block_type == defaults["block_type"]:
+                stats["unchanged"] += 1
+            else:
+                stats["updated"] += 1
+
+    def _print_summary(self, stats: dict):
+        self.stdout.write("\n--- Block Library Import Summary ---")
+        self.stdout.write(f"Created:   {stats['created']}")
+        self.stdout.write(f"Updated:   {stats['updated']}")
+        self.stdout.write(f"Unchanged: {stats['unchanged']}")
+        if stats["errors"]:
+            self.stdout.write(self.style.ERROR(f"Errors ({len(stats['errors'])}):"))
+            for err in stats["errors"]:
+                self.stdout.write(f" - {err}")
+        self.stdout.write("------------------------------------")

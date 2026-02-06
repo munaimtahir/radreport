@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key")
 DEBUG = os.getenv("DJANGO_DEBUG", "0") == "1"
 # Configure via DJANGO_ALLOWED_HOSTS in production (comma-separated). No wildcards by default.
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if h.strip()]
+ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,rims.alshifialab.pk").split(",") if h.strip()]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -65,15 +65,15 @@ TEMPLATES = [
 WSGI_APPLICATION = "rims_backend.wsgi.application"
 
 # Database configuration - supports both SQLite (dev) and PostgreSQL (production)
-if os.getenv("DATABASE_URL") or os.getenv("DB_ENGINE") == "postgresql":
+if os.getenv("DATABASE_URL") or "postgres" in os.getenv("DB_ENGINE", ""):
     DATABASES = {
         "default": {
             "ENGINE": "django.db.backends.postgresql",
             "NAME": os.getenv("DB_NAME", "rims"),
             "USER": os.getenv("DB_USER", "rims"),
             "PASSWORD": os.getenv("DB_PASSWORD", "rims"),
-            "HOST": os.getenv("DB_HOST", "127.0.0.1"),
-            "PORT": os.getenv("DB_PORT", "5434"),
+            "HOST": os.getenv("DB_HOST", "db"),
+            "PORT": os.getenv("DB_PORT", "5432"),
         }
     }
 else:
