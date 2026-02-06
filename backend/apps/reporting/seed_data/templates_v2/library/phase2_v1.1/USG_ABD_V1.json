@@ -51,7 +51,7 @@
       }
     ],
     "impression_rules": [
-      {"priority": 10, "when": {"field": "ff_present", "equals": true}, "text": "Free fluid present ({{ff_amount}}).", "continue": true},
+      {"priority": 10, "when": {"field": "ff_present", "equals": true}, "text": "Free fluid present.", "continue": true},
       {"priority": 20, "when": {"field": "gb_stones_present", "equals": true}, "text": "Cholelithiasis.", "continue": true},
       {"priority": 30, "when": {"field": "kid_r_calculus_present", "equals": true}, "text": "Right renal calculus.", "continue": true},
       {"priority": 31, "when": {"field": "kid_l_calculus_present", "equals": true}, "text": "Left renal calculus.", "continue": true}

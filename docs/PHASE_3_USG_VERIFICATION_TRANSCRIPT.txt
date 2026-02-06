@@ -161,6 +161,13 @@ npm warn Unknown env config "http-proxy". This will stop working in the next maj
 
 
 $ cd backend && python manage.py seed_usg_basic_services
+
+NOTE: This error occurs because the database schema has not been migrated yet. When running the
+NOTE: `seed_usg_basic_services`, `seed_reporting_v2`, or `import_templates_v2` management commands
+NOTE: outside the Django test environment, ensure that all migrations have been applied first
+NOTE: (for example, by running `python manage.py migrate`), otherwise "no such table" errors like
+NOTE: the one below will be raised.
+
 Traceback (most recent call last):
   File "/root/.pyenv/versions/3.12.12/lib/python3.12/site-packages/django/db/backends/utils.py", line 105, in _execute
     return self.cursor.execute(sql, params)

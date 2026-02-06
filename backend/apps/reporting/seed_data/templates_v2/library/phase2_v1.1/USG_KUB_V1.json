@@ -40,7 +40,8 @@
       {
         "title": "Kidneys / Ureters / Bladder",
         "content": [
-          "Both kidneys measure {{kid_r_length_cm}} cm (right) and {{kid_l_length_cm}} cm (left).",
+          {"if": {"field": "kid_r_length_cm", "gte": 0}, "then": "Right kidney measures {{kid_r_length_cm}} cm."},
+          {"if": {"field": "kid_l_length_cm", "gte": 0}, "then": "Left kidney measures {{kid_l_length_cm}} cm."},
           {"if": {"field": "kid_r_calculus_present", "equals": true}, "then": "Right renal calculus is identified."},
           {"if": {"field": "kid_l_calculus_present", "equals": true}, "then": "Left renal calculus is identified."},
           {"if": {"field": "ure_r_stone_suspected", "equals": true}, "then": "Right ureteric calculus is suspected."},

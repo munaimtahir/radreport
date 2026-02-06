@@ -38,27 +38,27 @@ class Command(BaseCommand):
                         name = (row.get("name") or "").strip()
                         if not name:
                             raise CommandError(f"Invalid block row in {file_path}: missing name")
+                        
+                        content = row.get("content") or {}
                         block_code = (row.get("block_code") or "").strip()
+                        
+                        # Ensure block_code is embedded in content if provided for future matching
+                        if block_code and isinstance(content, dict) and "block_code" not in content:
+                            content = {**content, "block_code": block_code}
+
+                        # Unified lookup strategy: use block_code if available, otherwise name
                         if block_code:
-                            existing = ReportBlockLibrary.objects.filter(content__block_code=block_code).first()
-                            if existing:
-                                for field, value in {
-                                    "name": name,
-                                    "category": row.get("category") or "",
-                                    "block_type": row.get("block_type") or "narrative",
-                                    "content": row.get("content") or {},
-                                }.items():
-                                    setattr(existing, field, value)
-                                existing.save(update_fields=["name", "category", "block_type", "content", "updated_at"])
-                                stats["updated"] += 1
-                                continue
+                            lookup_kwargs = {"content__block_code": block_code}
+                        else:
+                            lookup_kwargs = {"name": name}
 
                         _, created = ReportBlockLibrary.objects.update_or_create(
-                            name=name,
+                            **lookup_kwargs,
                             defaults={
+                                "name": name,
                                 "category": row.get("category") or "",
                                 "block_type": row.get("block_type") or "narrative",
-                                "content": row.get("content") or {},
+                                "content": content,
                             },
                         )
                         stats["created" if created else "updated"] += 1
@@ -66,7 +66,7 @@ class Command(BaseCommand):
                 if dry_run:
                     raise _DryRunRollback()
         except _DryRunRollback:
-            pass
+            # Intentionally ignore: used only to roll back the atomic transaction in dry-run mode.
 
         self.stdout.write(
             self.style.SUCCESS(

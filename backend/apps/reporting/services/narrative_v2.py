@@ -188,11 +188,14 @@ def _process_impression(rules, values, schema):
                 if rendered:
                     impressions.append(rendered)
 
-            # Safe default: continue evaluating unless explicitly asked to stop.
-            if rule.get("stop", False):
-                break
-            if rule.get("continue") is False:
-                # Backward compatibility for legacy rules that used continue:false as explicit stop.
+            # Explicit stop/continue semantics:
+            # - `stop: true` means stop evaluation immediately
+            # - `continue: false` (legacy) means stop evaluation 
+            # - Otherwise, continue to next rule
+            explicit_stop = bool(rule.get("stop")) or (
+                "continue" in rule and rule.get("continue") is False
+            )
+            if explicit_stop:
                 break
 
     return impressions

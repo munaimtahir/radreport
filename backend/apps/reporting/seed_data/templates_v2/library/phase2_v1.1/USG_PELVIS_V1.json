@@ -40,18 +40,18 @@
       {
         "title": "Pelvis",
         "content": [
-          {"if": {"field": "ut_visualized", "equals": true}, "then": "Uterus is visualized and measures {{ut_size_cm}}."},
+          {"if": {"field": "ut_visualized", "equals": true}, "then": "Uterus is visualized."},
           {"if": {"field": "ut_fibroid_present", "equals": true}, "then": "Fibroid is noted in the uterus."},
           {"if": {"field": "ov_r_simple_cyst_present", "equals": true}, "then": "Right ovarian simple cyst is present."},
           {"if": {"field": "ov_l_simple_cyst_present", "equals": true}, "then": "Left ovarian simple cyst is present."},
-          {"if": {"field": "adnx_mass_present", "equals": true}, "then": "Adnexal mass is seen on {{adnx_side}} side."}
+          {"if": {"field": "adnx_mass_present", "equals": true}, "then": "Adnexal mass is present."}
         ]
       }
     ],
     "impression_rules": [
       {"priority": 10, "when": {"field": "ut_fibroid_present", "equals": true}, "text": "Uterine fibroid.", "continue": true},
-      {"priority": 20, "when": {"field": "adnx_mass_present", "equals": true}, "text": "Adnexal mass on {{adnx_side}} side.", "continue": true},
-      {"priority": 30, "when": {"field": "ff_present", "equals": true}, "text": "Free fluid present ({{ff_amount}}).", "continue": true},
+      {"priority": 20, "when": {"field": "adnx_mass_present", "equals": true}, "text": "Adnexal mass present.", "continue": true},
+      {"priority": 30, "when": {"field": "ff_present", "equals": true}, "text": "Free fluid present.", "continue": true},
       {"priority": 40, "when": {"field": "bl_pvr_ml", "gte": 100}, "text": "Significant post-void residual urine.", "continue": true}
     ]
   }
