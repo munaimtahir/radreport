@@ -4,12 +4,12 @@ from apps.catalog.models import Modality, Service
 
 
 class Command(BaseCommand):
-    help = "Seed minimal USG services (Ultrasound Abdomen/Pelvis/KUB)."
+    help = "Seed minimal USG core services (Abdomen/KUB/Pelvis)."
 
     def handle(self, *args, **options):
         modality, _ = Modality.objects.get_or_create(
             code="USG",
-            defaults={"name": "Ultrasound"}
+            defaults={"name": "Ultrasound"},
         )
 
         services = [
@@ -19,7 +19,7 @@ class Command(BaseCommand):
         ]
 
         for code, name in services:
-            service, created = Service.objects.update_or_create(
+            _, created = Service.objects.update_or_create(
                 code=code,
                 defaults={
                     "modality": modality,
@@ -28,21 +28,7 @@ class Command(BaseCommand):
                     "price": 0,
                     "charges": 0,
                     "default_price": 0,
-                }
+                },
             )
-            if not created:
-                updated = False
-                if service.modality_id != modality.id:
-                    service.modality = modality
-                    updated = True
-                if service.name != name:
-                    service.name = name
-                    updated = True
-                if service.category != "Radiology":
-                    service.category = "Radiology"
-                    updated = True
-                if updated:
-                    service.save()
-                self.stdout.write(self.style.SUCCESS(f"Updated {service.code} -> {service.name}"))
-            else:
-                self.stdout.write(self.style.SUCCESS(f"Created {service.code} -> {service.name}"))
+            status = "Created" if created else "Updated"
+            self.stdout.write(self.style.SUCCESS(f"{status} {code} -> {name}"))
