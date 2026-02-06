@@ -30,8 +30,10 @@
         - [ ] Verify fields REAPPEAR.
     - [ ] Set **Free Fluid Present** to `No` (or uncheck if checkbox).
         - [ ] Verify `Free Fluid Amount` is HIDDEN.
-    - [ ] Set **Free Fluid Present** to `Yes`.
-        - [ ] Verify `Free Fluid Amount` is VISIBLE.
+    - [ ] Set **Aorta/IVC Visualized** to `Obscured`.
+        - [ ] Verify `Aorta Max Diameter (mm)` is HIDDEN.
+    - [ ] Set **R Kidney Calculus Present** to `No`.
+        - [ ] Verify `R Kidney Largest Calculus (mm)` is HIDDEN.
 - [ ] **Data Integrity**:
     - [ ] Fill out the form.
     - [ ] Click "Save Draft".
@@ -39,8 +41,44 @@
     - [ ] specific values should persist.
     - [ ] Check "Narrative JSON" box at bottom (if available) or Chrome Network tab to ensure `values_json` has standard keys (e.g. `liv_size_cm`, not nested in some UI group).
 
-### 3. Edge Cases
-- [ ] Toggle "Liver Visualized" `No` -> Save -> Reload. Fields should remain hidden but if data was present before hiding, ensure backend didn't lose it (UI hides it, but data might persist in JSON depending on implementation. *Note: Current implementation hides UI but doesn't delete data automatically unless manual clear logic added. This maintains safety.*)
+### 3. USG KUB Enhanced UI
+- [ ] Open a USG KUB report (Template Code: `USG_KUB_V1`).
+- [ ] **Paired Groups**:
+    - [ ] Verify **Kidneys** are in side-by-side columns.
+    - [ ] Verify **Ureters** are in side-by-side columns.
+- [ ] **Visibility Rules**:
+    - [ ] Set **Right Kidney Visualized** to `No`.
+        - [ ] Verify all right kidney detail fields disappear.
+    - [ ] Set **Right Kidney Calculus Present** to `No`.
+        - [ ] Verify `Right Kidney Largest Calculus (mm)` disappears.
+    - [ ] Set **Right Ureter Stone Suspected** to `No`.
+        - [ ] Verify `Stone Location (R)` and `Stone Size (mm) (R)` disappear.
+    - [ ] Set **Bladder Visualized** to `No`.
+        - [ ] Verify all bladder detail fields disappear.
+- [ ] **Units**:
+    - [ ] Verify `(cm)`, `(mm)`, and `(mL)` units are correctly displayed in measurements.
+- [ ] **Data Integrity**:
+    - [ ] Verify values persist after save/reload.
+    - [ ] Verify hidden fields are not tabbable/focusable.
+
+### 4. USG Pelvis Enhanced UI
+- [ ] Open a USG Pelvis report (Template Code: `USG_PELVIS_V1`).
+- [ ] **Paired Groups**:
+    - [ ] Verify **Ovaries** are in side-by-side columns.
+- [ ] **Visibility Rules**:
+    - [ ] Set **Fibroid Present** to `No`.
+        - [ ] Verify `Largest Fibroid (mm)` disappears.
+    - [ ] Set **Adnexal Mass Present** to `No`.
+        - [ ] Verify `Adnexa Side`, `Papillary Projection`, `Solid Component`, etc. disappear.
+- [ ] **Data Integrity**:
+    - [ ] Verify values persist after save/reload.
+
+### 5. Developer Tools (Spec Lint)
+- [ ] Open Browser Console (F12) while on any Enhanced UI report.
+- [ ] Verify no `[SpecLint]` warnings appear (unless deliberate errors exist).
+- [ ] If warnings appear, verify they are actionable (e.g. "references unknown key").
+
+### 6. Edge Cases
 
 ## Troubleshooting
 - If UI is blank, check Console for `SmartSchemaFormV2` errors.

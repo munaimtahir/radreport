@@ -22,6 +22,7 @@ import {
 import SchemaFormV2 from "../components/reporting/SchemaFormV2";
 import SmartSchemaFormV2 from "../components/reporting/SmartSchemaFormV2";
 import { getUiSpec } from "../reporting_ui/registry";
+import { specLint } from "../reporting_ui/specLint";
 import Button from "../ui/components/Button";
 import ErrorAlert from "../ui/components/ErrorAlert";
 import SuccessAlert from "../ui/components/SuccessAlert";
@@ -102,6 +103,15 @@ export default function ReportingPage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if ((import.meta as any).env.DEV && schema) {
+            const uiSpec = getUiSpec(schema.code || "");
+            if (uiSpec) {
+                specLint(schema.code || "", schema.json_schema, uiSpec);
+            }
+        }
+    }, [schema]);
 
     const preparePayload = () => ({ schema_version: "v2" as const, values_json: valuesJson });
 

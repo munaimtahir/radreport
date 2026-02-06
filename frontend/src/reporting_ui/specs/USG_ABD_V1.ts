@@ -74,41 +74,87 @@ export const USG_ABD_V1_SPEC: TemplateUiSpec = {
             hide: [
                 "ff_amount"
             ]
+        },
+        {
+            when: { key: "aiv_visualized", op: "eq", value: "Obscured" },
+            hide: ["aiv_aorta_max_diameter_mm"]
+        },
+        {
+            when: { key: "kid_r_calculus_present", op: "eq", value: false },
+            hide: ["kid_r_largest_calculus_mm"]
+        },
+        {
+            when: { key: "kid_l_calculus_present", op: "eq", value: false },
+            hide: ["kid_l_largest_calculus_mm"]
         }
     ],
 
     fieldEnhancements: {
         // Kidneys
+        "kid_r_visualized": {
+            enumLabels: {
+                "Satisfactory": "Well seen",
+                "No": "Not seen"
+            }
+        },
+        "kid_l_visualized": {
+            enumLabels: {
+                "Satisfactory": "Well seen",
+                "No": "Not seen"
+            }
+        },
         "kid_r_cmd": { label: "Corticomedullary diff" },
         "kid_l_cmd": { label: "Corticomedullary diff" },
         "kid_r_length_cm": { unit: "cm", widget: "measurement" },
         "kid_l_length_cm": { unit: "cm", widget: "measurement" },
+        "kid_r_calculus_present": { widget: "segmented_boolean", compact: true },
+        "kid_l_calculus_present": { widget: "segmented_boolean", compact: true },
         "kid_r_largest_calculus_mm": { unit: "mm", widget: "measurement" },
         "kid_l_largest_calculus_mm": { unit: "mm", widget: "measurement" },
+        "kid_r_mass_suspected": { widget: "segmented_boolean", compact: true },
+        "kid_l_mass_suspected": { widget: "segmented_boolean", compact: true },
 
         // Liver
         "liv_size_cm": { unit: "cm", widget: "measurement" },
         "liv_portal_vein_diameter_mm": { unit: "mm", widget: "measurement" },
+        "liv_focal_lesion_present": { widget: "segmented_boolean", compact: true },
+        "liv_ihbd_present": { widget: "segmented_boolean", compact: true },
         "liv_visualized": {
-            // keeping enum, just labels if needed. Structure is fine in schema.
+            enumLabels: {
+                "Satisfactory": "Well seen",
+                "Partially": "Partially seen",
+                "No": "Not seen"
+            }
         },
 
         // Gallbladder
         "gb_wall_thickness_mm": { unit: "mm", widget: "measurement" },
         "gb_cbd_diameter_mm": { unit: "mm", widget: "measurement" },
+        "gb_stones_present": { widget: "segmented_boolean", compact: true },
+        "gb_sludge_present": { widget: "segmented_boolean", compact: true },
+        "gb_murphy_sign_positive": { widget: "segmented_boolean", compact: true },
+        "gb_pericholecystic_fluid_present": { widget: "segmented_boolean", compact: true },
+        "gb_cbd_stone_suspected": { widget: "segmented_boolean", compact: true },
 
         // Pancreas
         "panc_mpd_diameter_mm": { unit: "mm", widget: "measurement" },
+        "panc_focal_lesion_present": { widget: "segmented_boolean", compact: true },
         "panc_visualized": {
             enumLabels: {
                 "Satisfactory": "Well seen",
-                "Partially": "Partially unseen",
+                "Partially": "Partially seen",
                 "Obscured by bowel gas": "Not visualized (Gas)"
             }
         },
 
         // Spleen
         "spl_length_cm": { unit: "cm", widget: "measurement" },
+        "spl_visualized": {
+            enumLabels: {
+                "Satisfactory": "Well seen",
+                "No": "Not seen"
+            }
+        },
 
         // Aorta
         "aiv_aorta_max_diameter_mm": { unit: "mm", widget: "measurement" },
