@@ -1,0 +1,56 @@
+{
+  "code": "prostate_seminal_vesicles_paired_structure_single_instance",
+  "name": "Prostate & seminal vesicles (paired structure, single instance)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "prostate_seminal_vesicles_paired_structure_single_instance",
+    "name": "Prostate & seminal vesicles (paired structure, single instance)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "male": {
+          "type": "string"
+        },
+        "LUTS/retention evaluation": {
+          "type": "string"
+        },
+        "pros_visualized": {
+          "type": "boolean"
+        },
+        "pros_image_quality": {
+          "type": "string"
+        },
+        "pros_limitation_reason": {
+          "type": "string"
+        },
+        "pros_volume_ml": {
+          "type": "number"
+        },
+        "pros_echotexture": {
+          "type": "string"
+        },
+        "pros_median_lobe_protrusion": {
+          "type": "boolean"
+        },
+        "pros_calcifications_present": {
+          "type": "boolean"
+        },
+        "pros_seminal_vesicles": {
+          "type": "string"
+        },
+        "BPH pattern": {
+          "type": "string"
+        },
+        "optional if clinically relevant": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "pros_visualized",
+        "pros_image_quality"
+      ]
+    }
+  }
+}

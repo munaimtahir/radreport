@@ -1,0 +1,64 @@
+{
+  "code": "gall_bladder_cbd",
+  "name": "Gall bladder & CBD",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "gall_bladder_cbd",
+    "name": "Gall bladder & CBD",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "extended upper abdomen": {
+          "type": "string"
+        },
+        "gb_visualized": {
+          "type": "boolean"
+        },
+        "gb_image_quality": {
+          "type": "string"
+        },
+        "gb_limitation_reason": {
+          "type": "string"
+        },
+        "gb_status": {
+          "type": "string"
+        },
+        "gb_stones_present": {
+          "type": "boolean"
+        },
+        "gb_sludge_present": {
+          "type": "boolean"
+        },
+        "gb_wall_thickness_mm": {
+          "type": "number"
+        },
+        "gb_murphy_sign_positive": {
+          "type": "boolean"
+        },
+        "gb_pericholecystic_fluid_present": {
+          "type": "boolean"
+        },
+        "gb_cbd_diameter_mm": {
+          "type": "number"
+        },
+        "gb_cbd_stone_suspected": {
+          "type": "boolean"
+        },
+        "gb_wall_thickness_mm > 3": {
+          "type": "string"
+        },
+        "use gb_limitation_reason": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "gb_visualized",
+        "gb_image_quality",
+        "gb_status",
+        "gb_stones_present"
+      ]
+    }
+  }
+}

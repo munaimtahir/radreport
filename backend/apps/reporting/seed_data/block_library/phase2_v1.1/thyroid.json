@@ -1,0 +1,73 @@
+{
+  "code": "thyroid",
+  "name": "Thyroid",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "thyroid",
+    "name": "Thyroid",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "thy_visualized": {
+          "type": "boolean"
+        },
+        "thy_image_quality": {
+          "type": "string"
+        },
+        "thy_limitation_reason": {
+          "type": "string"
+        },
+        "thy_rt_lobe_length_cm": {
+          "type": "number"
+        },
+        "thy_lt_lobe_length_cm": {
+          "type": "number"
+        },
+        "thy_isthmus_mm": {
+          "type": "number"
+        },
+        "thy_echotexture": {
+          "type": "string"
+        },
+        "thy_vascularity": {
+          "type": "string"
+        },
+        "thy_nodule_present": {
+          "type": "boolean"
+        },
+        "thy_dominant_nodule_mm": {
+          "type": "number"
+        },
+        "thy_dominant_composition": {
+          "type": "string"
+        },
+        "thy_dominant_echogenicity": {
+          "type": "string"
+        },
+        "thy_dominant_margins": {
+          "type": "string"
+        },
+        "thy_microcalcifications_suspected": {
+          "type": "boolean"
+        },
+        "thy_taller_than_wide": {
+          "type": "boolean"
+        },
+        "s": {
+          "type": "string"
+        },
+        "risk stratification/FNA as per protocol": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "thy_visualized",
+        "thy_image_quality",
+        "thy_echotexture",
+        "thy_nodule_present"
+      ]
+    }
+  }
+}

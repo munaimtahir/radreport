@@ -1,0 +1,39 @@
+[
+  {
+    "code": "USG_ABD_V2",
+    "name": "Ultrasound Abdomen (Complete)",
+    "modality": "USG",
+    "status": "active",
+    "json_schema": {
+      "type": "object",
+      "properties": {
+        "liver_size": {
+          "type": "string",
+          "title": "Liver Size",
+          "default": "Normal"
+        },
+        "liver_echotexture": {
+          "type": "string",
+          "enum": ["Normal", "Coarse", "Fatty"],
+          "default": "Normal"
+        }
+      }
+    },
+    "ui_schema": {
+      "liver_size": {
+        "ui:widget": "text"
+      },
+      "liver_echotexture": {
+        "ui:widget": "select"
+      }
+    },
+    "narrative_rules": {
+      "sections": [
+        {
+          "title": "Liver",
+          "content": "Liver is {liver_size} in size with {liver_echotexture} echotexture."
+        }
+      ]
+    }
+  }
+]

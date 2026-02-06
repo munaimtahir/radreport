@@ -1,48 +1,34 @@
 from django.core.management.base import BaseCommand
-
-from apps.catalog.models import Modality, Service
-
+from apps.catalog.models import Service, Modality
 
 class Command(BaseCommand):
-    help = "Seed minimal USG services (Ultrasound Abdomen/Pelvis/KUB)."
+    help = "Seeds basic USG services (Phase 3 Core)"
 
     def handle(self, *args, **options):
-        modality, _ = Modality.objects.get_or_create(
-            code="USG",
-            defaults={"name": "Ultrasound"}
-        )
+        # Ensure Modality USG exists
+        modality, _ = Modality.objects.get_or_create(code="USG", defaults={"name": "Ultrasound"})
 
         services = [
-            ("USG-ABD", "USG Abdomen"),
-            ("USG-KUB", "USG KUB"),
-            ("USG-PELVIS", "USG Pelvis"),
+            {"code": "USG-ABD", "name": "USG Abdomen"},
+            {"code": "USG-KUB", "name": "USG KUB"},
+            {"code": "USG-PELVIS", "name": "USG Pelvis"},
         ]
 
-        for code, name in services:
-            service, created = Service.objects.update_or_create(
-                code=code,
+        created_count = 0
+        updated_count = 0
+
+        for s in services:
+            obj, created = Service.objects.update_or_create(
+                code=s["code"],
                 defaults={
+                    "name": s["name"],
                     "modality": modality,
-                    "name": name,
-                    "category": "Radiology",
-                    "price": 0,
-                    "charges": 0,
-                    "default_price": 0,
+                    "is_active": True
                 }
             )
-            if not created:
-                updated = False
-                if service.modality_id != modality.id:
-                    service.modality = modality
-                    updated = True
-                if service.name != name:
-                    service.name = name
-                    updated = True
-                if service.category != "Radiology":
-                    service.category = "Radiology"
-                    updated = True
-                if updated:
-                    service.save()
-                self.stdout.write(self.style.SUCCESS(f"Updated {service.code} -> {service.name}"))
+            if created:
+                created_count += 1
             else:
-                self.stdout.write(self.style.SUCCESS(f"Created {service.code} -> {service.name}"))
+                updated_count += 1
+
+        self.stdout.write(self.style.SUCCESS(f"Seeded USG Services: {created_count} created, {updated_count} updated."))

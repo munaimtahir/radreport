@@ -1,0 +1,47 @@
+{
+  "code": "portal_vein_hepatic_venous_doppler",
+  "name": "Portal vein & hepatic venous Doppler",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "portal_vein_hepatic_venous_doppler",
+    "name": "Portal vein & hepatic venous Doppler",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "pvd_visualized": {
+          "type": "boolean"
+        },
+        "pvd_image_quality": {
+          "type": "string"
+        },
+        "pvd_limitation_reason": {
+          "type": "string"
+        },
+        "pvd_pv_diameter_mm": {
+          "type": "number"
+        },
+        "pvd_pv_flow_direction": {
+          "type": "string"
+        },
+        "pvd_pv_velocity_cm_s": {
+          "type": "number"
+        },
+        "pvd_pv_thrombosis_suspected": {
+          "type": "boolean"
+        },
+        "pvd_hepatic_vein_waveform": {
+          "type": "string"
+        },
+        "pvd_collaterals_suspected": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "pvd_visualized",
+        "pvd_image_quality"
+      ]
+    }
+  }
+}

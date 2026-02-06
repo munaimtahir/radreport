@@ -1,0 +1,63 @@
+{
+  "code": "cervical_lymph_nodes",
+  "name": "Cervical lymph nodes",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "cervical_lymph_nodes",
+    "name": "Cervical lymph nodes",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "adjunct": {
+          "type": "string"
+        },
+        "cln_visualized": {
+          "type": "boolean"
+        },
+        "cln_image_quality": {
+          "type": "string"
+        },
+        "cln_limitation_reason": {
+          "type": "string"
+        },
+        "cln_enlarged_present": {
+          "type": "boolean"
+        },
+        "cln_level": {
+          "type": "string"
+        },
+        "cln_short_axis_mm": {
+          "type": "number"
+        },
+        "cln_shape": {
+          "type": "string"
+        },
+        "cln_hilum_preserved": {
+          "type": "boolean"
+        },
+        "cln_necrosis_present": {
+          "type": "boolean"
+        },
+        "cln_calcification_present": {
+          "type": "boolean"
+        },
+        "cln_abnormal_vascularity_present": {
+          "type": "boolean"
+        },
+        "if benign features": {
+          "type": "string"
+        },
+        "if suspicious features": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "cln_visualized",
+        "cln_image_quality",
+        "cln_enlarged_present"
+      ]
+    }
+  }
+}

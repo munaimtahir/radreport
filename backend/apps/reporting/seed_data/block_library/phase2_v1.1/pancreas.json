@@ -1,0 +1,58 @@
+{
+  "code": "pancreas",
+  "name": "Pancreas",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "pancreas",
+    "name": "Pancreas",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "extended": {
+          "type": "string"
+        },
+        "panc_visualized": {
+          "type": "boolean"
+        },
+        "panc_image_quality": {
+          "type": "string"
+        },
+        "panc_limitation_reason": {
+          "type": "string"
+        },
+        "panc_visualized_extent": {
+          "type": "string"
+        },
+        "panc_size": {
+          "type": "string"
+        },
+        "panc_echotexture": {
+          "type": "string"
+        },
+        "panc_mpd_diameter_mm": {
+          "type": "number"
+        },
+        "panc_peripancreatic_fluid_present": {
+          "type": "boolean"
+        },
+        "panc_focal_lesion_present": {
+          "type": "boolean"
+        },
+        "correlate clinically/biochemically": {
+          "type": "string"
+        },
+        "further characterization advised": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "panc_visualized",
+        "panc_image_quality",
+        "panc_visualized_extent",
+        "panc_echotexture"
+      ]
+    }
+  }
+}

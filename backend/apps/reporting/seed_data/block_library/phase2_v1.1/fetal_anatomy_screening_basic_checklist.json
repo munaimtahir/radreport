@@ -1,0 +1,68 @@
+{
+  "code": "fetal_anatomy_screening_basic_checklist",
+  "name": "Fetal anatomy screening (basic checklist)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "fetal_anatomy_screening_basic_checklist",
+    "name": "Fetal anatomy screening (basic checklist)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "limited anatomy check": {
+          "type": "string"
+        },
+        "fa_visualized": {
+          "type": "boolean"
+        },
+        "fa_image_quality": {
+          "type": "string"
+        },
+        "fa_limitation_reason": {
+          "type": "string"
+        },
+        "fa_skull_brain": {
+          "type": "string"
+        },
+        "fa_spine": {
+          "type": "string"
+        },
+        "fa_four_chamber_heart": {
+          "type": "string"
+        },
+        "fa_stomach": {
+          "type": "string"
+        },
+        "fa_kidneys": {
+          "type": "string"
+        },
+        "fa_bladder": {
+          "type": "string"
+        },
+        "fa_abdominal_wall_intact": {
+          "type": "string"
+        },
+        "fa_cord_vessels": {
+          "type": "string"
+        },
+        "and not limited": {
+          "type": "string"
+        },
+        "when defect suspected": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "fa_visualized",
+        "fa_image_quality",
+        "fa_skull_brain",
+        "fa_spine",
+        "fa_four_chamber_heart",
+        "fa_stomach",
+        "fa_kidneys",
+        "fa_bladder"
+      ]
+    }
+  }
+}

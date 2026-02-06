@@ -1,0 +1,54 @@
+{
+  "code": "breast_parenchyma_background",
+  "name": "Breast parenchyma (background)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "breast_parenchyma_background",
+    "name": "Breast parenchyma (background)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "adjunct": {
+          "type": "string"
+        },
+        "brp_visualized": {
+          "type": "boolean"
+        },
+        "brp_image_quality": {
+          "type": "string"
+        },
+        "brp_limitation_reason": {
+          "type": "string"
+        },
+        "brp_side": {
+          "type": "string"
+        },
+        "brp_pattern": {
+          "type": "string"
+        },
+        "brp_duct_ectasia_present": {
+          "type": "boolean"
+        },
+        "brp_skin_thickening_present": {
+          "type": "boolean"
+        },
+        "brp_edema_present": {
+          "type": "boolean"
+        },
+        "optional": {
+          "type": "string"
+        },
+        "correlate clinically": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "brp_visualized",
+        "brp_image_quality",
+        "brp_side"
+      ]
+    }
+  }
+}

@@ -80,12 +80,12 @@ class ReportPDFGeneratorV2:
         ]
         
         # Config / Branding (reuse V1 logic)
-        lab_details = {
+        org_details = {
             "lab_name": "Adjacent Excel Labs",
             "lab_address": "Near Arman Pan Shop Faisalabad Road Jaranwala",
             "lab_contact": "Tel: 041 4313 777 | WhatsApp: 03279640897",
             "logo_path": str(settings.BASE_DIR / "static" / "branding" / "logo.png"),
-            "disclaimer": "Electronically verified. Laboratory results should be interpreted by a physician in correlation with clinical and radiologic findings."
+            "disclaimer": "Electronically verified. Results should be interpreted by a physician in correlation with clinical and radiologic findings."
         }
         
         static_signatories = []
@@ -93,20 +93,20 @@ class ReportPDFGeneratorV2:
         # Load config
         config = ReportingOrganizationConfig.objects.first()
         if config:
-            lab_details["lab_name"] = config.org_name
+            org_details["lab_name"] = config.org_name
             if config.address:
-                lab_details["lab_address"] = config.address
+                org_details["lab_address"] = config.address
             if config.phone:
-                lab_details["lab_contact"] = config.phone
+                org_details["lab_contact"] = config.phone
             
             if config.logo:
                 try:
-                    lab_details["logo_path"] = config.logo.path
+                    org_details["logo_path"] = config.logo.path
                 except Exception:
                     pass
             
             if config.disclaimer_text:
-                lab_details["disclaimer"] = config.disclaimer_text
+                org_details["disclaimer"] = config.disclaimer_text
             
             if config.signatories_json and isinstance(config.signatories_json, list):
                 static_signatories = config.signatories_json
@@ -114,7 +114,7 @@ class ReportPDFGeneratorV2:
         final_signatories = dynamic_signatories + static_signatories
         
         self.data = {
-            "header": lab_details,
+            "header": org_details,
             "patient": {
                 "name": patient.name,
                 "age_gender": f"{patient.age or '-'} Y / {patient.gender or '-'}",
@@ -137,7 +137,7 @@ class ReportPDFGeneratorV2:
             "json_schema": template.json_schema,
             "narrative": self.narrative_json or {},
             "footer": {
-                "disclaimer": lab_details["disclaimer"],
+                "disclaimer": org_details["disclaimer"],
                 "signatories": final_signatories
             }
         }
@@ -335,17 +335,21 @@ class ReportPDFGeneratorV2:
         story.append(self.build_patient_table())
         story.append(Spacer(1, 15))
         
-        # Render narrative if available
+        # Render narrative if available and has content
         narrative = self.data.get('narrative', {})
-        if narrative:
+        has_content = narrative.get('sections') or narrative.get('impression')
+        
+        if narrative and has_content:
             self._render_narrative(story, narrative)
         else:
             # Fallback: render values as table
-            story.append(Paragraph("REPORT VALUES", self.styles['SectionHeading']))
+            story.append(Paragraph("REPORT FINDINGS", self.styles['SectionHeading']))
             story.append(Spacer(1, 5))
             values_table = self.build_values_table()
             if values_table:
                 story.append(values_table)
+            else:
+                story.append(Paragraph("No reportable values provided.", self.styles['BodyText']))
         
         doc.build(story)
         

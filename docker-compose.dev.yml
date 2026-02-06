@@ -6,9 +6,9 @@ services:
     container_name: rims_db_local
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME:-rims}
-      POSTGRES_USER: ${DB_USER:-rims}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-rims}
+      POSTGRES_DB: rims
+      POSTGRES_USER: rims
+      POSTGRES_PASSWORD: rims
     volumes:
       - postgres_data_local:/var/lib/postgresql/data
     networks:

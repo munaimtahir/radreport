@@ -1,0 +1,70 @@
+{
+  "code": "soft_tissue_lump_abscess_foreign_body",
+  "name": "Soft tissue lump / abscess / foreign body",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "soft_tissue_lump_abscess_foreign_body",
+    "name": "Soft tissue lump / abscess / foreign body",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "any region": {
+          "type": "string"
+        },
+        "st_visualized": {
+          "type": "boolean"
+        },
+        "st_image_quality": {
+          "type": "string"
+        },
+        "st_limitation_reason": {
+          "type": "string"
+        },
+        "st_site": {
+          "type": "string"
+        },
+        "st_lesion_present": {
+          "type": "boolean"
+        },
+        "st_lesion_max_mm": {
+          "type": "number"
+        },
+        "st_depth_plane": {
+          "type": "string"
+        },
+        "st_composition": {
+          "type": "string"
+        },
+        "st_margins": {
+          "type": "string"
+        },
+        "st_vascularity": {
+          "type": "string"
+        },
+        "st_collection_features_present": {
+          "type": "boolean"
+        },
+        "st_sinus_tract_suspected": {
+          "type": "boolean"
+        },
+        "st_foreign_body_suspected": {
+          "type": "boolean"
+        },
+        "st_vascularity = internal OR st_vascularity = marked": {
+          "type": "string"
+        },
+        "if abscess pattern": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "st_visualized",
+        "st_image_quality",
+        "st_site",
+        "st_lesion_present"
+      ]
+    }
+  }
+}

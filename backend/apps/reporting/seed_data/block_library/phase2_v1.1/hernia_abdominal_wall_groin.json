@@ -1,0 +1,58 @@
+{
+  "code": "hernia_abdominal_wall_groin",
+  "name": "Hernia (abdominal wall / groin)",
+  "category": "USG",
+  "block_type": "ui",
+  "content": {
+    "code": "hernia_abdominal_wall_groin",
+    "name": "Hernia (abdominal wall / groin)",
+    "version": "v1.1",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "hern_visualized": {
+          "type": "boolean"
+        },
+        "hern_image_quality": {
+          "type": "string"
+        },
+        "hern_limitation_reason": {
+          "type": "string"
+        },
+        "hern_site": {
+          "type": "string"
+        },
+        "hern_present": {
+          "type": "boolean"
+        },
+        "hern_type": {
+          "type": "string"
+        },
+        "hern_neck_mm": {
+          "type": "number"
+        },
+        "hern_content": {
+          "type": "string"
+        },
+        "hern_reducible": {
+          "type": "boolean"
+        },
+        "hern_strangulation_suspected": {
+          "type": "boolean"
+        },
+        "with content": {
+          "type": "string"
+        },
+        "urgent correlation": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "hern_visualized",
+        "hern_image_quality",
+        "hern_site",
+        "hern_present"
+      ]
+    }
+  }
+}
