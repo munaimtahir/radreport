@@ -18,11 +18,15 @@ class V2TemplateImportTests(TestCase):
         Modality.objects.all().delete()
         self.modality = Modality.objects.create(code="USG", name="Ultrasound")
         self.service = Service.objects.create(code="USG-ABD", name="USG Abdomen", modality=self.modality)
+        self.service_kub = Service.objects.create(code="USG-KUB", name="USG KUB", modality=self.modality)
+        self.service_pelvis = Service.objects.create(code="USG-PELVIS", name="USG Pelvis", modality=self.modality)
         self.seed_dir = Path(__file__).resolve().parents[1] / "seed_data" / "templates_v2"
+        self.library_dir = self.seed_dir / "library" / "phase2_v1.1"
+        self.activation_csv = self.seed_dir / "activation" / "phase3_usg_core.csv"
         self.active_codes = {"USG_ABD_V1", "USG_KUB_V1", "USG_PELVIS_V1"}
 
     def test_active_seed_templates_are_schema_valid(self):
-        files = list(self.seed_dir.glob("*.json"))
+        files = list(self.library_dir.glob("*.json"))
         payloads = [json.loads(p.read_text(encoding="utf-8")) for p in files]
         by_code = {p["code"]: p for p in payloads}
 
@@ -48,10 +52,13 @@ class V2TemplateImportTests(TestCase):
 
     def test_mapping_created_when_service_exists(self):
         call_command("import_templates_v2")
-        self.assertTrue(ServiceReportTemplateV2.objects.filter(service=self.service).exists())
+        self.assertEqual(
+            ServiceReportTemplateV2.objects.filter(service__code__in=["USG-ABD", "USG-KUB", "USG-PELVIS"]).count(),
+            3,
+        )
 
     def test_unresolved_service_is_reported_without_crashing(self):
-        mapping_file = self.seed_dir / "tmp_unresolved_map.csv"
+        mapping_file = self.seed_dir / "activation" / "tmp_unresolved_map.csv"
         with mapping_file.open("w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(
                 f,

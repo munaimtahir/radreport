@@ -49,6 +49,10 @@ def seed_data():
     # Call app-specific seeders
     print("\n[3/3] Calling app seeders...")
     try:
+        print("Running seed_usg_basic_services...")
+        call_command('seed_usg_basic_services')
+        print("✓ seed_usg_basic_services complete")
+
         print("Running seed_reporting_v2...")
         call_command('seed_reporting_v2')
         print("✓ seed_reporting_v2 complete")

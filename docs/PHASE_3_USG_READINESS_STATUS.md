@@ -1,68 +1,54 @@
-# Phase 3 USG V2 Readiness Status
+# RADREPORT Phase 3 — USG Core Readiness Status
 
-## Truth Map (Audit)
+## Activation scope (active now)
+- `USG-ABD` → `USG_ABD_V1`
+- `USG-KUB` → `USG_KUB_V1`
+- `USG-PELVIS` → `USG_PELVIS_V1`
 
-### V2 data model (present)
-- `ReportTemplateV2`
-- `ServiceReportTemplateV2`
-- `ReportInstanceV2`
-- `ReportPublishSnapshotV2`
-- `ReportActionLogV2`
-- `ReportBlockLibrary`
+Activation file: `backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv`.
 
-### V2 workitem/reporting endpoints (present)
-- `schema`
-- `values`
-- `save`
-- `submit`
-- `generate-narrative`
-- `report-pdf`
-- `verify`
-- `publish`
-- `publish-history`
-- `published-pdf`
-- `published-integrity`
+## Service code scheme
+- Option A (locked) codes are implemented and seeded idempotently:
+  - `USG-ABD` (`USG Abdomen`)
+  - `USG-KUB` (`USG KUB`)
+  - `USG-PELVIS` (`USG Pelvis`)
 
-### Legacy remnants found and fixed
-- Legacy seeding in `backend/seed_data.py` called `seed_reporting` (V1) → replaced with `seed_reporting_v2`.
-- Legacy management commands referencing removed V1 models existed and were removed:
-  - `seed_reporting`
-  - `seed_usg_abd_profile`
-  - `import_reporting_profiles`
-  - `export_reporting_profiles`
-  - `export_published_reports`
-- Frontend now resolves missing-template backend errors to a clear user message: `No active template configured for this service`.
+## What is active in bootstrap
+- `seed_data.py` invokes:
+  1. `seed_usg_basic_services`
+  2. `seed_reporting_v2`
+- `seed_reporting_v2` invokes:
+  1. `import_block_library_v1`
+  2. `import_templates_v2`
 
-### Seed files audit
-- `seed_data/templates_v2/*.json` contained many placeholder files.
-- Added production-ready active USG templates for this phase:
-  - `USG_ABD_V1`
-  - `USG_KUB_V1`
-  - `USG_PELVIS_V1`
-- `service_template_map.csv` was minimal and now includes explicit active mappings for Abdomen/KUB/Pelvis only.
+## Idempotent seed/import assets
+- Template library (full-preserve location for this phase):
+  - `backend/apps/reporting/seed_data/templates_v2/library/phase2_v1.1/`
+- Activation set (only USG core active now):
+  - `backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv`
+- Block library seeds:
+  - `backend/apps/reporting/seed_data/block_library/phase2_v1.1/block_library.json`
 
-## What changed for Phase 3 completion
-- `import_templates_v2` now works with **no args** and uses default seed paths.
-- Import supports template directory ingestion and idempotent updates by `code`.
-- Mapping supports service lookup by `service_code`, then `service_slug` (normalized), then `service_name` (normalized).
-- `--dry-run` is transactional and non-writing.
-- Unresolved services are reported with close name suggestions.
-
-## Activated USG services now
-- USG Abdomen
-- USG KUB
-- USG Pelvis
-
-## Deferred services
-- Doppler USG services (all)
-- Procedures/interventions (pleural/ascitic tap, drainage, etc.)
-- OB / anomaly templates
-- Non-core non-doppler USG (to be phased later): Abdomen+Pelvis, Soft Tissue, Swelling, Breast/B/L Breast, Chest, Scrotal, Cranial, Knee Joint, Both Hip Joints Child
-
-## Seed + verify commands
+## Repro commands
 ```bash
-python manage.py import_templates_v2 --dry-run
-python manage.py import_templates_v2
-pytest backend/apps/reporting/tests/test_v2_import.py backend/apps/reporting/tests/test_workitem_v2_minimal_flow.py
+# backend tests
+cd backend && python manage.py test apps.reporting.tests.test_v2_import apps.reporting.tests.test_workitem_v2_minimal_flow -v 2
+
+# frontend smoke
 cd frontend && npm test -- --run src/utils/reporting/__tests__/errors.test.ts
+
+# v2 import dry-run
+cd backend && python manage.py import_templates_v2 --dry-run
 ```
+
+## Deferred (explicitly not active in this phase)
+- Doppler (all)
+- OB / anomaly workflows (all)
+- Procedures / interventions
+- Other USG templates beyond core ABD/KUB/PELVIS activation:
+  - Abdomen+pelvis variants, breast, scrotal, soft tissue / lump / swelling,
+  - chest, cranial, pediatric hips/knee and all additional non-core scans.
+
+## Current gate status in this environment
+- Backend/Frontend automated checks for import + minimal V2 flow: **PASS**.
+- Docker-based transcript commands cannot complete here because `docker` is unavailable in the runtime shell; command outputs are captured in transcript.

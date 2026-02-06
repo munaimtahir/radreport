@@ -174,13 +174,12 @@ def _process_rule(rule, values, schema):
 
 def _process_impression(rules, values, schema):
     impressions = []
-    
-    # Sort by priority (ascending or descending? "ordered by priority" - usually 1 is high)
-    # Let's assume lower is higher priority or just simple sort.
-    # Spec: "priority": 1. 
-    sorted_rules = sorted(rules, key=lambda x: x.get("priority", 999))
-    
-    for rule in sorted_rules:
+
+    # Deterministic ordering: priority DESC, then input order.
+    indexed_rules = list(enumerate(rules or []))
+    sorted_rules = sorted(indexed_rules, key=lambda item: (-item[1].get("priority", 0), item[0]))
+
+    for _, rule in sorted_rules:
         when = rule.get("when")
         if _evaluate_condition(when, values):
             text = rule.get("text", "")
@@ -188,20 +187,14 @@ def _process_impression(rules, values, schema):
                 rendered = _render_template(text, values, schema)
                 if rendered:
                     impressions.append(rendered)
-            
-            # Check for continuation
-            if not rule.get("continue", False):
-                 # Spec: "First match wins (unless continue:true)"
-                 pass 
-                 # Wait, "evaluated top-down. First match wins". implies we stop across all rules?
-                 # Or per "group"? usually impression is a list.
-                 # "impression_rules": [ ... ]
-                 # If rule matches and continue=False (default), do we stop processing *subsequent* rules?
-                 # Usually yes for "finding" generators, but for impression... 
-                 # Let's assume we stop unless continue=True.
-                 if not rule.get("continue", False):
-                     break
-                     
+
+            # Safe default: continue evaluating unless explicitly asked to stop.
+            if rule.get("stop", False):
+                break
+            if rule.get("continue") is False:
+                # Backward compatibility for legacy rules that used continue:false as explicit stop.
+                break
+
     return impressions
 
 def _evaluate_condition(condition, values):

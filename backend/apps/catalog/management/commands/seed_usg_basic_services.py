@@ -13,13 +13,13 @@ class Command(BaseCommand):
         )
 
         services = [
-            ("USG_ABDOMEN", "Ultrasound Abdomen"),
-            ("USG_PELVIS", "Ultrasound Pelvis"),
-            ("USG_KUB", "Ultrasound KUB"),
+            ("USG-ABD", "USG Abdomen"),
+            ("USG-KUB", "USG KUB"),
+            ("USG-PELVIS", "USG Pelvis"),
         ]
 
         for code, name in services:
-            service, created = Service.objects.get_or_create(
+            service, created = Service.objects.update_or_create(
                 code=code,
                 defaults={
                     "modality": modality,

@@ -26,8 +26,10 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         base_dir = Path(__file__).resolve().parents[2] / "seed_data" / "templates_v2"
-        templates_path = Path(options.get("templates") or base_dir)
-        mappings_path = Path(options.get("mappings") or (base_dir / "service_template_map.csv"))
+        default_templates = base_dir / "library" / "phase2_v1.1"
+        default_mappings = base_dir / "activation" / "phase3_usg_core.csv"
+        templates_path = Path(options.get("templates") or default_templates)
+        mappings_path = Path(options.get("mappings") or default_mappings)
         dry_run = options["dry_run"]
         strict = options["strict"]
 
