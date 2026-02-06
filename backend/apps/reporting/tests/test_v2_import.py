@@ -58,7 +58,9 @@ class V2TemplateImportTests(TestCase):
         )
 
     def test_unresolved_service_is_reported_without_crashing(self):
-        mapping_file = self.seed_dir / "activation" / "tmp_unresolved_map.csv"
+        activation_dir = self.seed_dir / "activation"
+        activation_dir.mkdir(exist_ok=True)  # Ensure directory exists
+        mapping_file = activation_dir / "tmp_unresolved_map.csv"
         with mapping_file.open("w", encoding="utf-8", newline="") as f:
             writer = csv.DictWriter(
                 f,
