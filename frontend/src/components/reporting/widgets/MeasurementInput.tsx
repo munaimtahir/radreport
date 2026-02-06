@@ -27,7 +27,7 @@ export default function MeasurementInput({
                 style={{
                     width: "100%",
                     padding: "10px 12px",
-                    paddingRight: 40, // Space for unit
+                    paddingRight: 40,
                     borderRadius: 8,
                     border: `1px solid ${theme.colors.border}`,
                     fontSize: 14,
@@ -36,6 +36,7 @@ export default function MeasurementInput({
                 }}
             />
             <span
+                data-testid="measurement-unit-badge"
                 style={{
                     position: "absolute",
                     right: 12,
