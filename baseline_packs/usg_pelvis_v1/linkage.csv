@@ -1,2 +1,0 @@
-service_id,service_code,service_name,profile_id,profile_code,profile_name,enforce_single_profile,is_default
-,USG_PELVIS,Ultrasound Pelvis,,USG_PELVIS,USG Pelvis,true,true

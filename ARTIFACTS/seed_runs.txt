@@ -1,0 +1,60 @@
+[Dry Run]
+Starting V2 Reporting Seed
+DRY RUN MODE ENABLED
+
+[1/3] Importing Block Library...
+Importing block library seeds
+Source: /home/munaim/srv/apps/radreport/backend/apps/reporting/seed_data/block_library/phase2_v1.1
+DRY RUN: no database writes
+
+--- Block Library Import Summary ---
+Created:   30
+Updated:   0
+Unchanged: 30
+------------------------------------
+✓ Block library imported.
+
+[2/3] Importing Templates & Mappings...
+Starting V2 template import
+Templates source: /home/munaim/srv/apps/radreport/backend/apps/reporting/seed_data/templates_v2/library/phase2_v1.1
+Mappings source:  /home/munaim/srv/apps/radreport/backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv
+DRY RUN MODE: no changes will be persisted.
+
+--------- SUMMARY ---------
+Templates Created: 0
+Templates Updated: 18
+Mappings Created:  0
+Mappings Updated:  3
+---------------------------
+✓ Templates & mappings imported.
+
+All V2 reporting seeds completed successfully.
+
+[Real Run]
+Starting V2 Reporting Seed
+
+[1/3] Importing Block Library...
+Importing block library seeds
+Source: /home/munaim/srv/apps/radreport/backend/apps/reporting/seed_data/block_library/phase2_v1.1
+
+--- Block Library Import Summary ---
+Created:   0
+Updated:   0
+Unchanged: 60
+------------------------------------
+✓ Block library imported.
+
+[2/3] Importing Templates & Mappings...
+Starting V2 template import
+Templates source: /home/munaim/srv/apps/radreport/backend/apps/reporting/seed_data/templates_v2/library/phase2_v1.1
+Mappings source:  /home/munaim/srv/apps/radreport/backend/apps/reporting/seed_data/templates_v2/activation/phase3_usg_core.csv
+
+--------- SUMMARY ---------
+Templates Created: 0
+Templates Updated: 18
+Mappings Created:  0
+Mappings Updated:  3
+---------------------------
+✓ Templates & mappings imported.
+
+All V2 reporting seeds completed successfully.

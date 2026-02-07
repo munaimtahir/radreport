@@ -1,0 +1,17 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.0.2, pluggy-1.6.0
+django: version: 5.2.10, settings: rims_backend.settings (from option)
+rootdir: /home/munaim/srv/apps/radreport/backend
+plugins: django-4.11.1
+collected 27 items
+
+apps/reporting/tests/test_block_library_import.py ...                    [ 11%]
+apps/reporting/tests/test_narrative_logic_v2.py ....                     [ 25%]
+apps/reporting/tests/test_template_v2.py ...                             [ 37%]
+apps/reporting/tests/test_v2_import.py .....                             [ 55%]
+apps/reporting/tests/test_workitem_v2_minimal_flow.py .                  [ 59%]
+apps/reporting/tests/test_workitem_v2_narrative.py ..                    [ 66%]
+apps/reporting/tests/test_workitem_v2_publish_pdf.py ......              [ 88%]
+apps/reporting/tests/test_workitem_v2_routing.py ...                     [100%]
+
+============================= 27 passed in 15.61s ==============================

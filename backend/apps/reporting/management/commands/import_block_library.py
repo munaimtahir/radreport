@@ -60,17 +60,29 @@ class Command(BaseCommand):
             stats["errors"].append(f"{path.name}: invalid JSON ({exc})")
             return
 
-        code = payload.get("code") or payload.get("content", {}).get("code")
+        if isinstance(payload, list):
+            for item in payload:
+                self._import_single_item(item, path.name, stats)
+        else:
+            self._import_single_item(payload, path.name, stats)
+
+    def _import_single_item(self, payload: dict, filename: str, stats: dict):
+        code = payload.get("code") or payload.get("block_code") or payload.get("content", {}).get("code")
         name = payload.get("name")
         if not name:
-            stats["errors"].append(f"{path.name}: missing name")
+            stats["errors"].append(f"{filename}: missing name")
             return
+
+        content = payload.get("content", {})
+        # Ensure code is preserved in content for lookup
+        if code and "code" not in content:
+            content["code"] = code
 
         defaults = {
             "name": name,
             "category": payload.get("category", "USG"),
             "block_type": payload.get("block_type", "ui"),
-            "content": payload.get("content", {}),
+            "content": content,
         }
 
         lookup = {"name": name}
@@ -81,7 +93,11 @@ class Command(BaseCommand):
         if created:
             stats["created"] += 1
         else:
-            if obj.name == name and obj.content == defaults["content"] and obj.category == defaults["category"] and obj.block_type == defaults["block_type"]:
+            # Basic comparison to detect updates
+            if (obj.name == name and 
+                obj.content == defaults["content"] and 
+                obj.category == defaults["category"] and 
+                obj.block_type == defaults["block_type"]):
                 stats["unchanged"] += 1
             else:
                 stats["updated"] += 1

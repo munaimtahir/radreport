@@ -199,6 +199,7 @@ class WorkItemV2PublishPDFTestCase(TestCase):
     def test_publish_creates_snapshot(self):
         """Test that publish creates a snapshot with PDF"""
         # Create report instance
+        # Create report instance (VERIFIED)
         instance = ReportInstanceV2.objects.create(
             work_item=self.work_item,
             template_v2=self.template_v2,
@@ -208,7 +209,8 @@ class WorkItemV2PublishPDFTestCase(TestCase):
                 "gb_stones": False,
                 "comments": "Normal study"
             },
-            created_by=self.user
+            created_by=self.user,
+            status="verified"
         )
         
         # Make user a verifier (or admin)
@@ -237,7 +239,7 @@ class WorkItemV2PublishPDFTestCase(TestCase):
     
     def test_republish_with_same_values(self):
         """Test republishing with unchanged values produces consistent hash"""
-        # Create report instance
+        # Create report instance (VERIFIED)
         instance = ReportInstanceV2.objects.create(
             work_item=self.work_item,
             template_v2=self.template_v2,
@@ -247,7 +249,8 @@ class WorkItemV2PublishPDFTestCase(TestCase):
                 "gb_stones": False,
                 "comments": "Normal study"
             },
-            created_by=self.user
+            created_by=self.user,
+            status="verified"
         )
         
         self.user.is_superuser = True
@@ -274,6 +277,7 @@ class WorkItemV2PublishPDFTestCase(TestCase):
     def test_published_pdf_retrieval(self):
         """Test retrieving published PDF snapshot"""
         # Create and publish
+        # Create and publish (VERIFIED)
         instance = ReportInstanceV2.objects.create(
             work_item=self.work_item,
             template_v2=self.template_v2,
@@ -283,7 +287,8 @@ class WorkItemV2PublishPDFTestCase(TestCase):
                 "gb_stones": False,
                 "comments": "Normal study"
             },
-            created_by=self.user
+            created_by=self.user,
+            status="verified"
         )
         
         self.user.is_superuser = True
