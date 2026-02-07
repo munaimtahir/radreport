@@ -61,3 +61,7 @@ e2e/.auth/
 _audit_evidence/
 playwright-report/
 test-results/
+
+# Added for Final Main Governance
+ARTIFACTS/
+e2e/artifacts/
