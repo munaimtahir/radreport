@@ -57,3 +57,7 @@ artifacts/
 
 !.env.e2e.example
 e2e/.auth/
+
+_audit_evidence/
+playwright-report/
+test-results/
