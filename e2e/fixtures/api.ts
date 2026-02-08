@@ -1,73 +1,92 @@
-import fs from 'fs';
-import path from 'path';
-import { execSync } from 'child_process';
-import { E2E_SEED_CMD, E2E_SEED_JSON, E2E_SEED_ALWAYS, E2E_USER, E2E_PASS, getAuthUrl } from '../utils/env';
+import { E2E_API_URL, E2E_USER, E2E_PASS } from '../utils/env';
 
-export type SeedData = {
-  username: string;
-  password: string;
-  workitemId: string;
-  reportTemplateCode: string;
-  reportInstanceId?: string | null;
-  patientName?: string;
-  patientMrn?: string;
-  serviceCode?: string;
-  visitId?: string;
-};
-
-function ensureSeedDir() {
-  const dir = path.dirname(E2E_SEED_JSON);
-  if (!dir || dir === '.') return;
-  fs.mkdirSync(dir, { recursive: true });
+export interface AuthSession {
+  access: string;
+  refresh: string;
 }
 
-function runSeedCommand() {
-  ensureSeedDir();
-  const command =
-    E2E_SEED_CMD ||
-    `python3 backend/manage.py e2e_seed --json-out ${E2E_SEED_JSON} --username ${E2E_USER} --password ${E2E_PASS}`;
-  execSync(command, { stdio: 'inherit', env: process.env, shell: true });
+export interface BootstrapData {
+  patientId: string;
+  visitId: string;
+  workItemId: string;
+  templateCode: string;
 }
 
-function readSeedFile(): SeedData {
-  if (!fs.existsSync(E2E_SEED_JSON)) {
-    throw new Error(`Seed file not found at ${E2E_SEED_JSON}`);
-  }
-  const raw = fs.readFileSync(E2E_SEED_JSON, 'utf-8');
-  const data = JSON.parse(raw) as SeedData;
-  if (!data.workitemId || !data.reportTemplateCode || !data.username || !data.password) {
-    throw new Error(`Seed file missing required fields: ${E2E_SEED_JSON}`);
-  }
-  return data;
-}
-
-export function seedTestData(): SeedData {
-  if (E2E_SEED_ALWAYS || !fs.existsSync(E2E_SEED_JSON)) {
-    runSeedCommand();
-  }
-  return readSeedFile();
-}
-
-export function loadSeedData(): SeedData {
-  if (!fs.existsSync(E2E_SEED_JSON)) {
-    return seedTestData();
-  }
-  return readSeedFile();
-}
-
-export async function apiLogin(username = E2E_USER, password = E2E_PASS): Promise<string> {
-  if (!globalThis.fetch) {
-    throw new Error('Global fetch is not available in this Node runtime.');
-  }
-  const res = await fetch(getAuthUrl(), {
+export async function loginAPI(): Promise<AuthSession> {
+  const response = await fetch(`${E2E_API_URL}/api/auth/token/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ username, password }),
+    body: JSON.stringify({ username: E2E_USER, password: E2E_PASS }),
   });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`Login failed (${res.status}): ${text}`);
+
+  if (!response.ok) {
+    throw new Error(`Login failed: ${await response.text()}`);
   }
-  const data = await res.json();
-  return data.access;
+
+  return response.json() as Promise<AuthSession>;
+}
+
+export async function bootstrapV2Report(session: AuthSession): Promise<BootstrapData> {
+  // 1. Find a service mapped to V2 template
+  const servicesResponse = await fetch(`${E2E_API_URL}/api/reporting/service-templates-v2/`, {
+    headers: { Authorization: `Bearer ${session.access}` },
+  });
+  const serviceMappings = await servicesResponse.json();
+  const mapping = serviceMappings.find((m: any) => m.is_active && m.is_default);
+
+  if (!mapping) {
+    throw new Error('No active V2 service mapping found. Did you run the seed command?');
+  }
+
+  const serviceId = mapping.service;
+  const templateId = mapping.template;
+
+  // Fetch template details to get the code
+  const templateResponse = await fetch(`${E2E_API_URL}/api/reporting/templates-v2/${templateId}/`, {
+    headers: { Authorization: `Bearer ${session.access}` },
+  });
+  const template = await templateResponse.json();
+  const templateCode = template.code;
+
+  // 2. Create a patient
+  const patientResponse = await fetch(`${E2E_API_URL}/api/patients/`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: `E2E Test Patient ${Date.now()}`,
+      gender: 'male',
+      age: 30,
+      phone: '1234567890',
+    }),
+  });
+  const patient = await patientResponse.json();
+
+  // 3. Create a service visit with that service
+  const visitResponse = await fetch(`${E2E_API_URL}/api/workflow/visits/create_visit/`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      patient_id: patient.id,
+      service_ids: [serviceId],
+      subtotal: "1000",
+      total_amount: "1000",
+      amount_paid: "1000",
+      payment_method: "cash"
+    }),
+  });
+  const visit = await visitResponse.json();
+  const workItem = visit.items[0];
+
+  return {
+    patientId: patient.id,
+    visitId: visit.id,
+    workItemId: workItem.id,
+    templateCode: templateCode,
+  };
 }

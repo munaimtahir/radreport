@@ -1,26 +1,21 @@
-export const selectors = {
-  loginUsername: 'login-username',
-  loginPassword: 'login-password',
-  loginSubmit: 'login-submit',
-  reportingRoot: 'reporting-v2',
-  reportTemplateCode: 'report-template-code',
-  reportTemplateName: 'report-template-name',
-  reportStatus: 'report-status',
-  reportSave: 'report-save',
-  reportSubmit: 'report-submit',
-  reportSubmitConfirm: 'submit-confirm',
-  reportVerify: 'report-verify',
-  reportPublish: 'report-publish',
-  reportPublishConfirm: 'publish-confirm',
-  reportPublishConfirmButton: 'publish-confirm-button',
-  reportPublishNotes: 'publish-notes',
-  reportPreview: 'report-preview',
-  reportSuccess: 'report-success',
-  publishHistory: 'publish-history',
-  reportingWorklist: 'reporting-worklist',
-  worklistTable: 'worklist-table',
+export const SELECTORS = {
+  login: {
+    username: '[data-testid="login-username"]',
+    password: '[data-testid="login-password"]',
+    submit: '[data-testid="login-submit"]',
+  },
+  worklist: {
+    search: '[data-testid="worklist-search"]',
+    tableRow: (id: string) => `[data-testid="workitem-row-${id}"]`,
+    openReport: '[data-testid="open-report"]',
+  },
+  report: {
+    title: '[data-testid="report-title"]',
+    save: '[data-testid="report-save"]',
+    publish: '[data-testid="report-publish"]',
+    status: '[data-testid="report-status"]',
+    preview: '[data-testid="report-preview"]',
+    v2Marker: '[data-testid="v2-report-ui"]',
+    field: (key: string) => `[data-testid="field-${key}"]`,
+  },
 };
-
-export const fieldTestId = (key: string) => `field-${key}`;
-export const workitemRowTestId = (id: string) => `workitem-row-${id}`;
-export const openReportTestId = (id: string) => `open-report-${id}`;

@@ -15,8 +15,8 @@ export default defineConfig({
   },
   retries: process.env.CI ? 2 : 1,
   reporter: [
-    ['html', { open: 'never', outputFolder: 'e2e/artifacts/playwright-report' }],
-    ['line'],
+    ['html', { outputFolder: 'e2e/artifacts/playwright-report', open: 'never' }],
+    ['line']
   ],
   use: {
     baseURL,

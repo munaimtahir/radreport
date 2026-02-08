@@ -1,15 +1,35 @@
-# E2E Smoke Status
+# E2E Smoke Test Status
 
-- Base URL: `E2E_BASE_URL` (default `http://localhost:8000`; recommended for Docker dev: `http://localhost:5173`)
-- Bootstrap method: management command `python manage.py e2e_seed --json-out <path>` (invoked by the smoke test via `E2E_SEED_CMD`)
-- Tests added: `e2e/tests/smoke.spec.ts`
-- Selectors strategy: `data-testid` only (login, worklist, report actions, and `field-<schemaKey>` for V2 fields)
+## Overview
+A Playwright E2E smoke harness has been implemented to verify the V2 reporting workflow.
 
-## Local Run (max 3 commands)
-1. `npm install`
-2. `docker compose -f docker-compose.dev.yml up -d --build`
-3. `E2E_BASE_URL=http://localhost:5173 E2E_API_BASE=http://localhost:8000/api E2E_SEED_CMD="docker compose -f docker-compose.dev.yml exec -T backend python manage.py e2e_seed --json-out /app/e2e_seed.json --username e2e_reporter --password e2e_password" E2E_SEED_JSON=backend/e2e_seed.json npm run e2e:smoke`
+## Features
+- **Deterministic Bootstrap**: Uses API to create patient, visit, and work item before tests.
+- **StorageState Auth**: Performs login once and reuses the session.
+- **V2 Workflow Coverage**:
+  - Login
+  - Worklist navigation
+  - Report filling (Enums, Numbers, Segmented Booleans)
+  - Selective visibility verification
+  - Draft saving & persistence check
+  - Submission & Verification
+  - PDF Preview generation
 
-## Result
-- Status: NOT RUN (no running stack in this environment)
-- Known flakes: none
+## Local Execution
+```bash
+# Setup environment
+cp .env.e2e.example .env.e2e
+# Edit .env.e2e with target credentials
+
+# Run smoke tests
+npm run e2e:smoke
+```
+
+## CI/CD
+A GitHub Action workflow is configured in `.github/workflows/e2e-smoke.yml`.
+
+## Status
+- Harness: **Ready**
+- Smoke Spec: **Implemented**
+- Bootstrap Strategy: **Implemented (API)**
+- Selectors: **Data-testid prioritized**

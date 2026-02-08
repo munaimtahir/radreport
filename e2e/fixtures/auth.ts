@@ -1,56 +1,40 @@
+import { Page, expect } from '@playwright/test';
+import { E2E_USER, E2E_PASS } from '../utils/env';
 import fs from 'fs';
 import path from 'path';
-import type { Page } from '@playwright/test';
-import { E2E_BASE_URL, E2E_USER, E2E_PASS } from '../utils/env';
-import { selectors } from './selectors';
 
-const AUTH_PATH = 'e2e/.auth/state.json';
-const TOKEN_KEY = 'token';
-
-function decodeJwtPayload(token: string): { exp?: number } | null {
-  const parts = token.split('.');
-  if (parts.length < 2) return null;
-  try {
-    const payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
-    const padded = payload.padEnd(payload.length + ((4 - (payload.length % 4)) % 4), '=');
-    const json = Buffer.from(padded, 'base64').toString('utf8');
-    return JSON.parse(json);
-  } catch {
-    return null;
-  }
-}
-
-function isTokenValid(token: string, leewaySeconds = 60): boolean {
-  const payload = decodeJwtPayload(token);
-  if (!payload?.exp) return false;
-  const now = Math.floor(Date.now() / 1000);
-  return payload.exp > now + leewaySeconds;
-}
-
-export function readTokenFromStorageState(statePath = AUTH_PATH): string | null {
-  if (!fs.existsSync(statePath)) return null;
-  const raw = fs.readFileSync(statePath, 'utf-8');
-  const data = JSON.parse(raw);
-  const origins = Array.isArray(data.origins) ? data.origins : [];
-  for (const origin of origins) {
-    const items = Array.isArray(origin.localStorage) ? origin.localStorage : [];
-    const tokenItem = items.find((entry: any) => entry.name === TOKEN_KEY);
-    if (tokenItem?.value) return tokenItem.value;
-  }
-  return null;
-}
+export const AUTH_STATE_PATH = path.join(__dirname, '../../.auth/state.json');
 
 export async function ensureAuth(page: Page) {
-  const token = readTokenFromStorageState();
-  if (token && isTokenValid(token)) return;
+  if (fs.existsSync(AUTH_STATE_PATH)) {
+    const stats = fs.statSync(AUTH_STATE_PATH);
+    const mtime = stats.mtimeMs;
+    const now = Date.now();
+    // If state is less than 1 hour old, reuse it
+    if (now - mtime < 3600000) {
+      return;
+    }
+  }
 
-  fs.mkdirSync(path.dirname(AUTH_PATH), { recursive: true });
+  await page.goto('/login');
 
-  await page.goto(`${E2E_BASE_URL.replace(/\/$/, '')}/login`);
-  await page.getByTestId(selectors.loginUsername).fill(E2E_USER);
-  await page.getByTestId(selectors.loginPassword).fill(E2E_PASS);
-  await page.getByTestId(selectors.loginSubmit).click();
-  await page.waitForURL(/\/$/);
+  // Try to use data-testid if available, fallback to placeholder
+  const emailInput = page.locator('[data-testid="login-email"]').or(page.getByPlaceholder(/email|username/i));
+  const passwordInput = page.locator('[data-testid="login-password"]').or(page.getByPlaceholder(/password/i));
+  const submitBtn = page.locator('[data-testid="login-submit"]').or(page.getByRole('button', { name: /login/i }));
 
-  await page.context().storageState({ path: AUTH_PATH });
+  await emailInput.fill(E2E_USER);
+  await passwordInput.fill(E2E_PASS);
+  await submitBtn.click();
+
+  // Wait for navigation to dashboard or home
+  await expect(page).toHaveURL(/\/(dashboard)?$/);
+
+  // Ensure .auth directory exists
+  const authDir = path.dirname(AUTH_STATE_PATH);
+  if (!fs.existsSync(authDir)) {
+    fs.mkdirSync(authDir, { recursive: true });
+  }
+
+  await page.context().storageState({ path: AUTH_STATE_PATH });
 }
