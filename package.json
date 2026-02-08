@@ -10,8 +10,9 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "e2e": "playwright test",
+    "e2e:smoke": "playwright test e2e/tests/smoke.spec.ts",
     "e2e:ui": "playwright test --ui",
-    "e2e:report": "playwright show-report"
+    "e2e:report": "playwright show-report e2e/artifacts/playwright-report"
   },
   "keywords": [],
   "author": "",

@@ -83,6 +83,7 @@ export default function SmartSchemaFormV2(props: SmartSchemaFormV2Props) {
         const label = enhancement?.label || schema.title || field;
         const isRequired = requiredSet.has(field);
         const fieldValue = values[field] ?? "";
+        const fieldTestId = `field-${field}`;
 
         // Determine widget type
         // Priority: enhancement.widget -> uiSchema widget -> default based on type
@@ -103,6 +104,17 @@ export default function SmartSchemaFormV2(props: SmartSchemaFormV2Props) {
         const wrapperStyle: React.CSSProperties = {
             marginBottom: 0 // handled by grid/flex gap
         };
+
+        const wrapField = (content: React.ReactNode) => (
+            <div data-testid={fieldTestId} style={wrapperStyle}>
+                {content}
+                {description && (
+                    <div style={{ marginTop: 4, fontSize: 12, color: theme.colors.textSecondary }}>
+                        {description}
+                    </div>
+                )}
+            </div>
+        );
 
         // Render widgets
         let inputEl: React.ReactNode = null;
@@ -131,7 +143,7 @@ export default function SmartSchemaFormV2(props: SmartSchemaFormV2Props) {
                 );
             } else if (schema.type === "boolean") {
                 // Default Checkbox (Copied from SchemaFormV2 style)
-                return (
+                return wrapField(
                     <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <input
                             type="checkbox"
@@ -263,16 +275,7 @@ export default function SmartSchemaFormV2(props: SmartSchemaFormV2Props) {
             }
         }
 
-        return (
-            <div style={wrapperStyle}>
-                {inputEl}
-                {description && (
-                    <div style={{ marginTop: 4, fontSize: 12, color: theme.colors.textSecondary }}>
-                        {description}
-                    </div>
-                )}
-            </div>
-        );
+        return wrapField(inputEl);
     };
 
     const renderSection = (section: any) => {

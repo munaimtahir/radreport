@@ -188,7 +188,7 @@ export default function SchemaFormV2({
       </div>
       <div style={{ padding: "24px", display: "flex", flexDirection: "column", gap: 20 }}>
         {section.fields.map((field) => (
-          <div key={field}>
+          <div key={field} data-testid={`field-${field}`}>
             {renderField(field, properties[field] || {}, section.widgets?.[field])}
           </div>
         ))}

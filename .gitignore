@@ -65,3 +65,4 @@ test-results/
 # Added for Final Main Governance
 ARTIFACTS/
 e2e/artifacts/
+backend/e2e_seed.json

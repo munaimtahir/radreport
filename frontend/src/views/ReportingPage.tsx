@@ -225,28 +225,39 @@ export default function ReportingPage() {
     }
 
     return (
-        <div style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
+        <div data-testid="reporting-v2" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <div>
-                    <h2 style={{ margin: 0 }}>{schema.name}</h2>
-                    <div style={{ fontSize: 12, color: theme.colors.textTertiary }}>{schema.code}</div>
+                    <h2 data-testid="report-template-name" style={{ margin: 0 }}>{schema.name}</h2>
+                    <div data-testid="report-template-code" style={{ fontSize: 12, color: theme.colors.textTertiary }}>{schema.code}</div>
+                    <div data-testid="report-status" style={{ fontSize: 12, color: theme.colors.textTertiary }}>
+                        Status: {status}{isPublished ? " (published)" : ""}
+                    </div>
                 </div>
                 <Button variant="secondary" onClick={() => navigate("/reporting/worklist")}>Worklist</Button>
             </div>
 
-            {error && <ErrorAlert message={error} />}
-            {success && <SuccessAlert message={success} />}
+            {error && (
+                <div data-testid="report-error">
+                    <ErrorAlert message={error} />
+                </div>
+            )}
+            {success && (
+                <div data-testid="report-success">
+                    <SuccessAlert message={success} />
+                </div>
+            )}
 
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-                <Button onClick={handleSaveDraft} disabled={saving || status !== "draft"}>Save Draft</Button>
-                <Button variant="secondary" onClick={() => setShowSubmitModal(true)} disabled={status !== "draft"}>Submit</Button>
+                <Button data-testid="report-save" onClick={handleSaveDraft} disabled={saving || status !== "draft"}>Save Draft</Button>
+                <Button data-testid="report-submit" variant="secondary" onClick={() => setShowSubmitModal(true)} disabled={status !== "draft"}>Submit</Button>
                 <Button variant="secondary" onClick={handleGenerateNarrative} disabled={generatingNarrative}>Generate Narrative</Button>
-                <Button variant="secondary" onClick={handleFetchPdf}>Preview PDF</Button>
+                <Button data-testid="report-preview" variant="secondary" onClick={handleFetchPdf}>Preview PDF</Button>
                 {(user?.is_superuser || user?.groups?.includes("reporting_verifier")) && (
                     <>
                         <Button variant="secondary" onClick={() => setShowReturnModal(true)} disabled={status === "draft"}>Return</Button>
-                        <Button variant="secondary" onClick={handleVerify} disabled={status !== "submitted"}>Verify</Button>
-                        <Button variant="secondary" onClick={() => setShowPublishModal(true)} disabled={status !== "verified"}>Publish</Button>
+                        <Button data-testid="report-verify" variant="secondary" onClick={handleVerify} disabled={status !== "submitted"}>Verify</Button>
+                        <Button data-testid="report-publish" variant="secondary" onClick={() => setShowPublishModal(true)} disabled={status !== "verified"}>Publish</Button>
                     </>
                 )}
             </div>
@@ -281,7 +292,7 @@ export default function ReportingPage() {
             )}
 
             {isPublished && publishHistory.length > 0 && (
-                <div style={{ marginTop: 20 }}>
+                <div data-testid="publish-history" style={{ marginTop: 20 }}>
                     <h3>Publish History</h3>
                     <ul>
                         {publishHistory.map((snap: any) => (
@@ -299,13 +310,13 @@ export default function ReportingPage() {
             )}
 
             {showSubmitModal && (
-                <div style={{ background: "rgba(0,0,0,0.4)", position: "fixed", inset: 0, display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <div data-testid="submit-modal" style={{ background: "rgba(0,0,0,0.4)", position: "fixed", inset: 0, display: "flex", justifyContent: "center", alignItems: "center" }}>
                     <div style={{ background: "white", padding: 20, borderRadius: 8, width: 360 }}>
                         <h3>Submit report?</h3>
                         <p>Once submitted, the report cannot be edited until returned.</p>
                         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                             <Button variant="secondary" onClick={() => setShowSubmitModal(false)}>Cancel</Button>
-                            <Button onClick={handleSubmit} disabled={saving}>Submit</Button>
+                            <Button data-testid="submit-confirm" onClick={handleSubmit} disabled={saving}>Submit</Button>
                         </div>
                     </div>
                 </div>
@@ -330,16 +341,18 @@ export default function ReportingPage() {
             )}
 
             {showPublishModal && (
-                <div style={{ background: "rgba(0,0,0,0.4)", position: "fixed", inset: 0, display: "flex", justifyContent: "center", alignItems: "center" }}>
+                <div data-testid="publish-modal" style={{ background: "rgba(0,0,0,0.4)", position: "fixed", inset: 0, display: "flex", justifyContent: "center", alignItems: "center" }}>
                     <div style={{ background: "white", padding: 20, borderRadius: 8, width: 360 }}>
                         <h3>Publish report</h3>
                         <textarea
+                            data-testid="publish-notes"
                             placeholder="Notes"
                             value={publishNotes}
                             onChange={e => setPublishNotes(e.target.value)}
                             style={{ width: "100%", minHeight: 80, marginBottom: 12 }}
                         />
                         <input
+                            data-testid="publish-confirm"
                             placeholder="Type PUBLISH to confirm"
                             value={publishConfirm}
                             onChange={e => setPublishConfirm(e.target.value)}
@@ -347,7 +360,7 @@ export default function ReportingPage() {
                         />
                         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
                             <Button variant="secondary" onClick={() => setShowPublishModal(false)}>Cancel</Button>
-                            <Button onClick={handlePublish} disabled={publishConfirm !== "PUBLISH"}>Publish</Button>
+                            <Button data-testid="publish-confirm-button" onClick={handlePublish} disabled={publishConfirm !== "PUBLISH"}>Publish</Button>
                         </div>
                     </div>
                 </div>

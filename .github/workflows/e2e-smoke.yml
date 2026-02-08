@@ -1,0 +1,84 @@
+name: e2e-smoke
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - 'e2e/**'
+      - 'playwright.config.ts'
+      - 'package.json'
+      - 'package-lock.json'
+  schedule:
+    - cron: '0 3 * * *'
+
+jobs:
+  e2e-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Start stack
+        run: docker compose -f docker-compose.dev.yml up -d --build
+
+      - name: Wait for backend health
+        run: |
+          for i in {1..40}; do
+            if curl -fsS http://localhost:8000/api/health/ > /dev/null; then
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Backend health check failed"
+          docker compose -f docker-compose.dev.yml logs backend
+          exit 1
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps
+
+      - name: Run smoke
+        env:
+          E2E_BASE_URL: http://localhost:5173
+          E2E_API_BASE: http://localhost:8000/api
+          E2E_SEED_JSON: backend/e2e_seed.json
+          E2E_SEED_CMD: docker compose -f docker-compose.dev.yml exec -T backend python manage.py e2e_seed --json-out /app/e2e_seed.json --username e2e_reporter --password e2e_password
+        run: |
+          mkdir -p ARTIFACTS
+          set -o pipefail
+          npm run e2e:smoke 2>&1 | tee ARTIFACTS/e2e_console.txt
+
+      - name: Upload Playwright report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-playwright-report
+          path: e2e/artifacts/playwright-report
+          if-no-files-found: ignore
+
+      - name: Upload Playwright test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-test-results
+          path: e2e/artifacts/test-results
+          if-no-files-found: ignore
+
+      - name: Upload console output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-console
+          path: ARTIFACTS/e2e_console.txt
+          if-no-files-found: ignore

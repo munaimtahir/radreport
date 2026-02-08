@@ -56,6 +56,7 @@ export default function Login() {
           <div>
             <input
               type="text"
+              data-testid="login-username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
               placeholder="Username"
@@ -75,6 +76,7 @@ export default function Login() {
           <div>
             <input
               type="password"
+              data-testid="login-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Password"
@@ -107,6 +109,7 @@ export default function Login() {
           )}
           <button
             type="submit"
+            data-testid="login-submit"
             disabled={loading}
             style={{
               padding: 12,

@@ -91,7 +91,7 @@ export default function ReportingWorklistPage() {
     };
 
     return (
-        <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+        <div data-testid="reporting-worklist" style={{ maxWidth: 1200, margin: "0 auto" }}>
             <PageHeader
                 title="Reporting Worklist"
                 subtitle="Manage radiology and diagnostic reports"
@@ -154,7 +154,7 @@ export default function ReportingWorklistPage() {
 
                 {/* Table */}
                 <div style={{ overflowX: "auto" }}>
-                    <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                    <table data-testid="worklist-table" style={{ width: "100%", borderCollapse: "collapse" }}>
                         <thead>
                             <tr style={{ borderBottom: `2px solid ${theme.colors.border}`, backgroundColor: "white" }}>
                                 <th style={thStyle}>Date</th>
@@ -182,7 +182,13 @@ export default function ReportingWorklistPage() {
                                 filteredItems.map(item => {
                                     const statusColors = getStatusColor(item.status);
                                     return (
-                                        <tr key={item.id} style={{ borderBottom: `1px solid ${theme.colors.borderLight}`, transition: "background 0.2s" }} onMouseEnter={e => e.currentTarget.style.backgroundColor = "#f8f9fa"} onMouseLeave={e => e.currentTarget.style.backgroundColor = "transparent"}>
+                                        <tr
+                                            key={item.id}
+                                            data-testid={`workitem-row-${item.id}`}
+                                            style={{ borderBottom: `1px solid ${theme.colors.borderLight}`, transition: "background 0.2s" }}
+                                            onMouseEnter={e => e.currentTarget.style.backgroundColor = "#f8f9fa"}
+                                            onMouseLeave={e => e.currentTarget.style.backgroundColor = "transparent"}
+                                        >
                                             <td style={tdStyle}>
                                                 <div style={{ fontSize: 13 }}>{new Date(item.created_at).toLocaleDateString()}</div>
                                                 <div style={{ fontSize: 11, color: theme.colors.textTertiary }}>{new Date(item.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
@@ -237,6 +243,7 @@ export default function ReportingWorklistPage() {
                                                     onClick={() => navigate(`/reporting/worklist/${item.id}/report`)}
                                                     disabled={!item.profile_code}
                                                     title={!item.profile_code ? "No report profile mapped to this service" : ""}
+                                                    data-testid={`open-report-${item.id}`}
                                                 >
                                                     {getActionLabel(item)}
                                                 </Button>
