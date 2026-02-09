@@ -1,17 +1,17 @@
 # Graveyard Inventory (Candidate List)
 
 ## Legacy scripts (unverified)
-- `backend.sh`
-- `both.sh`
-- `frontend.sh`
+- `backend.sh` — CANDIDATE
+- `both.sh` — CANDIDATE
+- `frontend.sh` — CANDIDATE
 - `test_receipt_implementation.sh`
 - `verify_fixes.sh`
 - `scripts/phase_b_smoke.py`
 - `scripts/phase_c_smoke.py`
 - `scripts/phase_d_smoke.py`
-- `scripts/smoke_api.sh`
-- `scripts/smoke_pdf.py`
-- `scripts/smoke_workflow.py`
+- `scripts/smoke_api.sh` — CANDIDATE
+- `scripts/smoke_pdf.py` — CANDIDATE
+- `scripts/smoke_workflow.py` — CANDIDATE
 - `scripts/test-deployment.sh`
 
 ## Old prompts / agent instructions
