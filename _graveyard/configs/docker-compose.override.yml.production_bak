@@ -1,0 +1,61 @@
+# This file provides local-specific overrides for docker-compose.yml.
+# It is designed for development and will not affect your production setup.
+# To use it, run: docker-compose -f docker-compose.yml -f docker-compose.override.yml up
+
+version: "3.8"
+
+services:
+  # The 'db' service is intentionally omitted here.
+  # The backend will fall back to using a local SQLite database,
+  # as configured in the backend/.env.local file.
+
+  backend:
+    container_name: rims_backend_local
+    # Use the local environment file
+    env_file:
+      - backend/.env.local
+    # Mount the backend code directory to enable hot-reloading
+    volumes:
+      - ./backend:/app
+    ports:
+      # Expose backend on 8000 for direct access if needed
+      - "8000:8000"
+    # Remove dependency on the production database
+    depends_on: []
+    # Use a command that supports auto-reloading for development
+    command: ["gunicorn", "--reload", "--bind", "0.0.0.0:8000", "rims_backend.wsgi:application"]
+
+
+  frontend:
+    container_name: rims_frontend_local
+    build:
+      context: ./frontend
+      # Use a development-specific target if your Dockerfile has one,
+      # otherwise, the default build should install dependencies.
+    # Override the production command to start the Vite dev server
+    command: npm run dev -- --host 0.0.0.0
+    volumes:
+      # Mount the entire frontend directory for hot-reloading
+      - ./frontend:/app
+      # Use a named volume for node_modules to avoid it being overwritten by the mount
+      - frontend_node_modules:/app/node_modules
+    ports:
+      # Expose Vite dev server on port 5173
+      - "5173:5173"
+    # The production port mapping is not needed
+    
+  caddy:
+    image: caddy:2-alpine
+    container_name: rims_caddy_local
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.local:/etc/caddy/Caddyfile
+    networks:
+      - rims_network
+
+volumes:
+  # Named volume for frontend node_modules to persist them
+  frontend_node_modules:

@@ -56,12 +56,12 @@
 - `test_id_formats.py`
 
 ## Unclassified / needs review
-- `Caddyfile.complete`
-- `Caddyfile.local`
-- `PROPOSED_GITIGNORE.txt`
-- `READY_TO_USE.txt`
-- `docker-compose.override.yml.bak`
-- `docker-compose.override.yml.production_bak`
+- `Caddyfile.complete` — MOVED
+- `Caddyfile.local` — NEEDS CONTEXT (referenced by `docker-compose.dev.yml`)
+- `PROPOSED_GITIGNORE.txt` — MOVED
+- `READY_TO_USE.txt` — MOVED
+- `docker-compose.override.yml.bak` — MOVED
+- `docker-compose.override.yml.production_bak` — MOVED
 - `PHASE1_USG_ABD_template.csv`
 
 NOTES:
