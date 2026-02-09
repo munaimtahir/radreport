@@ -6,6 +6,13 @@
 - `frontend.sh`
 - `test_receipt_implementation.sh`
 - `verify_fixes.sh`
+- `scripts/phase_b_smoke.py`
+- `scripts/phase_c_smoke.py`
+- `scripts/phase_d_smoke.py`
+- `scripts/smoke_api.sh`
+- `scripts/smoke_pdf.py`
+- `scripts/smoke_workflow.py`
+- `scripts/test-deployment.sh`
 
 ## Old prompts / agent instructions
 - `PROMPTS.md`
