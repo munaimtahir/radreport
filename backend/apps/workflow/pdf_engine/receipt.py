@@ -43,15 +43,15 @@ COLUMN_GAP = 5
 HEADER_HEIGHT = 4
 ROW_PADDING = 1.2
 LINE_HEIGHT = 3.2
-FOOTER_HEIGHT = 10
-SUMMARY_HEIGHT = 20  # Reduced from 28
+FOOTER_HEIGHT = 18  # Increased for new footer design
+SUMMARY_HEIGHT = 32  # Increased for boxed billing summary
 MIN_FONT_SIZE = 8  # Minimum font size before splitting to multiple pages
 MAX_SERVICE_LINES = 2  # Maximum lines to display per service item
 
 # Approximate layout heights for calculating service area (in mm)
-APPROX_HEADER_SECTION_HEIGHT = 65  # Reduced from 80
-APPROX_FOOTER_SECTION_HEIGHT = 35  # Reduced from 40
-APPROX_NON_SERVICE_HEIGHT = 100  # Total approximate height used by non-service sections
+APPROX_HEADER_SECTION_HEIGHT = 75  # Increased for enhanced header
+APPROX_FOOTER_SECTION_HEIGHT = 50  # Increased for billing summary box
+APPROX_NON_SERVICE_HEIGHT = 125  # Total approximate height used by non-service sections
 
 
 def _wrap_text(text: str, font_name: str, font_size: float, max_width: float) -> List[str]:
@@ -171,10 +171,10 @@ def _draw_label_value_rows(
         for line_idx in range(max_lines):
             label_text = label_lines[line_idx] if line_idx < len(label_lines) else ""
             value_text = value_lines[line_idx] if line_idx < len(value_lines) else ""
-            canvas.setFont("Helvetica-Bold", font_size)
+            canvas.setFont("Helvetica", font_size)
             canvas.setFillColor(LIGHT_GREY)
             canvas.drawString(x, current_y, label_text)
-            canvas.setFont("Helvetica", font_size)
+            canvas.setFont("Helvetica-Bold", font_size)  # Values bolder than labels
             canvas.setFillColor(black)
             canvas.drawString(x + label_width, current_y, value_text)
             current_y -= line_height
@@ -347,6 +347,9 @@ def _draw_receipt_copy(
     right_x = x + width - padding
     content_width = width - padding * 2
 
+    # ============================================================================
+    # SECTION 1: HEADER (MOST PROMINENT)
+    # ============================================================================
     header_image_path = _safe_image_path(getattr(receipt_settings, "header_image", None))
     logo_path = _safe_image_path(getattr(receipt_settings, "logo_image", None))
     if not logo_path:
@@ -356,6 +359,7 @@ def _draw_receipt_copy(
             logo_path = static_logo
     header_text = getattr(receipt_settings, "header_text", None) or "Consultant Place Clinic"
 
+    # Draw header image if available
     header_height = HEADER_IMAGE_HEIGHT * mm
     if header_image_path:
         _draw_image_fit(
@@ -369,6 +373,7 @@ def _draw_receipt_copy(
         )
         current_y -= header_height + 2 * mm
 
+    # Draw logo if available
     if logo_path:
         logo_height = LOGO_HEIGHT * mm
         _draw_image_fit(
@@ -382,33 +387,57 @@ def _draw_receipt_copy(
         )
         current_y -= logo_height + 2 * mm
 
-    canvas.setFont("Helvetica-Bold", 12)
-    canvas.setFillColor(CLINIC_BLUE)
+    # Laboratory Name (LARGEST, BOLD)
+    canvas.setFont("Helvetica-Bold", 14)
+    canvas.setFillColor(black)
     canvas.drawCentredString(x + width / 2, current_y, header_text)
     current_y -= 5 * mm
 
-    canvas.setFont("Helvetica-Bold", 10)
+    # Address and contact (smaller, centered)
+    address_lines = LOCKED_FOOTER_TEXT.split("\n")
+    canvas.setFont("Helvetica", 7)
     canvas.setFillColor(black)
-    canvas.drawCentredString(x + width / 2, current_y, "RECEIPT")
-    canvas.setFont("Helvetica", 8)
-    canvas.setFillColor(LIGHT_GREY)
-    canvas.drawRightString(right_x, current_y, copy_label)
+    for line in address_lines[:1]:  # Only first line for header
+        canvas.drawCentredString(x + width / 2, current_y, line)
+        current_y -= 3 * mm
+    
+    # Contact number
+    canvas.drawCentredString(x + width / 2, current_y, address_lines[1] if len(address_lines) > 1 else "")
+    current_y -= 5 * mm
+
+    # Copy Type Label (PROMINENT)
+    canvas.setFont("Helvetica-Bold", 11)
+    canvas.setFillColor(black)
+    canvas.drawCentredString(x + width / 2, current_y, copy_label.upper())
     current_y -= 6 * mm
 
-    canvas.setStrokeColor(BORDER_GREY)
+    # Bold bottom divider for header
+    canvas.setStrokeColor(black)
+    canvas.setLineWidth(1.5)
     canvas.line(left_x, current_y, right_x, current_y)
-    current_y -= 4 * mm
+    canvas.setLineWidth(1)
+    current_y -= 5 * mm
 
+    # ============================================================================
+    # SECTION 2: PATIENT & RECEIPT IDENTIFICATION
+    # ============================================================================
+    # Draw subtle border around the entire section
+    section_start_y = current_y
     column_gap = COLUMN_GAP * mm
     column_width = (content_width - column_gap) / 2
     left_column_x = left_x
     right_column_x = left_x + column_width + column_gap
+
+    # Section titles
+    canvas.setFont("Helvetica-Bold", 9)
+    canvas.setFillColor(black)
+    canvas.drawString(left_column_x, current_y, "PATIENT INFORMATION")
+    canvas.drawString(right_column_x, current_y, "RECEIPT DETAILS")
+    current_y -= 4.5 * mm
+
     section_top_y = current_y
 
-    canvas.setFont("Helvetica-Bold", 9)
-    canvas.setFillColor(CLINIC_BLUE)
-    canvas.drawString(left_column_x, section_top_y, "Patient Information")
-    left_column_y = section_top_y - 4.5 * mm
+    # Left column - Patient Information
     patient_rows = [
         ("Patient:", f"{data['patient_name']} ({data['age']}/{data['gender']})"),
         ("MRN / Reg:", f"{data['mrn']} / {data['patient_reg_no']}"),
@@ -419,17 +448,14 @@ def _draw_receipt_copy(
         canvas,
         patient_rows,
         left_column_x,
-        left_column_y,
+        section_top_y,
         label_width=25 * mm,
         value_width=column_width - 25 * mm,
         font_size=8,
         line_height=3.8 * mm,
     )
 
-    canvas.setFont("Helvetica-Bold", 9)
-    canvas.setFillColor(CLINIC_BLUE)
-    canvas.drawString(right_column_x, section_top_y, "Receipt Details")
-    right_column_y = section_top_y - 4.5 * mm
+    # Right column - Receipt Details
     meta_rows = [
         ("Receipt No:", data["receipt_number"]),
         ("Visit ID:", data["visit_id"]),
@@ -440,7 +466,7 @@ def _draw_receipt_copy(
         canvas,
         meta_rows,
         right_column_x,
-        right_column_y,
+        section_top_y,
         label_width=20 * mm,
         value_width=column_width - 20 * mm,
         font_size=8,
@@ -449,23 +475,39 @@ def _draw_receipt_copy(
 
     current_y = min(left_column_y, right_column_y) - 2 * mm
 
+    # Draw subtle border around patient/receipt section
+    canvas.setStrokeColor(BORDER_GREY)
+    canvas.setLineWidth(0.5)
+    canvas.rect(left_x, current_y, content_width, section_start_y - current_y)
+    canvas.setLineWidth(1)
+    current_y -= 4 * mm
+
+    # ============================================================================
+    # SECTION 3: TEST / SERVICE TABLE (CORE SECTION)
+    # ============================================================================
     canvas.setFont("Helvetica-Bold", 9)
-    canvas.setFillColor(CLINIC_BLUE)
-    canvas.drawString(left_x, current_y, "Services")
-    current_y -= 3.5 * mm
+    canvas.setFillColor(black)
+    canvas.drawString(left_x, current_y, "SERVICES / TESTS")
+    current_y -= 4 * mm
 
     service_column_width = content_width * 0.7
     amount_column_width = content_width * 0.3
     header_height_var = HEADER_HEIGHT * mm
     row_padding = ROW_PADDING
 
-    canvas.setStrokeColor(BORDER_GREY)
-    canvas.setFillColor(LIGHT_GREY)
+    # Table header with bold underline
+    canvas.setStrokeColor(black)
+    canvas.setFillColor(black)
     canvas.setFont("Helvetica-Bold", 8)
-    canvas.drawString(left_x, current_y, "Service")
-    canvas.drawRightString(left_x + service_column_width + amount_column_width, current_y, "Amount")
+    canvas.drawString(left_x + 2, current_y, "Service Name")
+    canvas.drawRightString(left_x + service_column_width + amount_column_width - 2, current_y, "Amount (PKR)")
     current_y -= header_height_var
-    canvas.line(left_x, current_y + 2, right_x, current_y + 2)
+    
+    # Bold underline for header
+    canvas.setLineWidth(1.2)
+    canvas.line(left_x, current_y + 1, right_x, current_y + 1)
+    canvas.setLineWidth(1)
+    current_y -= 2
 
     footer_height = FOOTER_HEIGHT * mm
     summary_height = SUMMARY_HEIGHT * mm
@@ -494,51 +536,96 @@ def _draw_receipt_copy(
             service_name,
             "Helvetica",
             font_size,
-            service_column_width,
+            service_column_width - 4,
         )[:MAX_SERVICE_LINES]
         
+        row_start_y = current_y
         start_y = current_y
         for line in service_lines:
-            canvas.drawString(left_x, start_y, line)
+            canvas.drawString(left_x + 2, start_y, line)
             start_y -= line_height
         
         canvas.drawRightString(
-            left_x + service_column_width + amount_column_width,
+            left_x + service_column_width + amount_column_width - 2,
             current_y,
             amount_text,
         )
         current_y -= len(service_lines) * line_height + row_padding
+        
+        # Light row border
+        canvas.setStrokeColor(BORDER_GREY)
+        canvas.setLineWidth(0.3)
+        canvas.line(left_x, current_y + row_padding/2, right_x, current_y + row_padding/2)
+        canvas.setLineWidth(1)
     
-    current_y -= 2 * mm
+    current_y -= 3 * mm
 
+    # ============================================================================
+    # SECTION 4: BILLING SUMMARY (VISUALLY DISTINCT)
+    # ============================================================================
+    # Create a boxed section for billing summary
+    summary_box_start_y = current_y
+    
     canvas.setFont("Helvetica-Bold", 9)
-    canvas.setFillColor(CLINIC_BLUE)
-    canvas.drawString(left_x, current_y, "Payment Summary")
-    current_y -= 4.5 * mm
+    canvas.setFillColor(black)
+    canvas.drawString(left_x, current_y, "BILLING SUMMARY")
+    current_y -= 5 * mm
 
+    # Right-aligned billing details
+    summary_x = left_x + content_width * 0.45
     summary_rows = [
-        ("Total Amount:", data["total_amount"], False),
-        ("Discount:", data.get("discount_text", "Rs. 0.00"), False),
-        ("Net Amount:", data["net_amount"], True),
-        ("Paid Amount:", data["paid_amount"], False),
-        ("Balance Due:", data.get("balance_amount", "Rs. 0.00"), False),
-        ("Payment Method:", data["payment_method"], False),
+        ("Total Amount:", data["total_amount"], False, 8),
+        ("Discount:", data.get("discount_text", "Rs. 0.00"), False, 8),
+        ("Net Payable:", data["net_amount"], True, 9),
+        ("Paid Amount:", data["paid_amount"], False, 8),
+        ("Due Amount:", data.get("balance_amount", "Rs. 0.00"), True, 10),
+        ("Payment Method:", data["payment_method"], False, 8),
     ]
-    for label, value, highlight in summary_rows:
-        canvas.setFont("Helvetica-Bold", 8)
-        canvas.setFillColor(LIGHT_GREY)
-        canvas.drawString(left_x + content_width * 0.4, current_y, label)
-        canvas.setFont("Helvetica-Bold" if highlight else "Helvetica", 8)
-        canvas.setFillColor(ACCENT_ORANGE if highlight else black)
-        canvas.drawRightString(right_x, current_y, value)
-        current_y -= 3.5 * mm
+    
+    for label, value, is_due, size in summary_rows:
+        if label == "Due Amount:":
+            # Make Due Amount BOLD and LARGER - impossible to miss
+            canvas.setFont("Helvetica-Bold", size)
+            canvas.setFillColor(black)
+        else:
+            canvas.setFont("Helvetica-Bold" if is_due else "Helvetica", size)
+            canvas.setFillColor(black)
+        
+        canvas.drawString(summary_x, current_y, label)
+        canvas.drawRightString(right_x - 2, current_y, value)
+        current_y -= (4 * mm if label == "Due Amount:" else 3.5 * mm)
+    
+    summary_box_end_y = current_y + 1 * mm
+    
+    # Draw box around billing summary
+    canvas.setStrokeColor(black)
+    canvas.setLineWidth(0.8)
+    canvas.rect(left_x, summary_box_end_y, content_width, summary_box_start_y - summary_box_end_y)
+    canvas.setLineWidth(1)
 
-    footer_lines = LOCKED_FOOTER_TEXT.split("\n")
-    canvas.setFont("Helvetica", 6.5)
+    # ============================================================================
+    # SECTION 5: FOOTER / AUTHENTICATION
+    # ============================================================================
+    # Separated by top rule
+    canvas.setStrokeColor(BORDER_GREY)
+    canvas.setLineWidth(0.5)
+    canvas.line(left_x, y + 15 * mm, right_x, y + 15 * mm)
+    canvas.setLineWidth(1)
+    
+    # Footer content
+    canvas.setFont("Helvetica", 6)
     canvas.setFillColor(LIGHT_GREY)
-    footer_y = y + 8 * mm
-    for idx, line in enumerate(footer_lines):
-        canvas.drawCentredString(x + width / 2, footer_y + (len(footer_lines) - idx - 1) * 8, line)
+    footer_y = y + 10 * mm
+    
+    # Generated by/date info
+    canvas.drawString(left_x, footer_y, f"Generated: {data['date']}")
+    if data['cashier']:
+        canvas.drawRightString(right_x, footer_y, f"By: {data['cashier']}")
+    footer_y -= 3 * mm
+    
+    # Disclaimer (centered, smaller)
+    canvas.setFont("Helvetica", 5.5)
+    canvas.drawCentredString(x + width / 2, footer_y, "This is a computer-generated receipt and does not require a signature.")
 
 
 def _build_receipt_canvas(data: dict, receipt_settings, filename: str) -> ContentFile:
