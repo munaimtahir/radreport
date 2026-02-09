@@ -1,5 +1,5 @@
 import { Page, expect } from '@playwright/test';
-import { E2E_USER, E2E_PASS } from '../utils/env';
+import { E2E_USER, E2E_PASS, E2E_BASE_URL } from '../utils/env';
 import fs from 'fs';
 import path from 'path';
 
@@ -16,7 +16,7 @@ export async function ensureAuth(page: Page) {
     }
   }
 
-  await page.goto('/login');
+  await page.goto(`${E2E_BASE_URL}/login`);
 
   // Try to use data-testid if available, fallback to placeholder
   const emailInput = page.locator('[data-testid="login-email"]').or(page.getByPlaceholder(/email|username/i));

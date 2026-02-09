@@ -1,4 +1,5 @@
 import { Page } from '@playwright/test';
+import { E2E_API_URL } from './env';
 
 /**
  * Wait for a small amount of time for animations or eventual consistency
@@ -18,7 +19,6 @@ export async function waitForIdle(page: Page) {
  * Polls the API health endpoint until it returns 200
  */
 export async function waitForApiReady() {
-  const { E2E_API_URL } = require('./env');
   const maxRetries = 30;
   const delayMs = 1000;
 
