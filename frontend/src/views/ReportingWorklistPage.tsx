@@ -29,18 +29,40 @@ export default function ReportingWorklistPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [filter, setFilter] = useState("ALL");
+    const [dateFilterMode, setDateFilterMode] = useState<"ALL" | "TODAY" | "LAST_3_DAYS" | "CUSTOM">("TODAY");
+    const [customDateFrom, setCustomDateFrom] = useState(() => new Date().toISOString().split('T')[0]);
+    const [customDateTo, setCustomDateTo] = useState(() => new Date().toISOString().split('T')[0]);
 
     useEffect(() => {
         if (token) {
             loadWorklist();
         }
-    }, [token]);
+    }, [token, dateFilterMode]); // Reload when date mode changes
 
     const loadWorklist = async () => {
         try {
             setLoading(true);
             setError(null);
-            const data = await apiGet("/workflow/items/worklist/", token);
+
+            let url = "/workflow/items/worklist/?";
+
+            // Apply date filters
+            const today = new Date();
+            const formatDate = (d: Date) => d.toISOString().split('T')[0];
+
+            if (dateFilterMode === "TODAY") {
+                const dateStr = formatDate(today);
+                url += `&date_from=${dateStr}&date_to=${dateStr}`;
+            } else if (dateFilterMode === "LAST_3_DAYS") {
+                const past = new Date();
+                past.setDate(today.getDate() - 3);
+                url += `&date_from=${formatDate(past)}&date_to=${formatDate(today)}`;
+            } else if (dateFilterMode === "CUSTOM") {
+                if (customDateFrom) url += `&date_from=${customDateFrom}`;
+                if (customDateTo) url += `&date_to=${customDateTo}`;
+            }
+
+            const data = await apiGet(url, token);
             setItems(data || []);
         } catch (e: any) {
             setError(e.message || "Failed to load reporting worklist");
@@ -147,9 +169,58 @@ export default function ReportingWorklistPage() {
                             Published
                         </Button>
                     </div>
-                    <Button variant="secondary" onClick={loadWorklist} disabled={loading} style={{ padding: "6px 16px", fontSize: 13 }}>
-                        {loading ? "Refreshing..." : "Refresh"}
-                    </Button>
+
+                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                        <select
+                            value={dateFilterMode}
+                            onChange={(e) => setDateFilterMode(e.target.value as any)}
+                            style={{
+                                padding: "6px 10px",
+                                fontSize: 13,
+                                borderRadius: theme.radius.sm,
+                                border: `1px solid ${theme.colors.border}`,
+                                backgroundColor: "white",
+                                cursor: "pointer"
+                            }}
+                        >
+                            <option value="TODAY">Today</option>
+                            <option value="LAST_3_DAYS">Last 3 Days</option>
+                            <option value="CUSTOM">Custom Range</option>
+                            <option value="ALL">All Time</option>
+                        </select>
+
+                        {dateFilterMode === "CUSTOM" && (
+                            <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                                <input
+                                    type="date"
+                                    value={customDateFrom}
+                                    onChange={(e) => setCustomDateFrom(e.target.value)}
+                                    style={{
+                                        padding: "5px",
+                                        fontSize: 13,
+                                        borderRadius: theme.radius.sm,
+                                        border: `1px solid ${theme.colors.border}`
+                                    }}
+                                />
+                                <span style={{ fontSize: 12, color: theme.colors.textSecondary }}>-</span>
+                                <input
+                                    type="date"
+                                    value={customDateTo}
+                                    onChange={(e) => setCustomDateTo(e.target.value)}
+                                    style={{
+                                        padding: "5px",
+                                        fontSize: 13,
+                                        borderRadius: theme.radius.sm,
+                                        border: `1px solid ${theme.colors.border}`
+                                    }}
+                                />
+                            </div>
+                        )}
+
+                        <Button variant="secondary" onClick={loadWorklist} disabled={loading} style={{ padding: "6px 16px", fontSize: 13 }}>
+                            {loading ? "Refreshing..." : "Refresh"}
+                        </Button>
+                    </div>
                 </div>
 
                 {/* Table */}

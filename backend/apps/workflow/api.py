@@ -379,6 +379,14 @@ class ServiceVisitItemViewSet(viewsets.ReadOnlyModelViewSet):
             else:
                 queryset = queryset.filter(status=status_filter)
         
+        # Filter by date
+        start, end = _date_range_from_params(self.request)
+        if start:
+            # Filter by created_at of the item
+            queryset = queryset.filter(created_at__gte=start)
+        if end:
+            queryset = queryset.filter(created_at__lte=end)
+            
         return queryset
     
     @action(detail=True, methods=["post"], permission_classes=[IsAnyDesk])

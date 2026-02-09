@@ -174,7 +174,7 @@ const styles = {
     maxWidth: 1400,
     margin: "0 auto",
     padding: "0 20px 20px 20px",
-    fontFamily: theme.fonts.body,
+    fontFamily: theme.typography.fontFamily,
     color: "#334155",
   },
   topBar: {
@@ -743,7 +743,7 @@ export default function RegistrationPage() {
                   onMouseEnter={() => setActiveResultIndex(idx)}
                 >
                   <span style={{ fontWeight: 600, color: "#334155" }}>{p.name}</span>
-                  <span style={{ fontSize: 12, color: "#64748b" }}>{p.mobile || p.phone} | {p.mrn}</span>
+                  <span style={{ fontSize: 12, color: "#64748b" }}>{p.phone} | {p.mrn}</span>
                 </div>
               ))}
             </div>
