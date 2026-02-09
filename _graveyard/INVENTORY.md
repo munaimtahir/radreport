@@ -14,3 +14,8 @@
 
 ## Unclassified / needs review
 - 
+
+NOTES:
+- This file is an inventory only.
+- No files have been moved or deleted.
+- Items listed here are candidates, not confirmed obsolete.
