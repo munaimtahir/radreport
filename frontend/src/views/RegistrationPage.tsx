@@ -7,6 +7,8 @@ import SuccessAlert from "../ui/components/SuccessAlert";
 import Button from "../ui/components/Button";
 import { theme } from "../theme";
 
+// --- Types ---
+
 interface Patient {
   id: string;
   patient_reg_no?: string;
@@ -47,6 +49,8 @@ interface ParsedNotes {
   extraNotes: string;
 }
 
+// --- Helpers ---
+
 const LOCAL_USAGE_KEY = "rims:service-usage";
 
 const parsePatientNotes = (notes?: string): ParsedNotes => {
@@ -57,9 +61,7 @@ const parsePatientNotes = (notes?: string): ParsedNotes => {
     extraNotes: "",
   };
 
-  if (!notes) {
-    return parsed;
-  }
+  if (!notes) return parsed;
 
   const lines = notes.split("\n").map((line) => line.trim()).filter(Boolean);
   const remaining: string[] = [];
@@ -85,6 +87,7 @@ const parsePatientNotes = (notes?: string): ParsedNotes => {
 };
 
 const buildNotes = (existingNotes: string | undefined, fields: ParsedNotes): string => {
+  // Only preserve extra notes that aren't the structured internal ones
   const cleanExisting = (existingNotes || "")
     .split("\n")
     .filter((line) => !line.toLowerCase().startsWith("father/husband:")
@@ -94,15 +97,9 @@ const buildNotes = (existingNotes: string | undefined, fields: ParsedNotes): str
     .trim();
 
   const tagged: string[] = [];
-  if (fields.fatherHusband.trim()) {
-    tagged.push(`Father/Husband: ${fields.fatherHusband.trim()}`);
-  }
-  if (fields.cnic.trim()) {
-    tagged.push(`CNIC: ${fields.cnic.trim()}`);
-  }
-  if (fields.comments.trim()) {
-    tagged.push(`Comments: ${fields.comments.trim()}`);
-  }
+  if (fields.fatherHusband.trim()) tagged.push(`Father/Husband: ${fields.fatherHusband.trim()}`);
+  if (fields.cnic.trim()) tagged.push(`CNIC: ${fields.cnic.trim()}`);
+  if (fields.comments.trim()) tagged.push(`Comments: ${fields.comments.trim()}`);
 
   return [cleanExisting, tagged.join("\n")].filter(Boolean).join("\n");
 };
@@ -170,43 +167,228 @@ const getLocalMostUsed = (services: Service[]) => {
     .slice(0, 5);
 };
 
+// --- Styles ---
+
+const styles = {
+  container: {
+    maxWidth: 1400,
+    margin: "0 auto",
+    padding: "0 20px 20px 20px",
+    fontFamily: theme.fonts.body,
+    color: "#334155",
+  },
+  topBar: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 20,
+    paddingBottom: 10,
+    borderBottom: "1px solid #e2e8f0",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: 600,
+    color: "#1e293b",
+    margin: 0,
+  },
+  globalSearch: {
+    position: "relative" as "relative",
+    width: 400,
+  },
+  searchInput: {
+    width: "100%",
+    padding: "10px 16px",
+    borderRadius: 8,
+    border: "1px solid #cbd5e1",
+    fontSize: 14,
+    outline: "none",
+    boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
+    transition: "border-color 0.2s",
+  },
+  searchResults: {
+    position: "absolute" as "absolute",
+    top: "calc(100% + 4px)",
+    left: 0,
+    right: 0,
+    background: "#fff",
+    border: "1px solid #e2e8f0",
+    borderRadius: 8,
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
+    maxHeight: 300,
+    overflowY: "auto" as "auto",
+    zIndex: 50,
+  },
+  resultItem: {
+    padding: "10px 16px",
+    cursor: "pointer",
+    borderBottom: "1px solid #f1f5f9",
+    display: "flex",
+    flexDirection: "column" as "column",
+    gap: 2,
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr", // Equal split
+    gap: 24,
+    alignItems: "start",
+  },
+  card: {
+    background: "#fff",
+    border: "1px solid #e2e8f0",
+    borderRadius: 12,
+    padding: 24,
+    boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
+    height: "100%",
+    display: "flex",
+    flexDirection: "column" as "column",
+  },
+  cardHeader: {
+    fontSize: 18,
+    fontWeight: 600,
+    marginBottom: 20,
+    color: "#0f172a",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  sectionLabel: {
+    fontSize: 12,
+    textTransform: "uppercase" as "uppercase",
+    letterSpacing: "0.05em",
+    fontWeight: 600,
+    color: "#64748b",
+    marginBottom: 12,
+    marginTop: 8,
+    borderBottom: "1px solid #f1f5f9",
+    paddingBottom: 4,
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  label: {
+    display: "block",
+    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: 500,
+    color: "#475569",
+  },
+  input: {
+    width: "100%",
+    padding: "8px 12px",
+    borderRadius: 6,
+    border: "1px solid #cbd5e1",
+    fontSize: 14,
+    outline: "none",
+    height: 38, // Consistent height
+    transition: "border-color 0.2s",
+  },
+  row: {
+    display: "flex",
+    gap: 12,
+  },
+  serviceItem: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    padding: "8px 12px",
+    background: "#f8fafc",
+    borderRadius: 6,
+    marginBottom: 8,
+    border: "1px solid #e2e8f0",
+  },
+  billRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+    fontSize: 14,
+  },
+  totalRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 16,
+    paddingTop: 16,
+    borderTop: "1px solid #e2e8f0",
+    fontSize: 16,
+    fontWeight: 600,
+    color: "#0f172a",
+  },
+  dueRow: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 12,
+    padding: "12px",
+    background: "#fff1f2",
+    borderRadius: 6,
+    color: "#be123c",
+    fontWeight: 700,
+    fontSize: 16,
+  },
+  disabledOverlay: {
+    opacity: 0.5,
+    pointerEvents: "none" as "none",
+    filter: "grayscale(100%)",
+  }
+};
+
+// --- Main Component ---
+
 export default function RegistrationPage() {
   const { token } = useAuth();
-  const pageRef = useRef<HTMLDivElement>(null);
-  const serviceSearchRef = useRef<HTMLInputElement>(null);
+
+  // -- Data State --
+  const [services, setServices] = useState<Service[]>([]);
+  const [consultants, setConsultants] = useState<Consultant[]>([]);
+
+  // -- UI State --
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>("");
   const [success, setSuccess] = useState<string>("");
+  const [patientLocked, setPatientLocked] = useState(false); // True = Patient Saved/Selected
 
-  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
+  // -- Patient Search State --
+  const [searchQuery, setSearchQuery] = useState("");
   const [patientResults, setPatientResults] = useState<Patient[]>([]);
-  const [activePatientIndex, setActivePatientIndex] = useState(-1);
-  const [patientLocked, setPatientLocked] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [activeResultIndex, setActiveResultIndex] = useState(-1);
+
+  // -- Patient Form State --
+  const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null);
   const [patientForm, setPatientForm] = useState({
-    phone: "",
     name: "",
-    fatherHusband: "",
+    gender: "",
     date_of_birth: "",
     ageYears: "",
     ageMonths: "",
     ageDays: "",
-    gender: "",
-    cnic: "",
+    phone: "",
+    email: "", // Placeholder if needed
     address: "",
+    fatherHusband: "",
+    cnic: "",
     comments: "",
   });
 
-  const [services, setServices] = useState<Service[]>([]);
-  const [mostUsedServices, setMostUsedServices] = useState<Service[]>([]);
+  // -- Service & Billing State --
   const [selectedServices, setSelectedServices] = useState<Service[]>([]);
-  const [consultants, setConsultants] = useState<Consultant[]>([]);
-  const [bookedConsultantId, setBookedConsultantId] = useState("");
-  const [referringConsultant, setReferringConsultant] = useState("");
   const [serviceSearch, setServiceSearch] = useState("");
   const [activeServiceIndex, setActiveServiceIndex] = useState(-1);
-  const [discountPercentage, setDiscountPercentage] = useState("");
-  const [amountPaid, setAmountPaid] = useState("");
+  const [bookedConsultantId, setBookedConsultantId] = useState("");
+  const [referringConsultant, setReferringConsultant] = useState("");
+
+  // Billing
+  const [discountPercent, setDiscountPercent] = useState("");
+  const [discountAmount, setDiscountAmount] = useState("");
+  const [paidAmount, setPaidAmount] = useState("");
   const [paymentMethod, setPaymentMethod] = useState("cash");
+
+  const serviceSearchRef = useRef<HTMLInputElement>(null);
+  const globalSearchRef = useRef<HTMLInputElement>(null);
+
+  // -- Effects --
+
   useEffect(() => {
     if (token) {
       loadServices();
@@ -214,836 +396,669 @@ export default function RegistrationPage() {
     }
   }, [token]);
 
+  // Global Search Debounce
   useEffect(() => {
-    if (!token) return;
-    if (!patientForm.phone.trim()) {
+    if (!token || !searchQuery.trim()) {
       setPatientResults([]);
-      setActivePatientIndex(-1);
       return;
     }
-    const timer = window.setTimeout(() => {
-      searchPatients(patientForm.phone.trim());
+    const timer = setTimeout(() => {
+      performPatientSearch(searchQuery);
     }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, token]);
 
-    return () => window.clearTimeout(timer);
-  }, [patientForm.phone, token]);
+  // Auto-calculate Paid Amount Default
+  const subtotal = useMemo(() => {
+    return selectedServices.reduce((sum, s) => {
+      const price = typeof s.price === 'number' ? s.price : parseFloat(s.price as any) || 0;
+      return sum + price;
+    }, 0);
+  }, [selectedServices]);
+
+  const netPayable = useMemo(() => {
+    const disc = parseFloat(discountAmount) || 0;
+    return Math.max(0, subtotal - disc);
+  }, [subtotal, discountAmount]);
 
   useEffect(() => {
-    if (selectedPatient) {
-      setPatientLocked(true);
-      setTimeout(() => serviceSearchRef.current?.focus(), 0);
+    if (subtotal > 0 && !paidAmount) {
+      setPaidAmount(netPayable.toFixed(2));
     }
-  }, [selectedPatient]);
+    // Also update paidAmount if netPayable changes (e.g. discount applied) 
+    // AND paidAmount matches OLD netPayable? 
+    // For now, let's just default it if not set, or user can override. 
+    // Requirement says: "Default Behavior: Paid Amount = Net Payable (auto-filled)"
+    // If we want it strictly auto-filled unless edited:
+    setPaidAmount(netPayable.toFixed(2));
+  }, [netPayable, subtotal]);
+
+  // -- Loaders --
 
   const loadServices = async () => {
-    if (!token) return;
     try {
       const data = await apiGet("/services/", token);
-      const serviceList = data.results || data || [];
-      setServices(serviceList);
-      await loadMostUsedServices(serviceList);
-    } catch (err: any) {
-      setError(err.message || "Failed to load services");
+      setServices(data.results || data || []);
+    } catch (err) {
+      console.error(err);
     }
   };
 
   const loadConsultants = async () => {
-    if (!token) return;
     try {
       const data = await apiGet("/consultants/", token);
-      const results = data.results || data || [];
-      setConsultants(results);
-    } catch (err: any) {
-      setError(err.message || "Failed to load consultants");
-    }
-  };
-
-  const loadMostUsedServices = async (serviceList: Service[]) => {
-    if (!token) return;
-    try {
-      const data = await apiGet("/services/most-used/", token);
-      if (Array.isArray(data) && data.length > 0) {
-        setMostUsedServices(data);
-        return;
-      }
+      setConsultants(data.results || data || []);
     } catch (err) {
-      // Fall back to local usage when endpoint is unavailable
+      console.error(err);
     }
-    setMostUsedServices(getLocalMostUsed(serviceList));
   };
 
-  const searchPatients = async (query: string) => {
-    if (!token || !query.trim()) return;
+  const performPatientSearch = async (query: string) => {
+    setIsSearching(true);
     try {
       const data = await apiGet(`/patients/?search=${encodeURIComponent(query)}`, token);
-      const results = data.results || data || [];
-      setPatientResults(results);
-      setActivePatientIndex(results.length > 0 ? 0 : -1);
-    } catch (err: any) {
-      setError(err.message || "Failed to search patients");
+      setPatientResults(data.results || data || []);
+      setActiveResultIndex(data.results?.length ? 0 : -1);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSearching(false);
     }
   };
 
-  const focusNextElement = (current: HTMLElement) => {
-    if (!pageRef.current) return;
-    const focusable = Array.from(
-      pageRef.current.querySelectorAll<HTMLElement>(
-        "input, select, textarea, button, [tabindex]:not([tabindex='-1'])"
-      )
-    ).filter((el) => !el.hasAttribute("disabled") && el.tabIndex !== -1);
-    const currentIndex = focusable.indexOf(current);
-    if (currentIndex >= 0 && currentIndex < focusable.length - 1) {
-      focusable[currentIndex + 1]?.focus();
-    }
-  };
-
-  const handleEnterAsTab = (event: React.KeyboardEvent<HTMLElement>) => {
-    if (event.key !== "Enter") return;
-    event.preventDefault();
-    focusNextElement(event.currentTarget as HTMLElement);
-  };
+  // -- Handlers --
 
   const handleSelectPatient = (patient: Patient) => {
     const parsedNotes = parsePatientNotes(patient.notes);
     const derivedAge = patient.date_of_birth ? calculateAgeFromDob(patient.date_of_birth) : null;
+
     setSelectedPatient(patient);
     setPatientForm({
-      phone: patient.phone || "",
       name: patient.name || "",
-      fatherHusband: parsedNotes.fatherHusband,
+      gender: patient.gender || "",
       date_of_birth: patient.date_of_birth || "",
       ageYears: derivedAge?.years || (patient.age ? String(patient.age) : ""),
       ageMonths: derivedAge?.months || "",
       ageDays: derivedAge?.days || "",
-      gender: patient.gender || "",
-      cnic: parsedNotes.cnic,
+      phone: patient.phone || "",
+      email: "",
       address: patient.address || "",
-      comments: parsedNotes.comments || "",
+      fatherHusband: parsedNotes.fatherHusband,
+      cnic: parsedNotes.cnic,
+      comments: parsedNotes.comments,
     });
+
+    setSearchQuery("");
     setPatientResults([]);
+    // Switch to edit mode immediately if selected from search
+    setPatientLocked(true);
   };
 
-  const buildPatientPayload = (existingNotes?: string) => {
-    const payload: any = {
-      name: patientForm.name.trim(),
-      gender: patientForm.gender,
-      phone: patientForm.phone.trim(),
-      address: patientForm.address.trim(),
-    };
-    if (patientForm.date_of_birth) {
-      payload.date_of_birth = patientForm.date_of_birth;
-    }
-    if (patientForm.ageYears) {
-      payload.age = parseInt(patientForm.ageYears, 10);
-    }
-    const notesPayload = buildNotes(existingNotes, {
-      fatherHusband: patientForm.fatherHusband,
-      cnic: patientForm.cnic,
-      comments: patientForm.comments,
-      extraNotes: "",
-    });
-    if (notesPayload) {
-      payload.notes = notesPayload;
-    }
-    return payload;
-  };
-
-  const savePatient = async () => {
-    if (!token) return;
-    if (!patientForm.phone.trim() || !patientForm.name.trim() || !patientForm.gender) {
-      setError("Mobile number, patient name, and gender are required.");
-      return;
-    }
-    setLoading(true);
-    setError("");
-    try {
-      const payload = buildPatientPayload(selectedPatient?.notes);
-      const patient = selectedPatient
-        ? await apiPatch(`/patients/${selectedPatient.id}/`, token, payload)
-        : await apiPost("/patients/", token, payload);
-      setSelectedPatient(patient);
-      setPatientLocked(true);
-      setSuccess(selectedPatient ? "Patient updated successfully" : "Patient created successfully");
-      setTimeout(() => serviceSearchRef.current?.focus(), 0);
-    } catch (err: any) {
-      setError(err.message || "Failed to save patient");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const resetPatient = () => {
+  const handlePatientReset = () => {
     setSelectedPatient(null);
     setPatientLocked(false);
     setPatientForm({
-      phone: "",
       name: "",
-      fatherHusband: "",
+      gender: "",
       date_of_birth: "",
       ageYears: "",
       ageMonths: "",
       ageDays: "",
-      gender: "",
-      cnic: "",
+      phone: "",
+      email: "",
       address: "",
+      fatherHusband: "",
+      cnic: "",
       comments: "",
     });
+    // Reset billing
+    setSelectedServices([]);
+    setDiscountAmount("");
+    setDiscountPercent("");
+    setPaidAmount("");
   };
 
-  const estimatedDob =
-    patientForm.date_of_birth
-      ? ""
-      : calculateDobFromAge(patientForm.ageYears, patientForm.ageMonths, patientForm.ageDays);
-
-  const filteredServices = useMemo(() => {
-    const query = serviceSearch.trim().toLowerCase();
-    if (!query) return [] as Service[];
-    try {
-      return services.filter((service) => {
-        if (!service || !service.name) return false;
-        const matchName = service.name.toLowerCase().includes(query);
-        const matchCode = service.code?.toLowerCase()?.includes(query) || false;
-        return matchName || matchCode;
-      }).slice(0, 8);
-    } catch (error) {
-      console.error("Error filtering services:", error);
-      return [] as Service[];
-    }
-  }, [serviceSearch, services]);
-
-  const addServiceToCart = (service: Service) => {
-    if (!service || !service.id) return;
-    setSelectedServices((prev) => {
-      if (prev.find((item) => item.id === service.id)) return prev;
-      return [...prev, service];
-    });
-    updateLocalUsage(service.id);
-    setServiceSearch("");
-    setActiveServiceIndex(-1);
-    setTimeout(() => serviceSearchRef.current?.focus(), 0);
-    setMostUsedServices(getLocalMostUsed(services));
-  };
-
-  const removeServiceFromCart = (serviceId: string) => {
-    setSelectedServices((prev) => prev.filter((item) => item.id !== serviceId));
-  };
-
-  const handleServiceSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setActiveServiceIndex((prev) => Math.min(prev + 1, filteredServices.length - 1));
-      return;
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setActiveServiceIndex((prev) => Math.max(prev - 1, 0));
-      return;
-    }
-    if (event.key === "Enter") {
-      event.preventDefault();
-      if (filteredServices.length > 0) {
-        const targetIndex = activeServiceIndex >= 0 ? activeServiceIndex : 0;
-        const targetService = filteredServices[targetIndex];
-        if (targetService) {
-          addServiceToCart(targetService);
-          return;
-        }
-      }
-      focusNextElement(event.currentTarget);
-    }
-  };
-
-  const handlePatientSearchKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      setActivePatientIndex((prev) => Math.min(prev + 1, patientResults.length - 1));
-      return;
-    }
-    if (event.key === "ArrowUp") {
-      event.preventDefault();
-      setActivePatientIndex((prev) => Math.max(prev - 1, 0));
-      return;
-    }
-    if (event.key === "Enter") {
-      event.preventDefault();
-      if (patientResults.length > 0) {
-        const targetIndex = activePatientIndex >= 0 ? activePatientIndex : 0;
-        const targetPatient = patientResults[targetIndex];
-        if (targetPatient) {
-          handleSelectPatient(targetPatient);
-          return;
-        }
-      }
-      focusNextElement(event.currentTarget);
-    }
-  };
-
-  const handleDobChange = (value: string) => {
-    const age = calculateAgeFromDob(value);
-    setPatientForm((prev) => ({
-      ...prev,
-      date_of_birth: value,
-      ageYears: age.years,
-      ageMonths: age.months,
-      ageDays: age.days,
-    }));
-  };
-
-  const handleAgeChange = (field: "ageYears" | "ageMonths" | "ageDays", value: string) => {
-    setPatientForm((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
-  };
-
-  const clampDiscountPercentage = (value: string): number => {
-    const parsed = parseFloat(value);
-    const numeric = Number.isNaN(parsed) ? 0 : parsed;
-    return Math.min(Math.max(numeric, 0), 100);
-  };
-
-  const subtotal = selectedServices.reduce((sum, service) => {
-    const price = typeof service.price === 'number' ? service.price : parseFloat(service.price as any) || 0;
-    const charges = typeof service.charges === 'number' ? service.charges : parseFloat(service.charges as any) || 0;
-    return sum + (price || charges || 0);
-  }, 0);
-  const discountPercentValue = clampDiscountPercentage(discountPercentage);
-  const discountAmount = (subtotal * discountPercentValue) / 100;
-  const totalAmount = subtotal;
-  const netAmount = totalAmount - discountAmount;
-  const paidAmount = parseFloat(amountPaid) || netAmount;
-  const balanceAmount = netAmount - paidAmount;
-
-  const hasAutoFilledAmountPaid = useRef(false);
-
-  useEffect(() => {
-    if (selectedServices.length === 0) {
-      setAmountPaid("");
-      hasAutoFilledAmountPaid.current = false;
-      return;
-    }
-
-    if (!hasAutoFilledAmountPaid.current) {
-      setAmountPaid(netAmount.toFixed(2));
-      hasAutoFilledAmountPaid.current = true;
-    }
-  }, [selectedServices.length, netAmount]);
-
-  const saveVisit = async (printReceipt: boolean = false) => {
-    if (!token || !selectedPatient || selectedServices.length === 0) {
-      setError("Please select a patient and at least one service");
+  const handleSavePatient = async () => {
+    if (!token) return;
+    if (!patientForm.name.trim() || !patientForm.phone.trim() || !patientForm.gender) {
+      setError("Name, Mobile, and Gender are required.");
       return;
     }
 
     setLoading(true);
     setError("");
+
     try {
-      const visitData = {
-        patient_id: selectedPatient.id,
-        service_ids: selectedServices.map((service) => service.id),
-        booked_consultant_id: bookedConsultantId || null,
-        referring_consultant: referringConsultant || "",
-        subtotal,
-        total_amount: totalAmount,
-        discount: discountAmount,
-        discount_percentage: discountPercentValue,
-        net_amount: netAmount,
-        amount_paid: paidAmount,
-        payment_method: paymentMethod,
+      // Build payload
+      const payload: any = {
+        name: patientForm.name.trim(),
+        gender: patientForm.gender,
+        phone: patientForm.phone.trim(),
+        address: patientForm.address.trim(),
       };
 
-      const visit = await apiPost("/workflow/visits/create_visit/", token, visitData);
-      setSuccess(`Service visit created: ${visit.visit_id}`);
+      if (patientForm.date_of_birth) payload.date_of_birth = patientForm.date_of_birth;
+      if (patientForm.ageYears) payload.age = parseInt(patientForm.ageYears, 10);
 
-      setSelectedServices([]);
-      setDiscountPercentage("");
-      setAmountPaid("");
-      setReferringConsultant("");
-      setBookedConsultantId("");
+      const notesPayload = buildNotes(selectedPatient?.notes, {
+        fatherHusband: patientForm.fatherHusband,
+        cnic: patientForm.cnic,
+        comments: patientForm.comments,
+        extraNotes: "",
+      });
+      if (notesPayload) payload.notes = notesPayload;
 
-      if (printReceipt) {
-        const API_BASE = (import.meta as any).env.VITE_API_BASE
-          || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
-        const receiptUrl = `${API_BASE}/pdf/${visit.id}/receipt/`;
-
-        fetch(receiptUrl, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        })
-          .then((res) => {
-            if (!res.ok) {
-              if (res.status === 401) {
-                throw new Error("Authentication failed. Please log in again.");
-              }
-              throw new Error(`Failed to fetch receipt PDF: ${res.status} ${res.statusText}`);
-            }
-            const contentType = res.headers.get("content-type");
-            if (!contentType || !contentType.includes("application/pdf")) {
-              console.warn("Expected PDF but got:", contentType);
-            }
-            return res.blob();
-          })
-          .then((blob) => {
-            const url = window.URL.createObjectURL(blob);
-            const win = window.open(url, "_blank");
-            const fileName = `${visit.visit_id || visit.id}`;
-            if (win) {
-              // Attempt to set the window title so 'Save as PDF' or the tab shows the ID
-              win.document.title = fileName;
-
-              win.onload = () => {
-                win.document.title = fileName;
-                win.print();
-              };
-              setTimeout(() => window.URL.revokeObjectURL(url), 60000);
-            } else {
-              const link = document.createElement("a");
-              link.href = url;
-              link.target = "_blank";
-              link.download = `${fileName}.pdf`;
-              document.body.appendChild(link);
-              link.click();
-              document.body.removeChild(link);
-              setTimeout(() => window.URL.revokeObjectURL(url), 60000);
-            }
-          })
-          .catch((err) => {
-            console.error("Failed to load receipt:", err);
-            setError(`Failed to load receipt: ${err.message}`);
-          });
+      let patient: Patient;
+      if (selectedPatient) {
+        patient = await apiPatch(`/patients/${selectedPatient.id}/`, token, payload);
+      } else {
+        patient = await apiPost("/patients/", token, payload);
       }
+
+      setSelectedPatient(patient);
+      setPatientLocked(true);
+      setSuccess("Patient saved. Proceed to add services.");
+
+      // Focus on service search
+      setTimeout(() => serviceSearchRef.current?.focus(), 100);
+
     } catch (err: any) {
-      setError(err.message || "Failed to create service visit");
+      setError(err.message || "Failed to save patient.");
     } finally {
       setLoading(false);
     }
   };
 
+  // -- Service Search --
+
+  const filteredServices = useMemo(() => {
+    const q = serviceSearch.trim().toLowerCase();
+    if (!q) return [];
+    return services.filter(s =>
+      s.is_active && (
+        s.name.toLowerCase().includes(q) ||
+        s.code?.toLowerCase().includes(q)
+      )
+    ).slice(0, 10);
+  }, [serviceSearch, services]);
+
+  const handleAddService = (service: Service) => {
+    if (selectedServices.find(s => s.id === service.id)) return;
+    setSelectedServices([...selectedServices, service]);
+    updateLocalUsage(service.id);
+    setServiceSearch("");
+    setActiveServiceIndex(-1);
+    // Keep focus
+    serviceSearchRef.current?.focus();
+  };
+
+  // -- Billing Logic --
+
+  const handleDiscountPercentChange = (val: string) => {
+    setDiscountPercent(val);
+    const pct = parseFloat(val);
+    if (!isNaN(pct)) {
+      const amt = (subtotal * pct) / 100;
+      setDiscountAmount(amt.toFixed(2));
+    } else {
+      setDiscountAmount("");
+    }
+  };
+
+  const handleDiscountAmountChange = (val: string) => {
+    setDiscountAmount(val);
+    const amt = parseFloat(val);
+    if (!isNaN(amt) && subtotal > 0) {
+      const pct = (amt / subtotal) * 100;
+      setDiscountPercent(pct.toFixed(2));
+    } else if (subtotal === 0) {
+      setDiscountPercent("0");
+    } else {
+      setDiscountPercent("");
+    }
+  };
+
+  const dueAmount = netPayable - (parseFloat(paidAmount) || 0);
+
+  const handleSaveVisit = async (printReceipt = false) => {
+    if (!token || !selectedPatient || selectedServices.length === 0) {
+      setError("Please ensure patient is saved and services are added.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const visitData = {
+        patient_id: selectedPatient.id,
+        service_ids: selectedServices.map(s => s.id),
+        booked_consultant_id: bookedConsultantId || null,
+        referring_consultant: referringConsultant,
+        subtotal: subtotal,
+        total_amount: subtotal, // This seems redundant in API but requested
+        discount: parseFloat(discountAmount) || 0,
+        // We can send percentage if we want backend to store it, but amount is source of truth here
+        discount_percentage: parseFloat(discountPercent) || 0,
+        net_amount: netPayable,
+        amount_paid: parseFloat(paidAmount) || 0,
+        payment_method: paymentMethod
+      };
+
+      const visit = await apiPost("/workflow/visits/create_visit/", token, visitData);
+      setSuccess(`Visit created: ${visit.visit_id}`);
+
+      // Reset Billing only (Keep patient if they want to do another? No, usually reset all)
+      // Requirement says "Registration switches to edit/view mode". 
+      // After save, we probably want a fresh start.
+      handlePatientReset();
+
+      if (printReceipt) {
+        printReceiptPdf(visit.id, visit.visit_id);
+      }
+
+    } catch (err: any) {
+      setError(err.message || "Failed to create visit.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const printReceiptPdf = (visitId: string, visitCode: string) => {
+    // Re-use existing print logic or simplified version
+    const API_BASE = (import.meta as any).env.VITE_API_BASE
+      || ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
+    const url = `${API_BASE}/pdf/${visitId}/receipt/`;
+
+    // Open in new window for simplicity
+    const win = window.open(url, "_blank");
+    if (win) {
+      win.onload = () => win.print();
+    }
+  };
+
+  // -- Render Helpers --
+
+  const handleGlobalKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveResultIndex(prev => Math.min(prev + 1, patientResults.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveResultIndex(prev => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter' && activeResultIndex >= 0) {
+      e.preventDefault();
+      const p = patientResults[activeResultIndex];
+      if (p) handleSelectPatient(p);
+    }
+  };
+
+  const handleServiceKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setActiveServiceIndex(prev => Math.min(prev + 1, filteredServices.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setActiveServiceIndex(prev => Math.max(prev - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (activeServiceIndex >= 0 && filteredServices[activeServiceIndex]) {
+        handleAddService(filteredServices[activeServiceIndex]);
+      } else if (filteredServices.length > 0) {
+        handleAddService(filteredServices[0]);
+      }
+    }
+  };
+
   return (
-    <div ref={pageRef} style={{ maxWidth: 1200, margin: "0 auto" }}>
-      <PageHeader title="Registration Desk" />
+    <div style={styles.container}>
+      <PageHeader title="New Registration" />
 
       {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
       {success && <SuccessAlert message={success} onDismiss={() => setSuccess("")} />}
 
-      <div style={{ border: "1px solid #ddd", padding: 20, marginBottom: 20, borderRadius: 8 }}>
-        <h2>Patient Information</h2>
-        <div style={{ display: "grid", gap: 12 }}>
-          <div style={{ position: "relative" }}>
-            <label style={{ display: "block", marginBottom: 6 }}>Mobile Number *</label>
-            <input
-              type="text"
-              placeholder="Search by mobile number"
-              value={patientForm.phone}
-              onChange={(e) => {
-                setPatientForm({ ...patientForm, phone: e.target.value });
-                setPatientLocked(false);
-              }}
-              onKeyDown={handlePatientSearchKeyDown}
-              disabled={patientLocked}
-              style={{ width: "100%", padding: 8, fontSize: 14 }}
-            />
-            {patientResults.length > 0 && !patientLocked && (
-              <div style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                right: 0,
-                background: "#fff",
-                border: "1px solid #eee",
-                borderRadius: 4,
-                maxHeight: 200,
-                overflowY: "auto",
-                zIndex: 10,
-              }}>
-                {patientResults.map((patient, index) => (
-                  <div
-                    key={patient.id}
-                    onClick={() => handleSelectPatient(patient)}
-                    style={{
-                      padding: 10,
-                      cursor: "pointer",
-                      backgroundColor: activePatientIndex === index ? "#eef5ff" : "transparent",
-                    }}
-                  >
-                    <strong>{patient.name}</strong> - {patient.patient_reg_no || patient.mrn} - {patient.phone}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={{ display: "block", marginBottom: 6 }}>Patient Name *</label>
-              <input
-                type="text"
-                value={patientForm.name}
-                onChange={(e) => setPatientForm({ ...patientForm, name: e.target.value })}
-                onKeyDown={handleEnterAsTab}
-                disabled={patientLocked}
-                style={{ width: "100%", padding: 8 }}
-              />
+      {/* Top Bar: Global Search */}
+      <div style={styles.topBar}>
+        <div /> {/* Spacer */}
+        <div style={styles.globalSearch}>
+          <input
+            ref={globalSearchRef}
+            type="text"
+            placeholder="Search patient by name, mobile, or Reg #"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleGlobalKeyDown}
+            style={styles.searchInput}
+          />
+          {patientResults.length > 0 && (
+            <div style={styles.searchResults}>
+              {patientResults.map((p, idx) => (
+                <div
+                  key={p.id}
+                  style={{
+                    ...styles.resultItem,
+                    background: idx === activeResultIndex ? "#f1f5f9" : "transparent"
+                  }}
+                  onClick={() => handleSelectPatient(p)}
+                  onMouseEnter={() => setActiveResultIndex(idx)}
+                >
+                  <span style={{ fontWeight: 600, color: "#334155" }}>{p.name}</span>
+                  <span style={{ fontSize: 12, color: "#64748b" }}>{p.mobile || p.phone} | {p.mrn}</span>
+                </div>
+              ))}
             </div>
-            <div>
-              <label style={{ display: "block", marginBottom: 6 }}>Father/Husband Name</label>
-              <input
-                type="text"
-                value={patientForm.fatherHusband}
-                onChange={(e) => setPatientForm({ ...patientForm, fatherHusband: e.target.value })}
-                onKeyDown={handleEnterAsTab}
-                disabled={patientLocked}
-                style={{ width: "100%", padding: 8 }}
-              />
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={{ display: "block", marginBottom: 6 }}>Date of Birth</label>
-              <input
-                type="date"
-                value={patientForm.date_of_birth}
-                onChange={(e) => handleDobChange(e.target.value)}
-                onKeyDown={handleEnterAsTab}
-                disabled={patientLocked}
-                style={{ width: "100%", padding: 8 }}
-              />
-            </div>
-            <div>
-              <label style={{ display: "block", marginBottom: 6 }}>Age (Years / Months / Days)</label>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-                <input
-                  type="number"
-                  placeholder="Years"
-                  value={patientForm.ageYears}
-                  onChange={(e) => handleAgeChange("ageYears", e.target.value)}
-                  onKeyDown={handleEnterAsTab}
-                  disabled={patientLocked}
-                />
-                <input
-                  type="number"
-                  placeholder="Months"
-                  value={patientForm.ageMonths}
-                  onChange={(e) => handleAgeChange("ageMonths", e.target.value)}
-                  onKeyDown={handleEnterAsTab}
-                  disabled={patientLocked}
-                />
-                <input
-                  type="number"
-                  placeholder="Days"
-                  value={patientForm.ageDays}
-                  onChange={(e) => handleAgeChange("ageDays", e.target.value)}
-                  onKeyDown={handleEnterAsTab}
-                  disabled={patientLocked}
-                />
-              </div>
-              {estimatedDob && (
-                <small style={{ color: "#666" }}>Estimated DOB: {estimatedDob}</small>
-              )}
-            </div>
-          </div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-            <div>
-              <label style={{ display: "block", marginBottom: 6 }}>Gender *</label>
-              <select
-                value={patientForm.gender}
-                onChange={(e) => setPatientForm({ ...patientForm, gender: e.target.value })}
-                onKeyDown={handleEnterAsTab}
-                disabled={patientLocked}
-                style={{ width: "100%", padding: 8 }}
-              >
-                <option value="">Select Gender</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            <div>
-              <label style={{ display: "block", marginBottom: 6 }}>CNIC</label>
-              <input
-                type="text"
-                value={patientForm.cnic}
-                onChange={(e) => setPatientForm({ ...patientForm, cnic: e.target.value })}
-                onKeyDown={handleEnterAsTab}
-                disabled={patientLocked}
-                style={{ width: "100%", padding: 8 }}
-              />
-            </div>
-          </div>
-          <div>
-            <label style={{ display: "block", marginBottom: 6 }}>Address</label>
-            <input
-              type="text"
-              value={patientForm.address}
-              onChange={(e) => setPatientForm({ ...patientForm, address: e.target.value })}
-              onKeyDown={handleEnterAsTab}
-              disabled={patientLocked}
-              style={{ width: "100%", padding: 8 }}
-            />
-          </div>
-          <div>
-            <label style={{ display: "block", marginBottom: 6 }}>Referring Consultant (Name)</label>
-            <input
-              type="text"
-              placeholder="Enter name of referring consultant"
-              value={referringConsultant}
-              onChange={(e) => setReferringConsultant(e.target.value)}
-              onKeyDown={handleEnterAsTab}
-              style={{ width: "100%", padding: 8 }}
-            />
-          </div>
-          <div>
-            <label style={{ display: "block", marginBottom: 6 }}>Comments</label>
-            <textarea
-              value={patientForm.comments}
-              onChange={(e) => setPatientForm({ ...patientForm, comments: e.target.value })}
-              onKeyDown={handleEnterAsTab}
-              disabled={patientLocked}
-              rows={2}
-              style={{ width: "100%", padding: 8 }}
-            />
-          </div>
-        </div>
-        <div style={{ marginTop: 16, display: "flex", gap: 8, flexWrap: "wrap" }}>
-          <Button onClick={savePatient} disabled={loading || patientLocked}>
-            Save Patient &amp; Continue to Services
-          </Button>
-          {patientLocked && (
-            <Button variant="secondary" onClick={() => setPatientLocked(false)}>
-              Edit Patient
-            </Button>
           )}
-          <Button variant="secondary" onClick={resetPatient}>
-            Change Patient
-          </Button>
         </div>
       </div>
 
-      {selectedPatient && (
-        <div style={{ border: "1px solid #ddd", padding: 20, borderRadius: 8 }}>
-          <h2>Service Registration</h2>
-
-          <div style={{ marginBottom: 16 }}>
-            <label style={{ display: "block", marginBottom: 6 }}>Booked Under Consultant</label>
-            <select
-              value={bookedConsultantId}
-              onChange={(e) => setBookedConsultantId(e.target.value)}
-              onKeyDown={handleEnterAsTab}
-              style={{ width: "100%", padding: 8 }}
-            >
-              <option value="">Select consultant</option>
-              {consultants.map((consultant) => (
-                <option key={consultant.id} value={consultant.id}>
-                  {consultant.display_name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div style={{ marginBottom: 16, position: "relative" }}>
-            <label style={{ display: "block", marginBottom: 6 }}>Service Search</label>
-            <input
-              ref={serviceSearchRef}
-              type="text"
-              value={serviceSearch}
-              onChange={(e) => {
-                setServiceSearch(e.target.value);
-                setActiveServiceIndex(0);
-              }}
-              onKeyDown={handleServiceSearchKeyDown}
-              placeholder="Search service by name or code"
-              style={{ width: "100%", padding: 8 }}
-            />
-            {serviceSearch && filteredServices.length > 0 && (
-              <div style={{
-                position: "absolute",
-                top: "100%",
-                left: 0,
-                right: 0,
-                background: "#fff",
-                border: "1px solid #eee",
-                borderRadius: 4,
-                maxHeight: 220,
-                overflowY: "auto",
-                zIndex: 10,
-              }}>
-                {filteredServices.map((service, index) => (
-                  <div
-                    key={service.id}
-                    onClick={() => addServiceToCart(service)}
-                    style={{
-                      padding: 10,
-                      cursor: "pointer",
-                      backgroundColor: activeServiceIndex === index ? "#eef5ff" : "transparent",
-                    }}
-                  >
-                    <strong>{service.name || "Unknown Service"}</strong> ({service.code || service.modality?.code || "N/A"}) - Rs. {service.price || service.charges || 0}
-                  </div>
-                ))}
-              </div>
+      <div style={styles.grid}>
+        {/* Left Column: Patient Registration */}
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <span>Patient Details</span>
+            {patientLocked && (
+              <Button
+                onClick={() => setPatientLocked(false)}
+                variant="secondary"
+                style={{ fontSize: 12, padding: "4px 8px" }}
+              >
+                Edit
+              </Button>
             )}
           </div>
 
-          {mostUsedServices.length > 0 && (
-            <div style={{ marginBottom: 16 }}>
-              <h3 style={{ marginBottom: 8 }}>Most Used Services</h3>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {mostUsedServices.map((service) => (
-                  <button
-                    key={service.id}
-                    onClick={() => addServiceToCart(service)}
-                    style={{
-                      padding: "8px 16px",
-                      fontSize: 14,
-                      fontWeight: 500,
-                      backgroundColor: theme.colors.brandBlueSoft,
-                      color: theme.colors.brandBlue,
-                      border: "none",
-                      borderRadius: theme.radius.base,
-                      cursor: "pointer",
-                      transition: theme.transitions.fast,
-                      fontFamily: theme.typography.fontFamily,
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.brandBlue;
-                      e.currentTarget.style.color = "white";
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = theme.colors.brandBlueSoft;
-                      e.currentTarget.style.color = theme.colors.brandBlue;
-                    }}
-                  >
-                    {service.name || "Unknown Service"}
-                  </button>
-                ))}
+          <div style={{ flex: 1, pointerEvents: patientLocked ? "none" : "auto", opacity: patientLocked ? 0.8 : 1 }}>
+            {/* Block 1: Identity */}
+            <div style={styles.sectionLabel}>Identity</div>
+            <div style={styles.row}>
+              <div style={{ flex: 2 }}>
+                <label style={styles.label}>Full Name *</label>
+                <input
+                  style={styles.input}
+                  value={patientForm.name}
+                  onChange={e => setPatientForm({ ...patientForm, name: e.target.value })}
+                  placeholder="e.g. John Doe"
+                />
               </div>
-            </div>
-          )}
-
-          <div style={{ marginBottom: 16 }}>
-            <h3>Selected Services</h3>
-            {selectedServices.length === 0 ? (
-              <div style={{ color: "#666" }}>No services added yet.</div>
-            ) : (
-              <div style={{ border: "1px solid #eee", borderRadius: 4 }}>
-                {selectedServices.map((service) => (
-                  <div
-                    key={service.id}
-                    style={{ display: "flex", justifyContent: "space-between", padding: 10, borderBottom: "1px solid #eee" }}
-                  >
-                    <div>
-                      <strong>{service.name || "Unknown Service"}</strong> ({service.code || service.modality?.code || "N/A"})
-                      <div style={{ fontSize: 12, color: "#666" }}>Rs. {service.price || service.charges || 0}</div>
-                    </div>
-                    <button
-                      onClick={() => removeServiceFromCart(service.id)}
-                      style={{ background: "transparent", border: "none", color: "#d00", cursor: "pointer" }}
-                    >
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {selectedServices.length > 0 && (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-                <div>
-                  <label>Subtotal (from services):</label>
-                  <input
-                    type="number"
-                    value={subtotal.toFixed(2)}
-                    readOnly
-                    style={{ width: "100%", padding: 8, backgroundColor: "#f5f5f5" }}
-                  />
-                  <small>Auto-calculated from selected services</small>
-                </div>
-                <div>
-                  <label>Discount (%)</label>
-                  <input
-                    type="number"
-                    value={discountPercentage}
-                    min={0}
-                    max={100}
-                    onChange={(e) => {
-                      const value = Math.min(Math.max(parseFloat(e.target.value) || 0, 0), 100);
-                      setDiscountPercentage(e.target.value === "" ? "" : value.toString());
-                      setAmountPaid((subtotal - (subtotal * value) / 100).toFixed(2));
-                    }}
-                    onKeyDown={handleEnterAsTab}
-                    style={{ width: "100%", padding: 8 }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-                <div>
-                  <label>Net Amount:</label>
-                  <input
-                    type="number"
-                    value={netAmount.toFixed(2)}
-                    readOnly
-                    style={{ width: "100%", padding: 8, backgroundColor: "#f5f5f5" }}
-                  />
-                </div>
-                <div>
-                  <label>Amount Paid:</label>
-                  <input
-                    type="number"
-                    value={amountPaid}
-                    onChange={(e) => setAmountPaid(e.target.value)}
-                    onKeyDown={handleEnterAsTab}
-                    style={{ width: "100%", padding: 8 }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: 16 }}>
-                <label>Payment Method:</label>
+              <div style={{ flex: 1 }}>
+                <label style={styles.label}>Gender *</label>
                 <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  onKeyDown={handleEnterAsTab}
-                  style={{ width: "100%", padding: 8 }}
+                  style={styles.input}
+                  value={patientForm.gender}
+                  onChange={e => setPatientForm({ ...patientForm, gender: e.target.value })}
                 >
-                  <option value="cash">Cash</option>
-                  <option value="card">Card</option>
-                  <option value="online">Online</option>
-                  <option value="insurance">Insurance</option>
-                  <option value="other">Other</option>
+                  <option value="">Select</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
                 </select>
               </div>
+            </div>
 
-              <div style={{ border: "1px solid #ddd", padding: 16, borderRadius: 4, marginBottom: 16 }}>
-                <h3>Summary</h3>
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-                  <div>Total Amount:</div>
-                  <div><strong>Rs. {totalAmount.toFixed(2)}</strong></div>
-                  <div>Discount ({discountPercentValue.toFixed(2)}%):</div>
-                  <div><strong>Rs. {discountAmount.toFixed(2)}</strong></div>
-                  <div>Net Amount:</div>
-                  <div><strong>Rs. {netAmount.toFixed(2)}</strong></div>
-                  <div>Amount Paid:</div>
-                  <div><strong>Rs. {paidAmount.toFixed(2)}</strong></div>
-                  <div>Balance:</div>
-                  <div><strong>Rs. {balanceAmount.toFixed(2)}</strong></div>
+            <div style={{ ...styles.row, marginTop: 12 }}>
+              <div style={{ flex: 1 }}>
+                <label style={styles.label}>Date of Birth</label>
+                <input
+                  type="date"
+                  style={styles.input}
+                  value={patientForm.date_of_birth}
+                  onChange={e => {
+                    const val = e.target.value;
+                    const age = calculateAgeFromDob(val);
+                    setPatientForm({
+                      ...patientForm,
+                      date_of_birth: val,
+                      ageYears: age.years,
+                      ageMonths: age.months,
+                      ageDays: age.days
+                    });
+                  }}
+                />
+              </div>
+              <div style={{ flex: 1.5 }}>
+                <label style={styles.label}>Age (Y / M / D)</label>
+                <div style={{ display: "flex", gap: 4 }}>
+                  <input
+                    type="number"
+                    placeholder="Y"
+                    style={{ ...styles.input, textAlign: "center" }}
+                    value={patientForm.ageYears}
+                    onChange={e => setPatientForm({ ...patientForm, ageYears: e.target.value })}
+                  />
+                  <input
+                    type="number"
+                    placeholder="M"
+                    style={{ ...styles.input, textAlign: "center" }}
+                    value={patientForm.ageMonths}
+                    onChange={e => setPatientForm({ ...patientForm, ageMonths: e.target.value })}
+                  />
+                  <input
+                    type="number"
+                    placeholder="D"
+                    style={{ ...styles.input, textAlign: "center" }}
+                    value={patientForm.ageDays}
+                    onChange={e => setPatientForm({ ...patientForm, ageDays: e.target.value })}
+                  />
                 </div>
               </div>
+            </div>
 
-              <div style={{ display: "flex", gap: 8 }}>
-                <Button onClick={() => saveVisit(false)} disabled={loading}>
-                  Save
-                </Button>
-                <Button onClick={() => saveVisit(true)} disabled={loading}>
-                  Save & Print Receipt
-                </Button>
+            {/* Block 2: Contact */}
+            <div style={{ ...styles.sectionLabel, marginTop: 24 }}>Contact</div>
+            <div style={styles.row}>
+              <div style={{ flex: 1 }}>
+                <label style={styles.label}>Mobile Number *</label>
+                <input
+                  style={styles.input}
+                  value={patientForm.phone}
+                  onChange={e => setPatientForm({ ...patientForm, phone: e.target.value })}
+                  placeholder="0300-1234567"
+                />
               </div>
-            </>
-          )}
+              <div style={{ flex: 1 }}>
+                <label style={styles.label}>Email (Optional)</label>
+                <input
+                  style={styles.input}
+                  value={patientForm.email}
+                  onChange={e => setPatientForm({ ...patientForm, email: e.target.value })}
+                />
+              </div>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              <label style={styles.label}>Address</label>
+              <textarea
+                style={{ ...styles.input, height: 60, resize: "none" }}
+                value={patientForm.address}
+                onChange={e => setPatientForm({ ...patientForm, address: e.target.value })}
+              />
+            </div>
+
+            {/* Block 3: Additional */}
+            <div style={{ ...styles.sectionLabel, marginTop: 24 }}>Additional Info</div>
+            <div style={styles.row}>
+              <div style={{ flex: 1 }}>
+                <label style={styles.label}>Father/Husband Name</label>
+                <input
+                  style={styles.input}
+                  value={patientForm.fatherHusband}
+                  onChange={e => setPatientForm({ ...patientForm, fatherHusband: e.target.value })}
+                />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={styles.label}>CNIC / National ID</label>
+                <input
+                  style={styles.input}
+                  value={patientForm.cnic}
+                  onChange={e => setPatientForm({ ...patientForm, cnic: e.target.value })}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Action Bar */}
+          <div style={{ marginTop: 24, paddingTop: 16, borderTop: "1px solid #e2e8f0", display: "flex", justifyContent: "flex-end", gap: 12 }}>
+            <Button variant="secondary" onClick={handlePatientReset}>Clear</Button>
+            {!patientLocked && (
+              <Button onClick={handleSavePatient} disabled={loading}>
+                {loading ? "Saving..." : "Save Patient & Continue"}
+              </Button>
+            )}
+          </div>
         </div>
-      )}
+
+        {/* Right Column: Service & Billing */}
+        <div style={{ ...styles.card, ...(!patientLocked ? styles.disabledOverlay : {}) }}>
+          <div style={styles.cardHeader}>Services & Billing</div>
+
+          {/* Search */}
+          <div style={{ position: "relative", marginBottom: 20 }}>
+            <label style={styles.label}>Add Service / Test</label>
+            <input
+              ref={serviceSearchRef}
+              style={styles.input}
+              placeholder="Type test name or code (e.g. CBC, Lipid)..."
+              value={serviceSearch}
+              onChange={e => setServiceSearch(e.target.value)}
+              onKeyDown={handleServiceKeyDown}
+              disabled={!patientLocked}
+            />
+            {serviceSearch && filteredServices.length > 0 && (
+              <div style={styles.searchResults}>
+                {filteredServices.map((s, idx) => (
+                  <div
+                    key={s.id}
+                    style={{
+                      ...styles.resultItem,
+                      background: idx === activeServiceIndex ? "#f1f5f9" : "transparent"
+                    }}
+                    onClick={() => handleAddService(s)}
+                    onMouseEnter={() => setActiveServiceIndex(idx)}
+                  >
+                    <span style={{ fontWeight: 600 }}>{s.name}</span>
+                    <span style={{ fontSize: 12, color: "#64748b" }}>{s.code} | {s.price} PKR</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Service List */}
+          <div style={{ flex: 1, overflowY: "auto", marginBottom: 20, maxHeight: 300 }}>
+            {selectedServices.map((s, idx) => (
+              <div key={idx} style={styles.serviceItem}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{s.name}</div>
+                  <div style={{ fontSize: 12, color: "#64748b" }}>{s.code}</div>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <span style={{ fontWeight: 600 }}>{s.price}</span>
+                  <button
+                    onClick={() => setSelectedServices(prev => prev.filter((_, i) => i !== idx))}
+                    style={{ border: "none", background: "none", color: "#ef4444", cursor: "pointer" }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+            {selectedServices.length === 0 && (
+              <div style={{ textAlign: "center", color: "#94a3b8", padding: 20, fontStyle: "italic" }}>
+                No services added yet.
+              </div>
+            )}
+          </div>
+
+          {/* Consultant Info */}
+          <div style={styles.row}>
+            <div style={{ flex: 1 }}>
+              <label style={styles.label}>Consultant</label>
+              <select
+                style={styles.input}
+                value={bookedConsultantId}
+                onChange={e => setBookedConsultantId(e.target.value)}
+              >
+                <option value="">None / Walk-in</option>
+                {consultants.map(c => <option key={c.id} value={c.id}>{c.display_name}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={styles.label}>Referring Dr.</label>
+              <input
+                style={styles.input}
+                placeholder="External doctor name"
+                value={referringConsultant}
+                onChange={e => setReferringConsultant(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Billing Summary */}
+          <div style={{ marginTop: 24, padding: 16, background: "#f8fafc", borderRadius: 8 }}>
+            <div style={styles.billRow}>
+              <span>Subtotal</span>
+              <span style={{ fontWeight: 600 }}>{subtotal.toFixed(2)}</span>
+            </div>
+            <div style={styles.billRow}>
+              <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                Discount
+                <div style={{ display: "flex", gap: 4 }}>
+                  <input
+                    placeholder="%"
+                    style={{ ...styles.input, width: 50, height: 28, padding: 4 }}
+                    value={discountPercent}
+                    onChange={e => handleDiscountPercentChange(e.target.value)}
+                  />
+                  <input
+                    placeholder="PKR"
+                    style={{ ...styles.input, width: 70, height: 28, padding: 4 }}
+                    value={discountAmount}
+                    onChange={e => handleDiscountAmountChange(e.target.value)}
+                  />
+                </div>
+              </span>
+              <span style={{ color: "#ef4444" }}>-{parseFloat(discountAmount || "0").toFixed(2)}</span>
+            </div>
+
+            <div style={styles.totalRow}>
+              <span>Net Payable</span>
+              <span>{netPayable.toFixed(2)}</span>
+            </div>
+
+            <div style={{ ...styles.billRow, marginTop: 12 }}>
+              <span style={{ alignSelf: "center" }}>Amount Paid</span>
+              <input
+                style={{ ...styles.input, width: 120, textAlign: "right", fontWeight: 600 }}
+                value={paidAmount}
+                onChange={e => setPaidAmount(e.target.value)}
+              />
+            </div>
+
+            {dueAmount > 0 && (
+              <div style={styles.dueRow}>
+                <span>DUE AMOUNT</span>
+                <span>{dueAmount.toFixed(2)}</span>
+              </div>
+            )}
+          </div>
+
+          <div style={{ marginTop: 20, display: "flex", gap: 12 }}>
+            <Button
+              onClick={() => handleSaveVisit(true)}
+              disabled={loading || selectedServices.length === 0}
+              style={{ flex: 1 }}
+            >
+              Save & Print Receipt
+            </Button>
+            <Button
+              onClick={() => handleSaveVisit(false)}
+              disabled={loading || selectedServices.length === 0}
+              variant="secondary"
+            >
+              Save Only
+            </Button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
