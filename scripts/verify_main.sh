@@ -36,13 +36,16 @@ run_step python3 -m compileall backend/apps
 echo ">>> 2. Running manage.py check..." | tee -a "$LOG_FILE"
 run_step python3 backend/manage.py check
 
-echo ">>> 3. Running block library dry-run..." | tee -a "$LOG_FILE"
+echo ">>> 3. Running migrations..." | tee -a "$LOG_FILE"
+run_step python3 backend/manage.py migrate --noinput
+
+echo ">>> 4. Running block library dry-run..." | tee -a "$LOG_FILE"
 run_step python3 backend/manage.py import_block_library --dry-run
 
-echo ">>> 4. Running templates v2 dry-run..." | tee -a "$LOG_FILE"
+echo ">>> 5. Running templates v2 dry-run..." | tee -a "$LOG_FILE"
 run_step python3 backend/manage.py import_templates_v2 --dry-run
 
-echo ">>> 5. Running pytest (backend/apps/reporting)..." | tee -a "$LOG_FILE"
+echo ">>> 6. Running pytest (backend/apps/reporting)..." | tee -a "$LOG_FILE"
 # Set PYTHONPATH to include backend and define settings module
 export PYTHONPATH="${PYTHONPATH:-}:$(pwd)/backend"
 export DJANGO_SETTINGS_MODULE="rims_backend.settings"
