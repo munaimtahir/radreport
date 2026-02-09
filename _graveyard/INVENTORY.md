@@ -4,15 +4,15 @@
 - `backend.sh` — CANDIDATE
 - `both.sh` — CANDIDATE
 - `frontend.sh` — CANDIDATE
-- `test_receipt_implementation.sh`
-- `verify_fixes.sh`
-- `scripts/phase_b_smoke.py`
-- `scripts/phase_c_smoke.py`
-- `scripts/phase_d_smoke.py`
+- `test_receipt_implementation.sh` — CANDIDATE
+- `verify_fixes.sh` — CANDIDATE
+- `scripts/phase_b_smoke.py` — CANDIDATE
+- `scripts/phase_c_smoke.py` — CANDIDATE
+- `scripts/phase_d_smoke.py` — CANDIDATE
 - `scripts/smoke_api.sh` — CANDIDATE
 - `scripts/smoke_pdf.py` — CANDIDATE
 - `scripts/smoke_workflow.py` — CANDIDATE
-- `scripts/test-deployment.sh`
+- `scripts/test-deployment.sh` — CANDIDATE
 
 ## Old prompts / agent instructions
 - `PROMPTS.md`
