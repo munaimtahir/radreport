@@ -1,18 +1,18 @@
 # Graveyard Inventory (Candidate List)
 
 ## Legacy scripts (unverified)
-- `backend.sh` — CANDIDATE
-- `both.sh` — CANDIDATE
-- `frontend.sh` — CANDIDATE
-- `test_receipt_implementation.sh` — CANDIDATE
-- `verify_fixes.sh` — CANDIDATE
-- `scripts/phase_b_smoke.py` — CANDIDATE
-- `scripts/phase_c_smoke.py` — CANDIDATE
-- `scripts/phase_d_smoke.py` — CANDIDATE
-- `scripts/smoke_api.sh` — CANDIDATE
-- `scripts/smoke_pdf.py` — CANDIDATE
-- `scripts/smoke_workflow.py` — CANDIDATE
-- `scripts/test-deployment.sh` — CANDIDATE
+- `backend.sh` — NEEDS CONTEXT (referenced by `SUPERUSER_MANAGEMENT.md`, `docs/ID_FORMAT_UPDATE.md`)
+- `both.sh` — NEEDS CONTEXT (referenced by `SUPERUSER_MANAGEMENT.md`, `SUPERUSER_CONFIRMED.md`)
+- `frontend.sh` — NEEDS CONTEXT (referenced by `SUPERUSER_MANAGEMENT.md`, `SUPERUSER_CONFIRMED.md`)
+- `test_receipt_implementation.sh` — NEEDS CONTEXT (referenced by `RECEIPT_PDF_IMPLEMENTATION_COMPLETE.md`)
+- `verify_fixes.sh` — CANDIDATE — MOVED
+- `scripts/phase_b_smoke.py` — CANDIDATE — MOVED
+- `scripts/phase_c_smoke.py` — CANDIDATE — MOVED
+- `scripts/phase_d_smoke.py` — CANDIDATE — MOVED
+- `scripts/smoke_api.sh` — CANDIDATE — MOVED
+- `scripts/smoke_pdf.py` — CANDIDATE — MOVED
+- `scripts/smoke_workflow.py` — CANDIDATE — MOVED
+- `scripts/test-deployment.sh` — CANDIDATE — MOVED
 
 ## Old prompts / agent instructions
 - `PROMPTS.md`
