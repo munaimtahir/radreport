@@ -67,6 +67,14 @@ class ReportTemplateV2ViewSet(viewsets.ModelViewSet):
         return Response({"status": "active"})
 
 
+    @action(detail=True, methods=["post"], url_path="preview-narrative")
+    def preview_narrative(self, request, pk=None):
+        instance = self.get_object()
+        values_json = request.data.get("values_json", {})
+        narrative_json = generate_narrative_v2(instance, values_json)
+        return Response({"narrative_json": narrative_json})
+
+
 class ServiceReportTemplateV2ViewSet(viewsets.ModelViewSet):
     queryset = ServiceReportTemplateV2.objects.all()
     serializer_class = ServiceReportTemplateV2Serializer
