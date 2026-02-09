@@ -397,12 +397,13 @@ def _draw_receipt_copy(
     address_lines = LOCKED_FOOTER_TEXT.split("\n")
     canvas.setFont("Helvetica", 7)
     canvas.setFillColor(black)
-    for line in address_lines[:1]:  # Only first line for header
-        canvas.drawCentredString(x + width / 2, current_y, line)
+    if address_lines:  # Draw first line directly
+        canvas.drawCentredString(x + width / 2, current_y, address_lines[0])
         current_y -= 3 * mm
     
     # Contact number
-    canvas.drawCentredString(x + width / 2, current_y, address_lines[1] if len(address_lines) > 1 else "")
+    if len(address_lines) > 1:
+        canvas.drawCentredString(x + width / 2, current_y, address_lines[1])
     current_y -= 5 * mm
 
     # Copy Type Label (PROMINENT)
@@ -507,7 +508,7 @@ def _draw_receipt_copy(
     canvas.setLineWidth(1.2)
     canvas.line(left_x, current_y + 1, right_x, current_y + 1)
     canvas.setLineWidth(1)
-    current_y -= 2
+    current_y -= 2 * mm
 
     footer_height = FOOTER_HEIGHT * mm
     summary_height = SUMMARY_HEIGHT * mm
@@ -555,7 +556,7 @@ def _draw_receipt_copy(
         # Light row border
         canvas.setStrokeColor(BORDER_GREY)
         canvas.setLineWidth(0.3)
-        canvas.line(left_x, current_y + row_padding/2, right_x, current_y + row_padding/2)
+        canvas.line(left_x, current_y + row_padding / 2, right_x, current_y + row_padding / 2)
         canvas.setLineWidth(1)
     
     current_y -= 3 * mm
@@ -582,17 +583,17 @@ def _draw_receipt_copy(
         ("Payment Method:", data["payment_method"], False, 8),
     ]
     
-    for label, value, is_due, size in summary_rows:
+    for label, value, is_highlighted, size in summary_rows:
         if label == "Due Amount:":
             # Make Due Amount BOLD and LARGER - impossible to miss
             canvas.setFont("Helvetica-Bold", size)
             canvas.setFillColor(black)
         else:
-            canvas.setFont("Helvetica-Bold" if is_due else "Helvetica", size)
+            canvas.setFont("Helvetica-Bold" if is_highlighted else "Helvetica", size)
             canvas.setFillColor(black)
         
         canvas.drawString(summary_x, current_y, label)
-        canvas.drawRightString(right_x - 2, current_y, value)
+        canvas.drawRightString(right_x - 2 * mm, current_y, value)
         current_y -= (4 * mm if label == "Due Amount:" else 3.5 * mm)
     
     summary_box_end_y = current_y + 1 * mm
