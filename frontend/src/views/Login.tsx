@@ -18,8 +18,8 @@ export default function Login() {
     setError("");
     setLoading(true);
     try {
-      const token = await login(username, password);
-      setToken(token);
+      const data = await login(username, password);
+      setToken(data.access, data.refresh);
       navigate("/");
     } catch (err: any) {
       setError(err.message || "Login failed");

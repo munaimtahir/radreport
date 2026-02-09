@@ -518,6 +518,7 @@ def _draw_receipt_copy(
 
     summary_rows = [
         ("Total Amount:", data["total_amount"], False),
+        ("Discount:", data.get("discount_text", "Rs. 0.00"), False),
         ("Net Amount:", data["net_amount"], True),
         ("Paid Amount:", data["paid_amount"], False),
         ("Balance Due:", data.get("balance_amount", "Rs. 0.00"), False),
@@ -815,7 +816,9 @@ def build_service_visit_receipt_pdf_reportlab(service_visit, invoice) -> Content
             else (service_visit.referring_consultant or (service_visit.booked_consultant.display_name if service_visit.booked_consultant else "-"))
         ),
         "services": services,
-        "total_amount": f"Rs. {invoice.total_amount:.2f}",
+        "services": services,
+        "total_amount": f"Rs. {invoice.subtotal:.2f}",
+        "discount_text": f"Rs. {invoice.discount:.2f}" + (f" ({invoice.discount_percentage:g}%)" if invoice.discount_percentage and invoice.discount_percentage > 0 else ""),
         "net_amount": f"Rs. {invoice.net_amount:.2f}",
         "paid_amount": f"Rs. {paid_amount:.2f}",
         "balance_amount": f"Rs. {invoice.balance_amount:.2f}",
@@ -864,7 +867,9 @@ def build_receipt_snapshot_pdf(snapshot) -> ContentFile:
             else (snapshot.referring_consultant or (snapshot.service_visit.booked_consultant.display_name if snapshot.service_visit.booked_consultant else "-"))
         ),
         "services": services,
-        "total_amount": f"Rs. {total_amount:.2f}",
+        "services": services,
+        "total_amount": f"Rs. {snapshot.subtotal:.2f}",
+        "discount_text": f"Rs. {snapshot.discount:.2f}",
         "net_amount": f"Rs. {total_amount:.2f}",
         "paid_amount": f"Rs. {snapshot.total_paid:.2f}",
         "balance_amount": f"Rs. {snapshot.service_visit.invoice.balance_amount:.2f}" if hasattr(snapshot.service_visit, "invoice") else "Rs. 0.00",

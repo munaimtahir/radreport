@@ -1,4 +1,3 @@
-// Use relative path in production, or env variable if set
 const RAW_API_BASE: string =
   (import.meta as any).env.VITE_API_BASE ||
   ((import.meta as any).env.PROD ? "/api" : "http://localhost:8000/api");
@@ -8,22 +7,65 @@ export const API_BASE: string = (() => {
   return trimmed.endsWith("/api") ? trimmed : `${trimmed}/api`;
 })();
 
+let tokenUpdateCallback: ((newToken: string, newRefreshToken?: string) => void) | null = null;
+
+export function setTokenUpdateCallback(cb: (newToken: string, newRefreshToken?: string) => void) {
+  tokenUpdateCallback = cb;
+}
+
 async function apiRequest(path: string, token: string | null, options: RequestInit = {}) {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
 
-  // If body is FormData, let the browser set Content-Type (checking body in options is tricky for typed RequestInit)
-  // But we can check if the caller passed a special flag or if we just detect it?
-  // Easier: Allow caller to override Content-Type to undefined/null to suppress it.
   if (headers["Content-Type"] === "multipart/form-data") {
     delete headers["Content-Type"];
   }
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  const r = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+  let r = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+  // Handle 401: Try to refresh token
+  if (r.status === 401) {
+    const refreshToken = localStorage.getItem("refresh_token");
+    if (refreshToken) {
+      try {
+        const refreshResponse = await fetch(`${API_BASE}/auth/token/refresh/`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refresh: refreshToken }),
+        });
+
+        if (refreshResponse.ok) {
+          const data = await refreshResponse.json();
+          const newAccessToken = data.access;
+          const newRefreshToken = data.refresh; // May be returned if rotation is on
+
+          // Update state via callback if registered
+          if (tokenUpdateCallback) {
+            tokenUpdateCallback(newAccessToken, newRefreshToken);
+          }
+
+          // Also update localStorage immediately for this session context
+          localStorage.setItem("token", newAccessToken);
+          if (newRefreshToken) {
+            localStorage.setItem("refresh_token", newRefreshToken);
+          }
+
+          // Retry the original request
+          headers["Authorization"] = `Bearer ${newAccessToken}`;
+          r = await fetch(`${API_BASE}${path}`, { ...options, headers });
+        }
+      } catch (e) {
+        // Refresh failed, proceed to return original 401
+        console.error("Token refresh failed", e);
+      }
+    }
+  }
+
   if (!r.ok) {
     const text = await r.text();
     let errorMsg = text;
@@ -113,5 +155,5 @@ export async function login(username: string, password: string) {
     throw new Error(text);
   }
   const data = await r.json();
-  return data.access;
+  return data;
 }
