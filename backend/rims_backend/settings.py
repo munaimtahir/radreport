@@ -6,7 +6,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key")
 DEBUG = os.getenv("DJANGO_DEBUG", "0") == "1"
 # Configure via DJANGO_ALLOWED_HOSTS in production (comma-separated). No wildcards by default.
-ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,rims.alshifialab.pk").split(",") if h.strip()]
+ALLOWED_HOSTS = [h.strip() for h in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,rims.alshifalab.pk,api.rims.alshifalab.pk").split(",") if h.strip()]
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     "apps.workflow",
     "apps.consultants",
     "apps.reporting",
+    "apps.backups",
 
 
 ]

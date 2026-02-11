@@ -22,6 +22,18 @@ from apps.consultants.api import ConsultantProfileViewSet, ConsultantSettlementV
 from apps.workflow.dashboard_api import (
     dashboard_summary, dashboard_worklist, dashboard_flow
 )
+from apps.workflow.backup_ops import (
+    backup_ops_status, backup_ops_backup_now, backup_ops_restore, backup_ops_sync, backup_ops_export, backup_ops_job_status
+)
+from apps.backups.api import (
+    backups_collection,
+    backup_detail,
+    backup_upload,
+    backup_export,
+    backup_import,
+    backup_restore,
+    backup_cloud_test,
+)
 from apps.workflow.models import ServiceVisit, Invoice
 from apps.workflow.pdf import build_receipt_pdf_from_snapshot
 from apps.workflow.receipts import get_receipt_snapshot_data
@@ -175,6 +187,19 @@ urlpatterns = [
     path("api/pdf/receipt/<uuid:visit_id>/", receipt_pdf_alt, name="receipt-pdf-alt"),  # Alternative route for compatibility
     path("api/visits/<uuid:visit_id>/receipt/", workflow_visit_receipt, name="workflow-visit-receipt"),
     path("api/visits/<uuid:visit_id>/receipt/pdf/", workflow_visit_receipt_pdf, name="workflow-visit-receipt-pdf"),
+    path("api/backup-ops/status/", backup_ops_status, name="backup-ops-status"),
+    path("api/backup-ops/backup-now/", backup_ops_backup_now, name="backup-ops-backup-now"),
+    path("api/backup-ops/restore/", backup_ops_restore, name="backup-ops-restore"),
+    path("api/backup-ops/sync/", backup_ops_sync, name="backup-ops-sync"),
+    path("api/backup-ops/jobs/<str:job_id>/", backup_ops_job_status, name="backup-ops-job-status"),
+    path("api/backup-ops/export/<str:backup_date>/", backup_ops_export, name="backup-ops-export"),
+    path("api/backups/", backups_collection, name="backups-collection"),
+    path("api/backups/import/", backup_import, name="backups-import"),
+    path("api/backups/cloud/test/", backup_cloud_test, name="backups-cloud-test"),
+    path("api/backups/<str:backup_id>/", backup_detail, name="backup-detail"),
+    path("api/backups/<str:backup_id>/upload/", backup_upload, name="backup-upload"),
+    path("api/backups/<str:backup_id>/export/", backup_export, name="backup-export"),
+    path("api/backups/<str:backup_id>/restore/", backup_restore, name="backup-restore"),
     # Dashboard endpoints
     path("api/dashboard/summary/", dashboard_summary, name="dashboard-summary"),
     path("api/dashboard/worklist/", dashboard_worklist, name="dashboard-worklist"),

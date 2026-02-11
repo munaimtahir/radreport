@@ -20,6 +20,7 @@ import TemplateV2Builder from "../views/admin/TemplateV2Builder";
 import BlockLibrary from "../views/admin/BlockLibrary";
 import ReportPrintingWorklist from "../views/ReportPrintingWorklist";
 import UserSettings from "../views/admin/UserSettings";
+import BackupOpsPage from "../views/admin/BackupOpsPage";
 
 
 import ModuleDisabled from "../views/ModuleDisabled";
@@ -38,6 +39,7 @@ function Shell() {
   const canPerform = isSuperuser || groups.includes("performance");
   const canVerify = isSuperuser || groups.includes("verification");
   const canAdmin = isSuperuser;
+  const canBackupAdmin = isSuperuser || groups.includes("manager") || groups.includes("admin");
   const canWorkflow = isSuperuser || canRegister || canPerform || canVerify;
 
   if (!token) return <Navigate to="/login" replace />;
@@ -184,6 +186,11 @@ function Shell() {
                 <NavLink to="/receipt-settings">
                   Receipt Settings
                 </NavLink>
+                {canBackupAdmin && (
+                  <NavLink to="/settings/backups">
+                    Backups
+                  </NavLink>
+                )}
               </div>
             )}
             {/* PHASE C: Legacy routes hidden from navigation - accessible via direct URL for admin only */}
@@ -265,6 +272,7 @@ function Shell() {
               <Route path="/settings/services" element={canAdmin ? <ServicesList /> : <AccessDenied />} />
               <Route path="/settings/services/:id" element={canAdmin ? <ServiceEditor /> : <AccessDenied />} />
               <Route path="/settings/users" element={canAdmin ? <UserSettings /> : <AccessDenied />} />
+              <Route path="/settings/backups" element={canBackupAdmin ? <BackupOpsPage /> : <AccessDenied />} />
 
               {/* Legacy Routes */}
               <Route path="/patients" element={<Patients />} />
