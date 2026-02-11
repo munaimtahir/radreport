@@ -18,6 +18,7 @@ from .models import (
     ReportInstanceV2,
     ReportPublishSnapshotV2,
     ReportTemplateV2,
+    ReportingOrganizationConfig,
     ServiceReportTemplateV2,
 )
 from .serializers import (
@@ -150,6 +151,156 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             instance.save(update_fields=["created_by"])
         return instance
 
+    def _listify(self, value):
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return [str(v).strip() for v in value if str(v).strip()]
+        text = str(value).strip()
+        return [text] if text else []
+
+    def _extract_measurements(self, values_json):
+        measurements = []
+        for key, value in values_json.items():
+            if isinstance(value, (int, float)):
+                measurements.append({"label": key.replace("_", " ").title(), "value": str(value)})
+            elif isinstance(value, str):
+                low_key = key.lower()
+                if "measurement" in low_key or "size" in low_key or "diameter" in low_key:
+                    text = value.strip()
+                    if text:
+                        measurements.append({"label": key.replace("_", " ").title(), "value": text})
+        return measurements[:12]
+
+    def _build_print_payload(self, request, item, instance, narrative_json):
+        visit = item.service_visit
+        patient = visit.patient
+        template = instance.template_v2
+
+        config = ReportingOrganizationConfig.objects.first()
+        center_lines = []
+        right_lines = []
+        logo_url = ""
+        disclaimer = "This report is based on imaging findings at the time of examination. Clinical correlation is advised."
+
+        if config:
+            if config.org_name:
+                center_lines.append(config.org_name.strip())
+            if config.address:
+                center_lines.append(str(config.address).strip())
+            if config.phone:
+                center_lines.append(str(config.phone).strip())
+            if config.logo:
+                try:
+                    logo_url = request.build_absolute_uri(config.logo.url)
+                except Exception:
+                    logo_url = ""
+            if config.disclaimer_text:
+                disclaimer = config.disclaimer_text
+
+        signatories = []
+        if item.consultant:
+            signatories.append(
+                {
+                    "verification_label": "Electronically Verified",
+                    "name": item.consultant.display_name,
+                    "credentials": item.consultant.degrees,
+                    "registration": "",
+                }
+            )
+            right_lines = [line for line in [item.consultant.display_name, item.consultant.degrees, item.consultant.designation, item.consultant.mobile_number] if line]
+        elif instance.created_by:
+            name = instance.created_by.get_full_name() or instance.created_by.username
+            signatories.append(
+                {
+                    "verification_label": "Electronically Verified",
+                    "name": name,
+                    "credentials": "",
+                    "registration": "",
+                }
+            )
+            right_lines = [name]
+
+        if config and isinstance(config.signatories_json, list):
+            for entry in config.signatories_json:
+                if not isinstance(entry, dict):
+                    continue
+                name = str(entry.get("name", "")).strip()
+                designation = str(entry.get("designation", "")).strip()
+                if name or designation:
+                    signatories.append(
+                        {
+                            "verification_label": "Electronically Verified",
+                            "name": name,
+                            "credentials": designation,
+                            "registration": str(entry.get("registration", "")).strip(),
+                        }
+                    )
+
+        inferred_indication = ""
+        for key, value in instance.values_json.items():
+            key_l = key.lower()
+            if "indication" in key_l or "clinical" in key_l or "history" in key_l:
+                text = str(value).strip()
+                if text:
+                    inferred_indication = text
+                    break
+
+        findings_blocks = []
+        for section in narrative_json.get("sections", []) if isinstance(narrative_json, dict) else []:
+            if not isinstance(section, dict):
+                continue
+            lines = self._listify(section.get("lines"))
+            if lines:
+                findings_blocks.append(
+                    {
+                        "heading": str(section.get("title", "")).strip(),
+                        "lines": lines,
+                    }
+                )
+
+        if not findings_blocks:
+            value_lines = []
+            for key, value in instance.values_json.items():
+                text = str(value).strip()
+                if not text:
+                    continue
+                value_lines.append(f"{key.replace('_', ' ').title()}: {text}")
+            if value_lines:
+                findings_blocks.append({"heading": "", "lines": value_lines})
+
+        payload = {
+            "header": {
+                "logo_url": logo_url,
+                "center_lines": center_lines,
+                "right_lines": right_lines,
+            },
+            "patient": {
+                "name": patient.name,
+                "age": str(patient.age or ""),
+                "sex": patient.gender or "",
+                "mrn": patient.patient_reg_no or patient.mrn,
+                "mobile": patient.phone or "",
+                "ref_no": visit.visit_id,
+                "referred_by": visit.referring_consultant or patient.referrer or "",
+                "study_datetime": item.created_at.strftime("%Y-%m-%d %H:%M"),
+                "report_datetime": instance.updated_at.strftime("%Y-%m-%d %H:%M"),
+                "clinical_indication": inferred_indication,
+            },
+            "report_title": (template.name or item.service.name or "Radiology Report").upper(),
+            "sections": {
+                "technique": self._listify(narrative_json.get("technique")) if isinstance(narrative_json, dict) else [],
+                "comparison": self._listify(narrative_json.get("comparison")) if isinstance(narrative_json, dict) else [],
+                "findings": findings_blocks,
+                "measurements": self._extract_measurements(instance.values_json),
+                "impression": self._listify(narrative_json.get("impression")) if isinstance(narrative_json, dict) else [],
+                "recommendations": self._listify(narrative_json.get("recommendations")) if isinstance(narrative_json, dict) else [],
+            },
+            "signatories": signatories,
+            "footer": {"disclaimer": disclaimer},
+        }
+        return payload
+
     @action(detail=True, methods=["get"])
     def schema(self, request, pk=None):
         item = self._get_item(pk)
@@ -264,6 +415,15 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         response = HttpResponse(pdf_bytes, content_type="application/pdf")
         response["Content-Disposition"] = f'inline; filename="{filename}"'
         return response
+
+    @action(detail=True, methods=["get"], url_path="print-payload")
+    def print_payload(self, request, pk=None):
+        item = self._get_item(pk)
+        template_v2 = self._get_v2_template(item)
+        instance = self._get_or_create_instance(item, template_v2, request.user)
+        narrative_json = instance.narrative_json or generate_narrative_v2(template_v2, instance.values_json)
+        payload = self._build_print_payload(request, item, instance, narrative_json)
+        return Response(payload)
 
     @action(detail=True, methods=["post"], url_path="return-for-correction")
     def return_for_correction(self, request, pk=None):

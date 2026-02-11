@@ -43,6 +43,9 @@ services:
       DB_PASSWORD: ${DB_PASSWORD}
       DB_HOST: db
       DB_PORT: "5432"
+      BACKUP_ROOT: ${BACKUP_ROOT:-/app/backups}
+      BACKUP_RCLONE_REMOTE: ${BACKUP_RCLONE_REMOTE:-offsite}
+      BACKUP_RCLONE_PATH: ${BACKUP_RCLONE_PATH:-radreport-backups}
       
       # Optional: Gunicorn tuning
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}

@@ -196,10 +196,21 @@ export default function ReportingPage() {
 
     const handleFetchPdf = async () => {
         if (!id) return;
+        window.open(`/print/report/${id}`, "_blank");
+    };
+
+    const handleDownloadServerPdf = async () => {
+        if (!id) return;
         try {
             const blob = await fetchReportPdf(id, token);
             const url = URL.createObjectURL(blob);
-            window.open(url, "_blank");
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `report_${id}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            URL.revokeObjectURL(url);
         } catch (e: any) {
             setError(e.message || "Failed to fetch PDF");
         }
@@ -252,7 +263,8 @@ export default function ReportingPage() {
                 <Button data-testid="report-save" onClick={handleSaveDraft} disabled={saving || status !== "draft"}>Save Draft</Button>
                 <Button data-testid="report-submit" variant="secondary" onClick={() => setShowSubmitModal(true)} disabled={status !== "draft"}>Submit</Button>
                 <Button variant="secondary" onClick={handleGenerateNarrative} disabled={generatingNarrative}>Generate Narrative</Button>
-                <Button data-testid="report-preview" variant="secondary" onClick={handleFetchPdf}>Preview PDF</Button>
+                <Button data-testid="report-preview" variant="secondary" onClick={handleFetchPdf}>Preview / Print Layout</Button>
+                <Button variant="secondary" onClick={handleDownloadServerPdf}>Download Server PDF</Button>
                 {(user?.is_superuser || user?.groups?.includes("reporting_verifier")) && (
                     <>
                         <Button variant="secondary" onClick={() => setShowReturnModal(true)} disabled={status === "draft"}>Return</Button>

@@ -85,6 +85,10 @@ def backups_collection(request):
     if request.method == "GET":
         payload = {
             "items": list_backups(),
+            "running_jobs": [
+                _job_payload(job)
+                for job in BackupJob.objects.filter(status=BackupJob.STATUS_RUNNING).order_by("-created_at")[:20]
+            ],
             "cloud": {
                 "remote_name": os.getenv("BACKUP_RCLONE_REMOTE", "offsite"),
                 "remote_path": os.getenv("BACKUP_RCLONE_PATH", "radreport-backups"),
@@ -181,6 +185,39 @@ def backup_export(request, backup_id: str):
         _, backup_dir = resolve_backup_ref(backup_id)
     except BackupError as exc:
         return Response({"detail": str(exc)}, status=status.HTTP_404_NOT_FOUND)
+
+    artifact = str(request.query_params.get("artifact", "full")).strip().lower()
+    if artifact == "db":
+        target = _artifact_file(backup_dir, "db.sql.gz")
+        if not target:
+            target = _artifact_file(backup_dir, "db.sql.gz.enc")
+        if not target:
+            return Response({"detail": "Database artifact not found"}, status=status.HTTP_404_NOT_FOUND)
+        return FileResponse(open(target, "rb"), as_attachment=True, filename=target.name)
+    if artifact == "media":
+        target = _artifact_file(backup_dir, "media.tar.gz")
+        if not target:
+            target = _artifact_file(backup_dir, "media.tar.gz.enc")
+        if not target:
+            return Response({"detail": "Media artifact not found"}, status=status.HTTP_404_NOT_FOUND)
+        return FileResponse(open(target, "rb"), as_attachment=True, filename=target.name)
+    if artifact == "infra":
+        target = _artifact_file(backup_dir, "infra.tar.gz")
+        if not target:
+            target = _artifact_file(backup_dir, "infra.tar.gz.enc")
+        if not target:
+            return Response({"detail": "Infra artifact not found"}, status=status.HTTP_404_NOT_FOUND)
+        return FileResponse(open(target, "rb"), as_attachment=True, filename=target.name)
+    if artifact == "meta":
+        target = _artifact_file(backup_dir, "meta.json")
+        if not target:
+            return Response({"detail": "meta.json not found"}, status=status.HTTP_404_NOT_FOUND)
+        return FileResponse(open(target, "rb"), as_attachment=True, filename="meta.json")
+    if artifact == "checksums":
+        target = _artifact_file(backup_dir, "checksums.sha256")
+        if not target:
+            return Response({"detail": "checksums.sha256 not found"}, status=status.HTTP_404_NOT_FOUND)
+        return FileResponse(open(target, "rb"), as_attachment=True, filename="checksums.sha256")
 
     file_obj = stream_backup_archive(backup_dir)
     return FileResponse(file_obj, as_attachment=True, filename=f"backup-{backup_dir.name}.tar.gz")
@@ -321,6 +358,13 @@ def _checksums_map(path: Path) -> dict[str, str]:
         digest, name = line.split("  ", 1)
         out[name] = digest
     return out
+
+
+def _artifact_file(root: Path, name: str) -> Path | None:
+    p = root / name
+    if p.exists() and p.is_file():
+        return p
+    return None
 
 
 def shutil_which(name: str):

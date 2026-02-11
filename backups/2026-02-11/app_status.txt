@@ -1,0 +1,3 @@
+clean=false
+dirty=true
+untracked_count=1

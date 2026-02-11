@@ -48,12 +48,59 @@ export interface NarrativeResponseV2 {
     narrative_json: Record<string, any>;
 }
 
+export interface ReportPrintPayload {
+    header?: {
+        logo_url?: string;
+        center_lines?: string[];
+        right_lines?: string[];
+    };
+    patient?: {
+        name?: string;
+        age?: string;
+        sex?: string;
+        mrn?: string;
+        mobile?: string;
+        ref_no?: string;
+        referred_by?: string;
+        study_datetime?: string;
+        report_datetime?: string;
+        clinical_indication?: string;
+    };
+    report_title?: string;
+    sections?: {
+        technique?: string[];
+        comparison?: string[];
+        findings?: Array<{
+            heading?: string;
+            lines?: string[];
+            paragraphs?: string[];
+            bullets?: string[];
+        }>;
+        measurements?: Array<{ label: string; value: string; unit?: string }>;
+        impression?: string[];
+        recommendations?: string[];
+    };
+    signatories?: Array<{
+        verification_label?: string;
+        name?: string;
+        credentials?: string;
+        registration?: string;
+    }>;
+    footer?: {
+        disclaimer?: string;
+    };
+}
+
 export async function generateNarrative(serviceVisitItemId: string, token: string | null): Promise<NarrativeResponseV2> {
     return apiPost(`/reporting/workitems/${serviceVisitItemId}/generate-narrative/`, token, {});
 }
 
 export async function getNarrative(serviceVisitItemId: string, token: string | null): Promise<NarrativeResponseV2> {
     return apiGet(`/reporting/workitems/${serviceVisitItemId}/narrative/`, token);
+}
+
+export async function getReportPrintPayload(serviceVisitItemId: string, token: string | null): Promise<ReportPrintPayload> {
+    return apiGet(`/reporting/workitems/${serviceVisitItemId}/print-payload/`, token);
 }
 
 export async function fetchReportPdf(serviceVisitItemId: string, token: string | null): Promise<Blob> {

@@ -28,6 +28,12 @@ type BackupItem = {
 
 type BackupListResponse = {
   items: BackupItem[];
+  running_jobs?: Array<{
+    id: string;
+    operation: string;
+    status: string;
+    created_by: string;
+  }>;
   cloud: {
     remote_name: string;
     remote_path: string;
@@ -109,7 +115,13 @@ export default function BackupOpsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
-  const hasRunning = useMemo(() => (data?.items || []).some((x) => isRunning(x.status)) || !!data?.restore_in_progress, [data]);
+  const hasRunning = useMemo(
+    () =>
+      (data?.items || []).some((x) => isRunning(x.status)) ||
+      (data?.running_jobs || []).some((x) => isRunning(x.status)) ||
+      !!data?.restore_in_progress,
+    [data]
+  );
 
   useEffect(() => {
     if (!hasRunning) return;
@@ -150,10 +162,10 @@ export default function BackupOpsPage() {
     }
   }
 
-  async function exportBackup(id: string) {
+  async function exportBackup(id: string, artifact: "full" | "db" | "media" | "infra" | "meta" | "checksums" = "full") {
     if (!token) return;
     try {
-      const res = await fetch(`${API_BASE}/backups/${id}/export/`, {
+      const res = await fetch(`${API_BASE}/backups/${id}/export/?artifact=${artifact}`, {
         method: "GET",
         headers: { Authorization: `Bearer ${token}` },
       });
@@ -165,7 +177,7 @@ export default function BackupOpsPage() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `backup-${id}.tar.gz`;
+      a.download = artifact === "full" ? `backup-${id}.tar.gz` : `backup-${id}-${artifact}`;
       document.body.appendChild(a);
       a.click();
       a.remove();
@@ -297,6 +309,11 @@ export default function BackupOpsPage() {
             {data?.cloud.connected ? "Connected" : "Not connected"}
           </span>
           {data?.restore_in_progress && <span style={{ color: theme.colors.danger, fontSize: 13 }}>Restore in progress. New operations are blocked.</span>}
+          {!!data?.running_jobs?.length && (
+            <span style={{ color: theme.colors.textSecondary, fontSize: 13 }}>
+              Running jobs: {data.running_jobs.map((j) => `${j.operation} (${j.id.slice(0, 8)})`).join(", ")}
+            </span>
+          )}
         </div>
 
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -370,7 +387,7 @@ export default function BackupOpsPage() {
                   <Button variant="secondary" onClick={() => viewDetails(item.id)} disabled={busy}>
                     View
                   </Button>
-                  <Button variant="secondary" onClick={() => exportBackup(item.id)} disabled={busy}>
+                  <Button variant="secondary" onClick={() => exportBackup(item.id, "full")} disabled={busy}>
                     Export
                   </Button>
                   <Button variant="secondary" onClick={() => uploadCloud(item.id)} disabled={busy || hasRunning}>
@@ -415,9 +432,20 @@ export default function BackupOpsPage() {
             </div>
             <div>
               <strong>Artifacts:</strong>
-              <div>DB: {selected.db_path || "-"}</div>
-              <div>Media: {selected.media_path || "-"}</div>
-              <div>Infra: {selected.infra_path || "-"}</div>
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 6 }}>
+                <Button variant="secondary" onClick={() => exportBackup(selected.id, "db")} disabled={busy}>
+                  Download DB
+                </Button>
+                <Button variant="secondary" onClick={() => exportBackup(selected.id, "media")} disabled={busy}>
+                  Download Media
+                </Button>
+                <Button variant="secondary" onClick={() => exportBackup(selected.id, "infra")} disabled={busy}>
+                  Download Infra
+                </Button>
+                <Button variant="secondary" onClick={() => exportBackup(selected.id, "meta")} disabled={busy}>
+                  Download Meta
+                </Button>
+              </div>
             </div>
             <div>
               <strong>Checksums:</strong>

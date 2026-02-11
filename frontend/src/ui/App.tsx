@@ -21,6 +21,7 @@ import BlockLibrary from "../views/admin/BlockLibrary";
 import ReportPrintingWorklist from "../views/ReportPrintingWorklist";
 import UserSettings from "../views/admin/UserSettings";
 import BackupOpsPage from "../views/admin/BackupOpsPage";
+import RadiologyReportPrintPage from "../views/RadiologyReportPrintPage";
 
 
 import ModuleDisabled from "../views/ModuleDisabled";
@@ -295,10 +296,17 @@ function Shell() {
 }
 
 export default function App() {
+  function PrintRouteGuard() {
+    const { token } = useAuth();
+    if (!token) return <Navigate to="/login" replace />;
+    return <RadiologyReportPrintPage />;
+  }
+
   return (
     <AuthProvider>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/print/report/:service_visit_item_id" element={<PrintRouteGuard />} />
         <Route path="/*" element={<Shell />} />
       </Routes>
     </AuthProvider>

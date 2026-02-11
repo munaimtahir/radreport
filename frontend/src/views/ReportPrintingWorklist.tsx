@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useAuth } from "../ui/auth";
 import { apiGet } from "../ui/api";
 import { theme } from "../theme";
 import PageHeader from "../ui/components/PageHeader";
 import Button from "../ui/components/Button";
 import ErrorAlert from "../ui/components/ErrorAlert";
-import { fetchPublishedPdf, fetchReportPdf } from "../ui/reporting";
 
 interface ServiceVisitItem {
     id: string;
@@ -52,22 +50,7 @@ export default function ReportPrintingWorklist() {
     };
 
     const handlePrint = async (item: ServiceVisitItem) => {
-        try {
-            // Fetch history to get the latest version
-            const history = await apiGet(`/reporting/workitems/${item.id}/publish-history/`, token);
-            let blob: Blob;
-            if (history && history.length > 0) {
-                const latestVersion = history[0].version; // History is ordered by -version
-                blob = await fetchPublishedPdf(item.id, latestVersion, token);
-            } else {
-                // Fallback to live report PDF if no snapshots found (might be legacy or not snapshotted)
-                blob = await fetchReportPdf(item.id, token);
-            }
-            const url = window.URL.createObjectURL(blob);
-            window.open(url, "_blank");
-        } catch (e: any) {
-            setError("Failed to fetch PDF: " + e.message);
-        }
+        window.open(`/print/report/${item.id}`, "_blank");
     };
 
     const filteredItems = items.filter(item =>

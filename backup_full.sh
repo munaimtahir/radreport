@@ -244,7 +244,17 @@ apply_retention() {
   local dir
 
   for dir in "${cron_dirs[@]}"; do
-    if [[ -f "$dir/meta.json" ]] && grep -q '"trigger": "cron"' "$dir/meta.json" && grep -q '"db": true' "$dir/meta.json"; then
+    if [[ -f "$dir/meta.json" ]] && python3 - "$dir/meta.json" <<'PY' >/dev/null 2>&1
+import json,sys
+p=sys.argv[1]
+try:
+    m=json.load(open(p))
+    ok=(m.get("trigger")=="cron" and bool(m.get("success",{}).get("db")))
+    raise SystemExit(0 if ok else 1)
+except Exception:
+    raise SystemExit(1)
+PY
+    then
       keep+=("$dir")
     fi
   done

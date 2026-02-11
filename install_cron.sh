@@ -13,7 +13,7 @@ cleaned="$(printf '%s\n' "$existing" | grep -v -F "${PROJECT_ROOT}/backup_full.s
 {
   printf '%s\n' "$cleaned"
   printf '%s\n' "$CRON_LINE"
-} | sed '/^$/d' | crontab -
+} | sed '/^$/d' | awk '!seen[$0]++' | crontab -
 
 echo "Installed cron entry: ${CRON_LINE}"
 crontab -l
