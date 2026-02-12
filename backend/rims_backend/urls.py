@@ -177,6 +177,8 @@ def receipt_pdf_alt(request, visit_id):
 
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("healthz", health),
+    path("healthz/", health),
     path("api/health/", health),
     path("api/health/auth/", health_auth),
     path("api/auth/me/", auth_me),
