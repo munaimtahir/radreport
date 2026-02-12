@@ -13,7 +13,7 @@ services:
     networks:
       - rims_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-rims}"]
+      test: [ "CMD-SHELL", "pg_isready -U ${DB_USER:-rims}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -35,7 +35,7 @@ services:
       DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-api.rims.alshifalab.pk,rims.alshifalab.pk,localhost,127.0.0.1}
       CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-https://rims.alshifalab.pk}
       CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-https://rims.alshifalab.pk,https://api.rims.alshifalab.pk}
-      
+
       # Database settings
       DB_ENGINE: postgresql
       DB_NAME: ${DB_NAME:-rims}
@@ -46,7 +46,7 @@ services:
       BACKUP_ROOT: ${BACKUP_ROOT:-/app/backups}
       BACKUP_RCLONE_REMOTE: ${BACKUP_RCLONE_REMOTE:-offsite}
       BACKUP_RCLONE_PATH: ${BACKUP_RCLONE_PATH:-radreport-backups}
-      
+
       # Optional: Gunicorn tuning
       GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-120}
@@ -81,8 +81,8 @@ networks:
 
 volumes:
   PROD_radreport_pgdata:
-    driver: local
+    name: PROD_radreport_pgdata
   PROD_radreport_media_data:
-    driver: local
+    name: PROD_radreport_media_data
   PROD_radreport_static_data:
-    driver: local
+    name: PROD_radreport_static_data
