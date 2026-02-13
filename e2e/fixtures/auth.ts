@@ -1,34 +1,24 @@
 import { Page, expect } from '@playwright/test';
-import { E2E_USER, E2E_PASS, E2E_BASE_URL } from '../utils/env';
+import { E2E_BASE_URL, E2E_USER, E2E_PASS } from '../utils/env';
 import fs from 'fs';
 import path from 'path';
 
-export const AUTH_STATE_PATH = path.join(__dirname, '../../.auth/state.json');
+export const AUTH_STATE_PATH = path.join(__dirname, '../.auth/state.json');
 
 export async function ensureAuth(page: Page) {
-  if (fs.existsSync(AUTH_STATE_PATH)) {
-    const stats = fs.statSync(AUTH_STATE_PATH);
-    const mtime = stats.mtimeMs;
-    const now = Date.now();
-    // If state is less than 1 hour old, reuse it
-    if (now - mtime < 3600000) {
-      return;
-    }
-  }
-
   await page.goto(`${E2E_BASE_URL}/login`);
 
-  // Try to use data-testid if available, fallback to placeholder
-  const emailInput = page.locator('[data-testid="login-email"]').or(page.getByPlaceholder(/email|username/i));
+  // Use explicit selectors from current Login view with a fallback.
+  const usernameInput = page.locator('[data-testid="login-username"]').or(page.getByPlaceholder(/username/i));
   const passwordInput = page.locator('[data-testid="login-password"]').or(page.getByPlaceholder(/password/i));
   const submitBtn = page.locator('[data-testid="login-submit"]').or(page.getByRole('button', { name: /login/i }));
 
-  await emailInput.fill(E2E_USER);
+  await usernameInput.fill(E2E_USER);
   await passwordInput.fill(E2E_PASS);
   await submitBtn.click();
 
-  // Wait for navigation to dashboard or home
-  await expect(page).toHaveURL(/\/(dashboard)?$/);
+  // Auth success gate: logout button is rendered in shell when token/user load succeeds.
+  await expect(page.getByRole('button', { name: /logout/i })).toBeVisible();
 
   // Ensure .auth directory exists
   const authDir = path.dirname(AUTH_STATE_PATH);

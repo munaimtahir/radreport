@@ -65,7 +65,7 @@ services:
     container_name: rims_caddy_local
     restart: unless-stopped
     ports:
-      - "8084:80"
+      - "127.0.0.1:8080:80"
     volumes:
       - ./Caddyfile.local:/etc/caddy/Caddyfile
       - caddy_data:/data

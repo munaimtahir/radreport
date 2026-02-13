@@ -72,8 +72,19 @@ class ReportTemplateV2ViewSet(viewsets.ModelViewSet):
     def preview_narrative(self, request, pk=None):
         instance = self.get_object()
         values_json = request.data.get("values_json", {})
-        narrative_json = generate_narrative_v2(instance, values_json)
-        return Response({"narrative_json": narrative_json})
+        include_debug = (
+            request.query_params.get("debug") in {"1", "true", "True"}
+            and (request.user.is_superuser or request.user.is_staff)
+        )
+        narrative_json = generate_narrative_v2(instance, values_json, include_composer_debug=include_debug)
+        payload = {
+            "narrative_json": narrative_json,
+            "narrative_by_organ": narrative_json.get("narrative_by_organ", []),
+            "narrative_text": narrative_json.get("narrative_text", ""),
+        }
+        if include_debug:
+            payload["composer_debug"] = narrative_json.get("composer_debug", {})
+        return Response(payload)
 
 
 class ServiceReportTemplateV2ViewSet(viewsets.ModelViewSet):
@@ -247,17 +258,31 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
                     break
 
         findings_blocks = []
-        for section in narrative_json.get("sections", []) if isinstance(narrative_json, dict) else []:
-            if not isinstance(section, dict):
-                continue
-            lines = self._listify(section.get("lines"))
-            if lines:
+        if isinstance(narrative_json, dict) and isinstance(narrative_json.get("narrative_by_organ"), list):
+            for entry in narrative_json.get("narrative_by_organ", []):
+                if not isinstance(entry, dict):
+                    continue
+                paragraph = str(entry.get("paragraph", "")).strip()
+                if not paragraph:
+                    continue
                 findings_blocks.append(
                     {
-                        "heading": str(section.get("title", "")).strip(),
-                        "lines": lines,
+                        "heading": str(entry.get("label", "")).strip(),
+                        "paragraphs": [paragraph],
                     }
                 )
+        if not findings_blocks:
+            for section in narrative_json.get("sections", []) if isinstance(narrative_json, dict) else []:
+                if not isinstance(section, dict):
+                    continue
+                lines = self._listify(section.get("lines"))
+                if lines:
+                    findings_blocks.append(
+                        {
+                            "heading": str(section.get("title", "")).strip(),
+                            "lines": lines,
+                        }
+                    )
 
         if not findings_blocks:
             value_lines = []
@@ -332,6 +357,8 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
                 "schema_version": "v2",
                 "values_json": serializer.data["values_json"],
                 "narrative_json": serializer.data.get("narrative_json", {}),
+                "narrative_by_organ": (serializer.data.get("narrative_json") or {}).get("narrative_by_organ", []),
+                "narrative_text": (serializer.data.get("narrative_json") or {}).get("narrative_text", ""),
                 "status": serializer.data.get("status"),
                 "last_saved_at": serializer.data.get("updated_at"),
                 "is_published": instance.is_published,
@@ -364,7 +391,15 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             action="save_draft",
             actor=request.user,
         )
-        return Response({"schema_version": "v2", "saved": True, "narrative_json": instance.narrative_json})
+        return Response(
+            {
+                "schema_version": "v2",
+                "saved": True,
+                "narrative_json": instance.narrative_json,
+                "narrative_by_organ": (instance.narrative_json or {}).get("narrative_by_organ", []),
+                "narrative_text": (instance.narrative_json or {}).get("narrative_text", ""),
+            }
+        )
 
     @action(detail=True, methods=["post"])
     def submit(self, request, pk=None):
@@ -392,17 +427,47 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         item = self._get_item(pk)
         template_v2 = self._get_v2_template(item)
         instance = self._get_or_create_instance(item, template_v2, request.user)
-        narrative_json = generate_narrative_v2(template_v2, instance.values_json)
+        include_debug = (
+            request.query_params.get("debug") in {"1", "true", "True"}
+            and (request.user.is_superuser or request.user.is_staff)
+        )
+        narrative_json = generate_narrative_v2(template_v2, instance.values_json, include_composer_debug=include_debug)
         instance.narrative_json = narrative_json
         instance.save(update_fields=["narrative_json", "updated_at"])
-        return Response({"schema_version": "v2", "status": instance.status, "narrative_json": narrative_json})
+        payload = {
+            "schema_version": "v2",
+            "status": instance.status,
+            "narrative_json": narrative_json,
+            "narrative_by_organ": narrative_json.get("narrative_by_organ", []),
+            "narrative_text": narrative_json.get("narrative_text", ""),
+        }
+        if include_debug:
+            payload["composer_debug"] = narrative_json.get("composer_debug", {})
+        return Response(payload)
 
     @action(detail=True, methods=["get"], url_path="narrative")
     def narrative(self, request, pk=None):
         item = self._get_item(pk)
         template_v2 = self._get_v2_template(item)
         instance = self._get_or_create_instance(item, template_v2, request.user)
-        return Response({"schema_version": "v2", "status": instance.status, "narrative_json": instance.narrative_json})
+        include_debug = (
+            request.query_params.get("debug") in {"1", "true", "True"}
+            and (request.user.is_superuser or request.user.is_staff)
+        )
+        if include_debug:
+            narrative_json = generate_narrative_v2(template_v2, instance.values_json, include_composer_debug=True)
+        else:
+            narrative_json = instance.narrative_json or {}
+        payload = {
+            "schema_version": "v2",
+            "status": instance.status,
+            "narrative_json": narrative_json,
+            "narrative_by_organ": narrative_json.get("narrative_by_organ", []),
+            "narrative_text": narrative_json.get("narrative_text", ""),
+        }
+        if include_debug:
+            payload["composer_debug"] = narrative_json.get("composer_debug", {})
+        return Response(payload)
 
     @action(detail=True, methods=["get"], url_path="report-pdf")
     def report_pdf(self, request, pk=None):

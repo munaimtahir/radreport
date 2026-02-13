@@ -1,4 +1,5 @@
 import { expect, Locator, Page } from '@playwright/test';
+import { bootstrapV2ReportByTemplateCode, loginAPI } from '../fixtures/api';
 
 function escapeRegex(text: string) {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -15,7 +16,7 @@ async function findFieldControlByLabel(page: Page, labelText: string): Promise<L
 
 export async function gotoReporting(page: Page) {
   await page.goto('/reporting/worklist');
-  await expect(page.getByRole('heading', { name: /reporting worklist/i })).toBeVisible();
+  await expect(page.getByTestId('reporting-worklist')).toBeVisible();
 }
 
 export async function openOrCreateReport(page: Page, templateCode: string) {
@@ -28,7 +29,10 @@ export async function openOrCreateReport(page: Page, templateCode: string) {
     return;
   }
 
-  throw new Error(`No worklist row found for template ${templateCode}. Seed data/work item is required for this template.`);
+  const session = await loginAPI();
+  const bootstrap = await bootstrapV2ReportByTemplateCode(session, templateCode);
+  await page.goto(`/reporting/worklist/${bootstrap.workItemId}/report`);
+  await expect(page).toHaveURL(/\/reporting\/worklist\/[^/]+\/report/);
 }
 
 export async function setFieldByLabel(page: Page, labelText: string, value: string | number) {

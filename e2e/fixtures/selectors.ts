@@ -10,12 +10,12 @@ export const SELECTORS = {
     openReport: '[data-testid="open-report"]',
   },
   report: {
-    title: '[data-testid="report-title"]',
+    title: '[data-testid="report-template-name"]',
     save: '[data-testid="report-save"]',
     publish: '[data-testid="report-publish"]',
     status: '[data-testid="report-status"]',
     preview: '[data-testid="report-preview"]',
-    v2Marker: '[data-testid="v2-report-ui"]',
+    v2Marker: '[data-testid="reporting-v2"]',
     field: (key: string) => `[data-testid="field-${key}"]`,
   },
 };

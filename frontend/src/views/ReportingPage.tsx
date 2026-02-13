@@ -235,6 +235,10 @@ export default function ReportingPage() {
         return <div style={{ padding: 20 }}>No template found for this service.</div>;
     }
 
+    const narrativeByOrgan = (narrative?.narrative_by_organ && narrative.narrative_by_organ.length > 0)
+        ? narrative.narrative_by_organ
+        : ((narrative?.narrative_json?.narrative_by_organ as Array<{ organ: string; label: string; paragraph: string }>) || []);
+
     return (
         <div data-testid="reporting-v2" style={{ padding: 20, display: "flex", flexDirection: "column", gap: 16 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -294,6 +298,21 @@ export default function ReportingPage() {
 
             {narrative && (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                    <div style={{ fontWeight: 600 }}>Narrative Preview</div>
+                    {narrativeByOrgan.length > 0 ? (
+                        <div data-testid="organ-sections" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                            {narrativeByOrgan.map((section, idx) => (
+                                <div key={`${section.organ}-${idx}`} data-testid={`organ-section-${section.organ}`}>
+                                    <div style={{ fontSize: 12, textTransform: "uppercase", letterSpacing: 0.4, color: theme.colors.textTertiary, marginBottom: 2 }}>
+                                        {section.label}
+                                    </div>
+                                    <p data-testid={`organ-section-paragraph-${section.organ}`} style={{ margin: 0, lineHeight: 1.5 }}>{section.paragraph}</p>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div style={{ fontSize: 13, color: theme.colors.textSecondary }}>No composed organ narrative available.</div>
+                    )}
                     <div style={{ fontWeight: 600 }}>Narrative JSON</div>
                     <textarea
                         value={JSON.stringify(narrative.narrative_json, null, 2)}

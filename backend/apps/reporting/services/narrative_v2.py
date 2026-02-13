@@ -11,6 +11,7 @@ import re
 import ast
 import operator
 import math
+from .narrative_composer import compose_narrative
 
 logger = logging.getLogger(__name__)
 
@@ -94,7 +95,7 @@ def safe_eval(expr, context):
 
 # --- Main Engine ---
 
-def generate_narrative_v2(template_v2, values_json: dict) -> dict:
+def generate_narrative_v2(template_v2, values_json: dict, include_composer_debug: bool = False) -> dict:
     narrative_rules = template_v2.narrative_rules or {}
 
     # 1. Computed Fields
@@ -121,7 +122,7 @@ def generate_narrative_v2(template_v2, values_json: dict) -> dict:
     if computed_values:
         result["computed"] = computed_values
 
-    return result
+    return compose_narrative(result, values_json=values_json, include_debug=include_composer_debug)
 
 def _process_sections(sections_def, values, schema):
     rendered_sections = []

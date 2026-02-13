@@ -14,6 +14,8 @@ export interface ReportValuesResponse {
     is_published?: boolean;
     values_json?: Record<string, any>;
     narrative_json?: Record<string, any>;
+    narrative_by_organ?: Array<{ organ: string; label: string; paragraph: string }>;
+    narrative_text?: string;
     schema_version?: string;
     last_saved_at?: string;
     last_published_at?: string;
@@ -46,6 +48,9 @@ export interface NarrativeResponseV2 {
     schema_version: "v2";
     status: string;
     narrative_json: Record<string, any>;
+    narrative_by_organ?: Array<{ organ: string; label: string; paragraph: string }>;
+    narrative_text?: string;
+    composer_debug?: Record<string, any>;
 }
 
 export interface ReportPrintPayload {

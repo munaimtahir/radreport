@@ -204,12 +204,27 @@ class ReportPDFGeneratorV2:
         narrative = self.input_narrative_json or report.narrative_json or {}
 
         findings = []
-        for block in narrative.get("sections", []) if isinstance(narrative, dict) else []:
-            if not isinstance(block, dict):
-                continue
-            lines = self._listify(block.get("lines"))
-            if lines:
-                findings.append({"heading": str(block.get("title", "")).strip(), "lines": lines})
+        if isinstance(narrative, dict) and isinstance(narrative.get("narrative_by_organ"), list):
+            for block in narrative.get("narrative_by_organ", []):
+                if not isinstance(block, dict):
+                    continue
+                paragraph = str(block.get("paragraph", "")).strip()
+                if not paragraph:
+                    continue
+                findings.append(
+                    {
+                        "heading": str(block.get("label", "")).strip(),
+                        "paragraphs": [paragraph],
+                    }
+                )
+
+        if not findings:
+            for block in narrative.get("sections", []) if isinstance(narrative, dict) else []:
+                if not isinstance(block, dict):
+                    continue
+                lines = self._listify(block.get("lines"))
+                if lines:
+                    findings.append({"heading": str(block.get("title", "")).strip(), "lines": lines})
 
         if not findings:
             fallback_lines = []

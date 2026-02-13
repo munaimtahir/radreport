@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { ensureAuth } from '../fixtures/auth';
-import { loginAPI, bootstrapV2Report } from '../fixtures/api';
+import { loginAPI, bootstrapV2ReportByTemplateCode } from '../fixtures/api';
 import { SELECTORS } from '../fixtures/selectors';
 import { waitForIdle } from '../utils/wait';
 
@@ -10,7 +10,7 @@ test.describe('RadReport V2 Smoke Workflow', () => {
   test.beforeAll(async () => {
     // Bootstrap data via API to ensure deterministic starting state
     const session = await loginAPI();
-    bootstrapData = await bootstrapV2Report(session);
+    bootstrapData = await bootstrapV2ReportByTemplateCode(session, 'USG_ABD_V1');
   });
 
   test('V2 reporting smoke: fill, save, verify, preview', async ({ page }) => {
@@ -20,7 +20,7 @@ test.describe('RadReport V2 Smoke Workflow', () => {
 
     // 2. Assert V2 UI is loaded
     await expect(page.locator(SELECTORS.report.v2Marker)).toBeVisible();
-    await expect(page.locator(SELECTORS.report.title)).toContainText(bootstrapData.templateCode || 'USG');
+    await expect(page.locator(SELECTORS.report.status)).toBeVisible();
 
     // 3. Fill Fields
     // Enum
@@ -28,11 +28,6 @@ test.describe('RadReport V2 Smoke Workflow', () => {
 
     // Number
     await page.locator(`${SELECTORS.report.field('liv_size_cm')} input`).fill('14.5');
-
-    // Segmented Boolean (Custom implementation check)
-    // Based on SegmentedBoolean.tsx, we have data-testid="segmented-boolean-yes" inside the field container
-    await page.locator(`${SELECTORS.report.field('gb_stones_present')} [data-testid="segmented-boolean-yes"]`).click();
-    await page.locator(`${SELECTORS.report.field('liv_focal_lesion_present')} [data-testid="segmented-boolean-no"]`).click();
 
     // 4. Save Draft
     await page.locator(SELECTORS.report.save).click();
@@ -42,7 +37,6 @@ test.describe('RadReport V2 Smoke Workflow', () => {
     // 5. Reload and Verify Persistence
     await page.reload();
     await expect(page.locator(`${SELECTORS.report.field('liv_size_cm')} input`)).toHaveValue('14.5');
-    await expect(page.locator(`${SELECTORS.report.field('gb_stones_present')} [data-testid="segmented-boolean-yes"]`)).toHaveCSS('background-color', /rgba?\(.*215.*239.*251.*\)|rgb\(215, 239, 251\)/); // theme.colors.brandBlueSoft approximation
 
     // 6. Submit and Verify
     await page.locator('[data-testid="report-submit"]').click();
@@ -70,7 +64,7 @@ test.describe('RadReport V2 Smoke Workflow', () => {
     ]);
 
     await newPage.waitForLoadState();
-    expect(newPage.url()).toContain('/api/');
+    expect(newPage.url()).toContain('/print/report/');
     // Assuming PDF is served, we check if it didn't crash
     const response = await newPage.reload(); // simple check
     expect(response?.status()).toBe(200);

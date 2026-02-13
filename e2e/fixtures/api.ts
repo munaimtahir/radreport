@@ -12,6 +12,48 @@ export interface BootstrapData {
   templateCode: string;
 }
 
+async function createWorkItemForService(session: AuthSession, serviceId: string): Promise<BootstrapData> {
+  const patientResponse = await fetch(`${E2E_API_URL}/api/patients/`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      name: `E2E Test Patient ${Date.now()}`,
+      gender: 'male',
+      age: 30,
+      phone: '1234567890',
+    }),
+  });
+  const patient = await patientResponse.json();
+
+  const visitResponse = await fetch(`${E2E_API_URL}/api/workflow/visits/create_visit/`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${session.access}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      patient_id: patient.id,
+      service_ids: [serviceId],
+      subtotal: "1000",
+      total_amount: "1000",
+      amount_paid: "1000",
+      payment_method: "cash"
+    }),
+  });
+  const visit = await visitResponse.json();
+  const workItem = visit.items[0];
+
+  return {
+    patientId: patient.id,
+    visitId: visit.id,
+    workItemId: workItem.id,
+    templateCode: "",
+  };
+}
+
 export async function loginAPI(): Promise<AuthSession> {
   const response = await fetch(`${E2E_API_URL}/api/auth/token/`, {
     method: 'POST',
@@ -48,45 +90,34 @@ export async function bootstrapV2Report(session: AuthSession): Promise<Bootstrap
   const template = await templateResponse.json();
   const templateCode = template.code;
 
-  // 2. Create a patient
-  const patientResponse = await fetch(`${E2E_API_URL}/api/patients/`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${session.access}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      name: `E2E Test Patient ${Date.now()}`,
-      gender: 'male',
-      age: 30,
-      phone: '1234567890',
-    }),
-  });
-  const patient = await patientResponse.json();
+  const created = await createWorkItemForService(session, serviceId);
+  return { ...created, templateCode };
+}
 
-  // 3. Create a service visit with that service
-  const visitResponse = await fetch(`${E2E_API_URL}/api/workflow/visits/create_visit/`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${session.access}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      patient_id: patient.id,
-      service_ids: [serviceId],
-      subtotal: "1000",
-      total_amount: "1000",
-      amount_paid: "1000",
-      payment_method: "cash"
-    }),
+export async function bootstrapV2ReportByTemplateCode(session: AuthSession, templateCode: string): Promise<BootstrapData> {
+  const servicesResponse = await fetch(`${E2E_API_URL}/api/reporting/service-templates-v2/`, {
+    headers: { Authorization: `Bearer ${session.access}` },
   });
-  const visit = await visitResponse.json();
-  const workItem = visit.items[0];
+  const mappings = await servicesResponse.json();
 
-  return {
-    patientId: patient.id,
-    visitId: visit.id,
-    workItemId: workItem.id,
-    templateCode: templateCode,
-  };
+  let selectedMapping: any = null;
+  for (const mapping of mappings) {
+    if (!mapping?.is_active || !mapping?.is_default) continue;
+    const templateResponse = await fetch(`${E2E_API_URL}/api/reporting/templates-v2/${mapping.template}/`, {
+      headers: { Authorization: `Bearer ${session.access}` },
+    });
+    if (!templateResponse.ok) continue;
+    const template = await templateResponse.json();
+    if ((template?.code || "").toUpperCase() === templateCode.toUpperCase()) {
+      selectedMapping = mapping;
+      break;
+    }
+  }
+
+  if (!selectedMapping) {
+    throw new Error(`No active default service mapping found for template ${templateCode}`);
+  }
+
+  const created = await createWorkItemForService(session, String(selectedMapping.service));
+  return { ...created, templateCode };
 }

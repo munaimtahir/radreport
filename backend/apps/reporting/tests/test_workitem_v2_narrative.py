@@ -98,6 +98,10 @@ class WorkItemV2NarrativeAPITests(TestCase):
         self.assertIn("impression", narrative)
         self.assertEqual(narrative["sections"][0]["lines"][0], "Lungs: Clear")
         self.assertEqual(narrative["impression"][0], "Normal study.")
+        self.assertIn("narrative_by_organ", narrative)
+        self.assertIn("narrative_text", narrative)
+        self.assertIn("narrative_by_organ", resp.data)
+        self.assertIn("narrative_text", resp.data)
         
         # Check DB persistence
         instance = ReportInstanceV2.objects.get(work_item=self.item)
