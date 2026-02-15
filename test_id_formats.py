@@ -59,6 +59,8 @@ def test_formats():
 
     # Receipt
     receipt = get_next_receipt_number(increment=True)
+    period_yymm_receipt = timezone.now().strftime("%y%m")
+    expected_prefix = f"{period_yymm_receipt}-"
     print(f"\nReceipt: {receipt}")
     if receipt.startswith(expected_prefix) and len(receipt) == len(expected_prefix) + 4:
         print(f"  ✓ Format is CORRECT (YYMM-####)")
