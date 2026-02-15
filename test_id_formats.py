@@ -9,7 +9,6 @@ Test script to verify the new ID formats using apps.sequences:
 import os
 import sys
 import django
-from django.conf import settings
 
 # Setup Django
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "backend")))
