@@ -1,4 +1,9 @@
 #!/bin/bash
+set -e
+set -x
+
+# Ensure backend directory exists
+mkdir -p backend
 
 # Ensure backend/.env.local exists
 if [ ! -f backend/.env.local ]; then
@@ -15,7 +20,11 @@ DB_PASSWORD=rims
 DB_HOST=db
 DB_PORT=5432
 EOT
+else
+    echo "backend/.env.local already exists"
 fi
+
+ls -l backend/.env.local
 
 # Start all services in detached mode
 docker compose -f docker-compose.dev.yml up -d
