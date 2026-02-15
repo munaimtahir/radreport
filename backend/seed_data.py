@@ -46,6 +46,11 @@ def seed_data():
         mod, created = Modality.objects.get_or_create(code=code, defaults={"name": name})
         print(f"✓ {'Created' if created else 'Exists'}: {code} - {name}")
     
+    # Seed RBAC groups (no demo users by default)
+    print("\n[2.5/3] Seeding RBAC groups...")
+    call_command("seed_roles")
+    print("✓ seed_roles complete")
+
     # Call app-specific seeders
     print("\n[3/3] Calling app seeders...")
     try:

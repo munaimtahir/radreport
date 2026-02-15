@@ -20,10 +20,11 @@ RUN pip install --no-cache-dir -r /tmp/requirements.txt
 # Production stage
 FROM python:3.11-slim
 
-# Install runtime dependencies only (PostgreSQL client libraries)
+# Install runtime dependencies (PostgreSQL client, rclone for backups)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     postgresql-client \
     libpq5 \
+    rclone \
     libcairo2 \
     libpango-1.0-0 \
     libpangoft2-1.0-0 \

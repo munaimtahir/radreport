@@ -9,7 +9,6 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
 from apps.patients.api import PatientViewSet
 from apps.catalog.api import ModalityViewSet, ServiceViewSet
-from apps.studies.api import StudyViewSet, VisitViewSet, ReceiptSettingsViewSet
 
 from apps.audit.api import AuditLogViewSet
 from apps.workflow.api import (
@@ -46,10 +45,7 @@ router = DefaultRouter()
 router.register(r"patients", PatientViewSet, basename="patients")
 router.register(r"modalities", ModalityViewSet, basename="modalities")
 router.register(r"services", ServiceViewSet, basename="services")
-router.register(r"studies", StudyViewSet, basename="studies")
-router.register(r"visits", VisitViewSet, basename="visits")
 router.register(r"audit", AuditLogViewSet, basename="audit")
-router.register(r"receipt-settings", ReceiptSettingsViewSet, basename="receipt-settings")
 # Workflow endpoints
 router.register(r"workflow/service-catalog", ServiceCatalogViewSet, basename="service-catalog")
 router.register(r"workflow/visits", ServiceVisitViewSet, basename="service-visits")
@@ -158,14 +154,14 @@ def receipt_pdf_alt(request, visit_id):
         from rest_framework import status
         return Response({"detail": "Invoice not found"}, status=status.HTTP_404_NOT_FOUND)
     
-    # Generate receipt number if not exists
+    # Generate receipt number if not exists (idempotent)
     if not invoice.receipt_number:
-        from apps.studies.models import ReceiptSequence
+        from apps.sequences.models import get_next_receipt_number
         from django.db import transaction
         with transaction.atomic():
             invoice.refresh_from_db()
             if not invoice.receipt_number:
-                invoice.receipt_number = ReceiptSequence.get_next_receipt_number()
+                invoice.receipt_number = get_next_receipt_number(increment=True)
                 invoice.save()
     
     # Generate receipt PDF using snapshot data
@@ -207,6 +203,7 @@ urlpatterns = [
     path("api/dashboard/worklist/", dashboard_worklist, name="dashboard-worklist"),
     path("api/dashboard/flow/", dashboard_flow, name="dashboard-flow"),
     path("api/reporting/", include("apps.reporting.urls")),
+    path("api/printing/", include("apps.printing.urls")),
     path("api/", include(router.urls)),
 
 ]

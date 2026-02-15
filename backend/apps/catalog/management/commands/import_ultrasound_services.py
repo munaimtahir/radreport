@@ -5,7 +5,6 @@ This command will delete all existing services and import new ones from the CSV
 import csv
 from django.core.management.base import BaseCommand
 from apps.catalog.models import Modality, Service
-from apps.studies.models import OrderItem, Study
 
 
 class Command(BaseCommand):
@@ -26,18 +25,8 @@ class Command(BaseCommand):
         self.stdout.write(self.style.SUCCESS("Importing Ultrasound Services"))
         self.stdout.write("=" * 60)
         
-        # Step 1: Delete all existing services and related objects
-        self.stdout.write("\n[1/3] Deleting all existing services and related data...")
-        
-        # Delete OrderItems first (they reference services)
-        order_items_deleted = OrderItem.objects.all().delete()[0]
-        self.stdout.write(self.style.SUCCESS(f"✓ Deleted {order_items_deleted} order items"))
-        
-        # Delete Studies next (they also reference services)
-        studies_deleted = Study.objects.all().delete()[0]
-        self.stdout.write(self.style.SUCCESS(f"✓ Deleted {studies_deleted} studies"))
-        
-        # Now delete services
+        # Step 1: Delete all existing services (run on empty/fresh DB; ServiceVisitItem PROTECTs Service)
+        self.stdout.write("\n[1/3] Deleting all existing services...")
         deleted_count = Service.objects.all().delete()[0]
         self.stdout.write(self.style.SUCCESS(f"✓ Deleted {deleted_count} existing services"))
         

@@ -52,8 +52,8 @@ services:
       GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-120}
       SECURE_PROXY_SSL_HEADER: HTTP_X_FORWARDED_PROTO,https
     volumes:
-      # Persist media files
-      - media_data:/app/media
+      # Bind mount media for host Caddy to serve /media
+      - ./data/media:/app/media
       # Optionally mount staticfiles if serving via Caddy on host
       - static_data:/app/staticfiles
     ports:
@@ -81,8 +81,6 @@ networks:
 
 volumes:
   postgres_data:
-    driver: local
-  media_data:
     driver: local
   static_data:
     driver: local

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useAuth } from "../ui/auth";
-import { apiGet, apiPatch, apiPost } from "../ui/api";
+import { apiGet, apiPatch, apiUpload } from "../ui/api";
 import PageHeader from "../ui/components/PageHeader";
 import ErrorAlert from "../ui/components/ErrorAlert";
 import SuccessAlert from "../ui/components/SuccessAlert";
@@ -97,7 +97,7 @@ export default function PrintingSettings() {
     try {
       const form = new FormData();
       form.append(kind, file);
-      await apiPost(`/printing/config/upload-${kind}/`, token, form as any);
+      await apiUpload(`/printing/config/upload-${kind}/`, token, form);
       await loadConfig();
       setStatus("Uploaded");
     } catch (e: any) {

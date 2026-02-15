@@ -13,9 +13,9 @@ from rest_framework import permissions
 
 # Desk roles (canonical Django group names)
 DESK_ROLES = {
-    "REGISTRATION": "registration",
-    "PERFORMANCE": "performance",
-    "VERIFICATION": "verification",
+    "REGISTRATION": "registration_desk",
+    "PERFORMANCE": "performance_desk",
+    "VERIFICATION": "verification_desk",
 }
 
 

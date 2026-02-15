@@ -358,8 +358,9 @@ def _draw_receipt_copy(
         if os.path.exists(static_logo):
             logo_path = static_logo
     header_text = getattr(receipt_settings, "header_text", None) or "Consultant Place Clinic"
+    footer_text = getattr(receipt_settings, "footer_text", None) or LOCKED_FOOTER_TEXT
 
-    # Draw header image if available
+    # Draw header image if available (receipt_banner)
     header_height = HEADER_IMAGE_HEIGHT * mm
     if header_image_path:
         _draw_image_fit(
@@ -393,8 +394,8 @@ def _draw_receipt_copy(
     canvas.drawCentredString(x + width / 2, current_y, header_text)
     current_y -= 5 * mm
 
-    # Address and contact (smaller, centered)
-    address_lines = LOCKED_FOOTER_TEXT.split("\n")
+    # Address and contact (smaller, centered) - from receipt_footer_text
+    address_lines = (footer_text or "").strip().split("\n") or [""]
     canvas.setFont("Helvetica", 7)
     canvas.setFillColor(black)
     if address_lines:  # Draw first line directly

@@ -25,10 +25,11 @@ INSTALLED_APPS = [
     "apps.audit",
     "apps.patients",
     "apps.catalog",
-    "apps.studies",
     "apps.workflow",
     "apps.consultants",
     "apps.reporting",
+    "apps.sequences",
+    "apps.printing",
     "apps.backups",
 
 

@@ -257,27 +257,15 @@ class ServiceViewSet(viewsets.ModelViewSet):
         """
         limit = int(request.query_params.get("limit", 5))
         
-        # Count usage from ServiceVisitItem (workflow) and OrderItem (legacy)
+        # Count usage from ServiceVisitItem only
         from apps.workflow.models import ServiceVisitItem
-        from apps.studies.models import OrderItem
-        
-        # Count from ServiceVisitItem
+
         workflow_counts = ServiceVisitItem.objects.values('service_id').annotate(
             count=Count('id')
         ).values('service_id', 'count')
-        
-        # Count from OrderItem (legacy)
-        legacy_counts = OrderItem.objects.values('service_id').annotate(
-            count=Count('id')
-        ).values('service_id', 'count')
-        
-        # Combine counts
+
         usage_map = {}
         for item in workflow_counts:
-            service_id = item['service_id']
-            usage_map[service_id] = usage_map.get(service_id, 0) + item['count']
-        
-        for item in legacy_counts:
             service_id = item['service_id']
             usage_map[service_id] = usage_map.get(service_id, 0) + item['count']
         

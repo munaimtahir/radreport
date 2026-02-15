@@ -219,9 +219,21 @@ class PDFBase:
         ])
     
     def get_receipt_settings(self):
-        """Get receipt settings if available"""
+        """Get receipt settings from ReceiptBrandingConfig (attr names match receipt.py expectations)."""
+        class _Defaults:
+            header_text = "Consultant Place Clinic"
+            footer_text = ""
+            logo_image = None
+            header_image = None
+
         try:
-            from apps.studies.models import ReceiptSettings
-            return ReceiptSettings.get_settings()
+            from apps.printing.models import ReceiptBrandingConfig
+            r = ReceiptBrandingConfig.get_singleton()
+            class Adapter:
+                header_text = r.receipt_header_text or _Defaults.header_text
+                footer_text = r.receipt_footer_text or _Defaults.footer_text
+                logo_image = r.receipt_logo
+                header_image = r.receipt_banner
+            return Adapter()
         except Exception:
-            return None
+            return _Defaults()

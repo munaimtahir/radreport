@@ -1,6 +1,6 @@
 import uuid
-from django.db import models
-from django.utils import timezone
+from django.db import models, transaction
+
 
 class Patient(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -25,71 +25,14 @@ class Patient(models.Model):
             models.Index(fields=["name"]),
         ]
 
-    def generate_mrn(self):
-        """Generate a unique MR number based on date and sequence"""
-        import time
-        now = timezone.now()
-        prefix = now.strftime("%Y%m%d")
-        # Get count of patients today to append sequence number
-        today_count = Patient.objects.filter(mrn__startswith=f"MR{prefix}").count()
-        sequence = str(today_count + 1).zfill(4)
-        mrn = f"MR{prefix}{sequence}"
-        
-        # Handle race condition: if MRN exists, try next sequence
-        max_attempts = 100
-        attempt = 0
-        while Patient.objects.filter(mrn=mrn).exists() and attempt < max_attempts:
-            today_count += 1
-            sequence = str(today_count + 1).zfill(4)
-            mrn = f"MR{prefix}{sequence}"
-            attempt += 1
-        
-        return mrn
-
-    def generate_patient_reg_no(self):
-        """Generate a permanent unique patient registration number
-        Format: CCJ-yy-nnnn (e.g., CCJ-26-0001)
-        Where:
-        - CCJ = Consultant Clinic Jaranwala
-        - yy = Year (e.g., 26 for 2026)
-        - nnnn = Sequential number (4 digits, resets yearly)
-        """
-        now = timezone.now()
-        year_suffix = now.strftime("%y")  # 2-digit year (e.g., "26" for 2026)
-        prefix = f"CCJ-{year_suffix}-"
-        
-        # Get the highest existing patient_reg_no for this year
-        last_patient = Patient.objects.filter(
-            patient_reg_no__startswith=prefix
-        ).order_by('-patient_reg_no').first()
-        
-        if last_patient and last_patient.patient_reg_no:
-            try:
-                # Extract number from format like CCJ-26-0001
-                last_num = int(last_patient.patient_reg_no.split('-')[-1])
-                next_num = last_num + 1
-            except (ValueError, AttributeError, IndexError):
-                next_num = 1
-        else:
-            next_num = 1
-        
-        patient_reg_no = f"{prefix}{str(next_num).zfill(4)}"
-        
-        # Handle race condition
-        max_attempts = 100
-        attempt = 0
-        while Patient.objects.filter(patient_reg_no=patient_reg_no).exists() and attempt < max_attempts:
-            next_num += 1
-            patient_reg_no = f"{prefix}{str(next_num).zfill(4)}"
-            attempt += 1
-        
-        return patient_reg_no
-
     def save(self, *args, **kwargs):
-        if not self.mrn:
-            self.mrn = self.generate_mrn()
-        if not self.patient_reg_no:
-            self.patient_reg_no = self.generate_patient_reg_no()
+        if not self.mrn or not self.patient_reg_no:
+            from apps.sequences.models import get_next_mrn, get_next_patient_reg_no
+            with transaction.atomic():
+                if not self.mrn:
+                    self.mrn = get_next_mrn()
+                if not self.patient_reg_no:
+                    self.patient_reg_no = get_next_patient_reg_no()
         super().save(*args, **kwargs)
 
     def __str__(self):
