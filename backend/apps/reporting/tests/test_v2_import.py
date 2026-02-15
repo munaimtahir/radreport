@@ -58,8 +58,9 @@ class V2TemplateImportTests(TestCase):
         )
 
     def test_unresolved_service_is_reported_without_crashing(self):
-        mapping_file = self.seed_dir / "activation" / "tmp_unresolved_map.csv"
-        with mapping_file.open("w", encoding="utf-8", newline="") as f:
+        import tempfile
+        with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", newline="", suffix=".csv", delete=False) as f:
+            mapping_file = Path(f.name)
             writer = csv.DictWriter(
                 f,
                 fieldnames=["service_code", "service_name", "template_code", "is_default", "is_active"],
@@ -75,7 +76,9 @@ class V2TemplateImportTests(TestCase):
                 }
             )
 
-        stdout = io.StringIO()
-        call_command("import_templates_v2", "--mappings", str(mapping_file), stdout=stdout)
-        self.assertIn("Unresolved services", stdout.getvalue())
-        mapping_file.unlink(missing_ok=True)
+        try:
+            stdout = io.StringIO()
+            call_command("import_templates_v2", "--mappings", str(mapping_file), stdout=stdout)
+            self.assertIn("Unresolved services", stdout.getvalue())
+        finally:
+            mapping_file.unlink(missing_ok=True)

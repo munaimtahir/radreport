@@ -1,4 +1,28 @@
 #!/bin/bash
+set -e
+set -x
+
+# Ensure backend directory exists
+mkdir -p backend
+
+# Always create/overwrite backend/.env.local to ensure it exists and is correct
+echo "Creating/Overwriting backend/.env.local..."
+cat <<EOT > backend/.env.local
+DJANGO_SECRET_KEY=dev-secret-key
+DJANGO_DEBUG=1
+DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,backend
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://localhost:8080
+DB_ENGINE=postgresql
+DB_NAME=rims
+DB_USER=rims
+DB_PASSWORD=rims
+DB_HOST=db
+DB_PORT=5432
+EOT
+
+echo "File created. Verifying:"
+ls -la backend/.env.local
+sync
 
 # Start all services in detached mode
 docker compose -f docker-compose.dev.yml up -d
