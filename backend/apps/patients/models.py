@@ -33,7 +33,9 @@ class Patient(models.Model):
                     self.mrn = get_next_mrn()
                 if not self.patient_reg_no:
                     self.patient_reg_no = get_next_patient_reg_no()
-        super().save(*args, **kwargs)
+                super().save(*args, **kwargs)
+        else:
+            super().save(*args, **kwargs)
 
     def __str__(self):
         reg_no = self.patient_reg_no or self.mrn
