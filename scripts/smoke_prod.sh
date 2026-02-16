@@ -177,9 +177,7 @@ echo ""
 echo "[2/6] Auth..."
 
 TOKEN_JSON=$("${CURL_BASE[@]}" -X POST "$BASE_URL/api/auth/token/" \
-
   -H "Content-Type: application/json" \
-
   -d "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PASS\"}")
 
 
