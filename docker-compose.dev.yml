@@ -30,6 +30,8 @@ services:
         condition: service_healthy
     env_file:
       - backend/.env.local
+    environment:
+      - BACKUP_ROOT=/tmp/backups
     volumes:
       - ./backend:/app
       - media_data_local:/app/media

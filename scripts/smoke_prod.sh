@@ -78,27 +78,17 @@ json_get() {
 
   local key="$1"
 
-  python3 - <<PY
-
+  python3 -c "
 import sys, json
-
 try:
-
-  obj=json.load(sys.stdin)
-
+  obj = json.load(sys.stdin)
 except Exception:
-
-  print("")
-
+  print('')
   sys.exit(0)
-
-v=obj.get("$key","")
-
-if v is None: v=""
-
-print(v if isinstance(v,str) else v)
-
-PY
+v = obj.get('$key', '')
+if v is None: v = ''
+print(v if isinstance(v, str) else v)
+"
 
 }
 
@@ -110,31 +100,19 @@ json_has_keys() {
 
   # Usage: echo "$json" | json_has_keys key1 key2 ...
 
-  python3 - "$@" <<'PY'
-
+  python3 -c "
 import sys, json
-
-keys=sys.argv[1:]
-
+keys = sys.argv[1:]
 try:
-
-  obj=json.load(sys.stdin)
-
+  obj = json.load(sys.stdin)
 except Exception:
-
   sys.exit(2)
-
-missing=[k for k in keys if k not in obj]
-
+missing = [k for k in keys if k not in obj]
 if missing:
-
-  print("Missing keys:", ", ".join(missing))
-
+  print('Missing keys:', ', '.join(missing))
   sys.exit(1)
-
 sys.exit(0)
-
-PY
+" "$@"
 
 }
 
@@ -244,17 +222,12 @@ BACKUPS_JSON=$("${CURL_BASE[@]}" -H "${AUTH_HEADER[@]}" "$BASE_URL/api/backups/"
 
 # We accept either list or dict response, but must be valid JSON.
 
-python3 - <<PY
-
+echo "$BACKUPS_JSON" | python3 -c "
 import sys, json
-
 s = sys.stdin.read()
-
 json.loads(s)
-
-print("OK")
-
-PY <<<"$BACKUPS_JSON" >/dev/null || fail "Backups endpoint" "Invalid JSON response"
+print('OK')
+" >/dev/null || fail "Backups endpoint" "Invalid JSON response"
 
 pass "Backups endpoint" "200 OK + valid JSON"
 
