@@ -203,11 +203,46 @@ pgsims.alshifalab.pk, pgsims.pmc.edu.pk {
 rims.alshifalab.pk {
 	encode gzip zstd
 
-	# API, Admin, Media and Static routes to backend
-	@backend_paths {
-		path /api/* /admin/* /media/* /static/*
+	# Security headers
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Frame-Options "SAMEORIGIN"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
 	}
-	handle @backend_paths {
+
+	# Media files - serve directly from host filesystem (bind mount)
+	handle_path /media/* {
+		root * /home/munaim/srv/apps/radreport/data/media
+		file_server
+		header Cache-Control "public, max-age=604800"
+	}
+
+	# Static files - serve from backend (collected staticfiles)
+	handle /static/* {
+		reverse_proxy 127.0.0.1:8015 {
+			header_up Host {host}
+			header_up X-Real-IP {remote}
+			header_up X-Forwarded-For {remote}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+
+	# API routes to backend
+	handle /api/* {
+		reverse_proxy 127.0.0.1:8015 {
+			header_up Host {host}
+			header_up X-Real-IP {remote}
+			header_up X-Forwarded-For {remote}
+			header_up X-Forwarded-Proto {scheme}
+			header_up X-Forwarded-Host {host}
+		}
+	}
+
+	# Admin routes to backend
+	handle /admin/* {
 		reverse_proxy 127.0.0.1:8015 {
 			header_up Host {host}
 			header_up X-Real-IP {remote}
