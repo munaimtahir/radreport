@@ -3,26 +3,8 @@ set -e
 
 echo "==> RIMS Backend Production Entrypoint"
 
-# Set default values for DB variables if not provided
-DB_HOST=${DB_HOST:-db}
-DB_PORT=${DB_PORT:-5432}
-DB_USER=${DB_USER:-rims}
-
-# Wait for database to be ready
-echo "==> Waiting for PostgreSQL..."
-while ! pg_isready -h "$DB_HOST" -p "$DB_PORT" -U "$DB_USER" > /dev/null 2>&1; do
-    echo "    PostgreSQL not ready, waiting..."
-    sleep 2
-done
-echo "==> PostgreSQL is ready"
-
-# Collect static files
-echo "==> Collecting static files..."
-python manage.py collectstatic --noinput
-
-# Run database migrations
-echo "==> Running database migrations..."
-python manage.py migrate --noinput
+# Run production bootstrap script
+/app/scripts/prod_bootstrap.sh
 
 # Create superuser if needed (optional, only for first deployment)
 # Uncomment the following lines if you want to auto-create a superuser

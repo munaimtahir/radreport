@@ -69,3 +69,17 @@ To create demo users:
 ```bash
 docker compose exec backend python manage.py seed_roles --with-demo-users
 ```
+
+## Production Bootstrap
+
+The production entrypoint calls `prod_bootstrap.sh` which runs:
+- `python manage.py migrate --noinput`
+- `python manage.py collectstatic --noinput`
+- `python manage.py check`
+
+If any step fails, the container exits with a non-zero code.
+
+To run bootstrap manually:
+```bash
+docker compose exec backend /app/scripts/prod_bootstrap.sh
+```

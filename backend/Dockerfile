@@ -47,8 +47,8 @@ WORKDIR /app
 # Copy application code
 COPY . /app/
 
-# Ensure entrypoint script is executable
-RUN chmod +x /app/scripts/entrypoint.sh
+# Ensure entrypoint and bootstrap scripts are executable
+RUN chmod +x /app/scripts/entrypoint.sh /app/scripts/prod_bootstrap.sh
 
 # Create necessary directories (static directory is included in source code from COPY above)
 RUN mkdir -p /app/media /app/staticfiles
