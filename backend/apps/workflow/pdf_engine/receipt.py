@@ -533,7 +533,8 @@ def _draw_receipt_copy(
     canvas.setFont("Helvetica", font_size)
     canvas.setFillColor(black)
     
-    # Calculate width for numbering column (e.g., "1.", "2.", etc.)
+    # Reserve space for numbering column (e.g., "1.", "2.", ..., "99.")
+    # 8 points is sufficient for up to 2 digits plus period and spacing
     number_width = 8  # Width in points for the number column
     
     for idx in range(items_count):
@@ -545,7 +546,7 @@ def _draw_receipt_copy(
             service_name,
             "Helvetica",
             font_size,
-            service_column_width - number_width - 4,
+            service_column_width - number_width - 4,  # 4 points padding for margins
         )[:MAX_SERVICE_LINES]
         
         row_start_y = current_y
