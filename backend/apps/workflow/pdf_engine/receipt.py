@@ -532,19 +532,30 @@ def _draw_receipt_copy(
     canvas.setFont("Helvetica", font_size)
     canvas.setFillColor(black)
     
+    # Calculate width for numbering column (e.g., "1.", "2.", etc.)
+    number_width = 8  # Width in points for the number column
+    
     for idx in range(items_count):
         service_name, amount_text = services_to_display[idx]
+        # Add numbering prefix
+        item_number = f"{idx + 1}."
+        
         service_lines = _wrap_text(
             service_name,
             "Helvetica",
             font_size,
-            service_column_width - 4,
+            service_column_width - number_width - 4,
         )[:MAX_SERVICE_LINES]
         
         row_start_y = current_y
         start_y = current_y
+        
+        # Draw the number (only on the first line)
+        canvas.drawString(left_x + 2, start_y, item_number)
+        
+        # Draw service name lines with indent for numbering
         for line in service_lines:
-            canvas.drawString(left_x + 2, start_y, line)
+            canvas.drawString(left_x + 2 + number_width, start_y, line)
             start_y -= line_height
         
         canvas.drawRightString(
