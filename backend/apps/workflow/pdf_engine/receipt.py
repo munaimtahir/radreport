@@ -280,6 +280,7 @@ def _draw_receipt_copy(
     copy_label: str,
     receipt_settings,
     services_subset: Optional[List[Tuple[str, str]]] = None,
+    start_service_number: int = 1,
 ) -> None:
     """
     Render a single receipt copy into a rectangular region of the PDF canvas.
@@ -537,8 +538,8 @@ def _draw_receipt_copy(
     
     for idx in range(items_count):
         service_name, amount_text = services_to_display[idx]
-        # Add numbering prefix
-        item_number = f"{idx + 1}."
+        # Add numbering prefix - use start_service_number for continuous numbering
+        item_number = f"{start_service_number + idx}."
         
         service_lines = _wrap_text(
             service_name,
@@ -728,6 +729,7 @@ def _build_receipt_canvas(data: dict, receipt_settings, filename: str) -> Conten
         # Split services across multiple pages
         page_num = 0
         remaining_services = list(services)
+        service_start_index = 1  # Track the starting number for continuous numbering
         
         while remaining_services:
             page_num += 1
@@ -761,6 +763,7 @@ def _build_receipt_canvas(data: dict, receipt_settings, filename: str) -> Conten
                 f"Patient copy (Page {page_num})",
                 receipt_settings,
                 services_subset=current_page_services,
+                start_service_number=service_start_index,
             )
             _draw_receipt_copy(
                 canvas,
@@ -772,7 +775,11 @@ def _build_receipt_canvas(data: dict, receipt_settings, filename: str) -> Conten
                 f"Office copy (Page {page_num})",
                 receipt_settings,
                 services_subset=current_page_services,
+                start_service_number=service_start_index,
             )
+            
+            # Update the starting index for the next page
+            service_start_index += items_count
             
             # Draw divider line
             divider_y = margin + half_height + divider_gap / 2
