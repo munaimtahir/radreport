@@ -8,10 +8,13 @@ from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import exceptions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 
 from apps.workflow.models import ServiceVisitItem
+from apps.workflow.permissions import (
+    IsTechnologist, IsRadiologist, IsAnyDesk, IsManager
+)
 from .models import (
     ReportActionLogV2,
     ReportBlockLibrary,
@@ -36,7 +39,7 @@ logger = logging.getLogger(__name__)
 class ReportTemplateV2ViewSet(viewsets.ModelViewSet):
     queryset = ReportTemplateV2.objects.all()
     serializer_class = ReportTemplateV2Serializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]  # Only admins can manage templates
 
     def update(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -90,7 +93,7 @@ class ReportTemplateV2ViewSet(viewsets.ModelViewSet):
 class ServiceReportTemplateV2ViewSet(viewsets.ModelViewSet):
     queryset = ServiceReportTemplateV2.objects.all()
     serializer_class = ServiceReportTemplateV2Serializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]  # Only admins can manage service-template mappings
 
     @action(detail=True, methods=["post"], url_path="set-default")
     def set_default(self, request, pk=None):
@@ -106,15 +109,16 @@ class ServiceReportTemplateV2ViewSet(viewsets.ModelViewSet):
 class ReportBlockLibraryViewSet(viewsets.ModelViewSet):
     queryset = ReportBlockLibrary.objects.all()
     serializer_class = ReportBlockLibrarySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAdminUser]  # Only admins can manage block library
 
 
 class ReportWorkItemViewSet(viewsets.ViewSet):
     """
     Endpoints for reporting on a specific ServiceVisitItem (V2 only).
+    Technologists can create/edit drafts, Radiologists can verify/publish.
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAnyDesk]  # Any workflow role can access
 
     def _get_item(self, pk):
         return get_object_or_404(ServiceVisitItem, pk=pk)
@@ -366,7 +370,7 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             }
         )
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[IsTechnologist])
     def save(self, request, pk=None):
         item = self._get_item(pk)
         template_v2 = self._get_v2_template(item)
@@ -401,7 +405,7 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             }
         )
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[IsTechnologist])
     def submit(self, request, pk=None):
         item = self._get_item(pk)
         template_v2 = self._get_v2_template(item)
@@ -490,15 +494,9 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         payload = self._build_print_payload(request, item, instance, narrative_json)
         return Response(payload)
 
-    @action(detail=True, methods=["post"], url_path="return-for-correction")
+    @action(detail=True, methods=["post"], url_path="return-for-correction", permission_classes=[IsRadiologist])
     def return_for_correction(self, request, pk=None):
         item = self._get_item(pk)
-        # Allow verification_desk group (workflow) or reporting_verifier group (legacy)
-        # Check case-insensitively for variations
-        group_names = [g.name.lower() for g in request.user.groups.all()]
-        if not (request.user.is_superuser or 
-                any(name in ["verification", "verification_desk", "reporting_verifier"] for name in group_names)):
-            raise exceptions.PermissionDenied("Only verifiers can return reports.")
         reason = request.data.get("reason", "").strip()
         if not reason:
             return Response({"error": "Reason is required."}, status=400)
@@ -521,35 +519,16 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             )
         return Response({"status": "returned"})
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[IsRadiologist])
     def verify(self, request, pk=None):
         """
         Verify a submitted report.
         
         This changes the ReportInstanceV2 status from "submitted" to "verified".
         Only verified reports can be published.
+        Only radiologists can verify reports.
         """
         item = self._get_item(pk)
-        
-        # Allow verification_desk group (workflow) or reporting_verifier group (legacy)
-        # Check case-insensitively for variations
-        group_names = [g.name.lower() for g in request.user.groups.all()]
-        has_permission = request.user.is_superuser or \
-            any(name in ["verification", "verification_desk", "reporting_verifier"] for name in group_names)
-        
-        if not has_permission:
-            logger.warning(
-                "verify_permission_denied",
-                extra={
-                    "event": "verify_permission_denied",
-                    "user": request.user.username,
-                    "user_groups": group_names,
-                    "item_id": str(item.id),
-                },
-            )
-            raise exceptions.PermissionDenied(
-                f"Only verifiers can verify reports. User groups: {group_names}"
-            )
         
         notes = request.data.get("notes", "")
 
@@ -712,39 +691,19 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
 
         return version, snapshot
 
-    @action(detail=True, methods=["post"])
+    @action(detail=True, methods=["post"], permission_classes=[IsRadiologist])
     def publish(self, request, pk=None):
         """
         Publish a verified report by creating a ReportPublishSnapshotV2.
         
         This endpoint:
-        1. Checks user permissions (verification group required)
+        1. Checks user permissions (radiologist role required)
         2. Validates report is in "verified" status
         3. Creates a ReportPublishSnapshotV2 with PDF
         4. Updates ServiceVisitItem status to PUBLISHED
         5. Creates audit log entry
         """
         item = self._get_item(pk)
-        
-        # Allow verification_desk group (workflow) or reporting_verifier group (legacy)
-        # Check case-insensitively for variations
-        group_names = [g.name.lower() for g in request.user.groups.all()]
-        has_permission = request.user.is_superuser or \
-            any(name in ["verification", "verification_desk", "reporting_verifier"] for name in group_names)
-        
-        if not has_permission:
-            logger.warning(
-                "publish_permission_denied",
-                extra={
-                    "event": "publish_permission_denied",
-                    "user": request.user.username,
-                    "user_groups": group_names,
-                    "item_id": str(item.id),
-                },
-            )
-            raise exceptions.PermissionDenied(
-                f"Only verifiers can publish reports. User groups: {group_names}"
-            )
 
         template_v2 = self._get_v2_template(item)
         instance = self._get_or_create_instance(item, template_v2, request.user)

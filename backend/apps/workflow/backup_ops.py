@@ -21,6 +21,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from apps.workflow.permissions import IsManager
 
 DATE_DIR_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
@@ -33,8 +34,11 @@ ProgressReporter = Optional[Callable[[int, str, str], None]]
 
 
 def _require_admin(request):
+    # Check if user is superuser or manager
     if not request.user.is_superuser:
-        return Response({"detail": "Admin access required"}, status=status.HTTP_403_FORBIDDEN)
+        from apps.workflow.permissions import IsManager
+        if not IsManager().has_permission(request, None):
+            return Response({"detail": "Admin or manager access required"}, status=status.HTTP_403_FORBIDDEN)
     return None
 
 
@@ -558,7 +562,7 @@ def _perform_sync(root: Path, backup_date: str, reporter: ProgressReporter = Non
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsManager])
 def backup_ops_status(request):
     denied = _require_admin(request)
     if denied:
@@ -605,7 +609,7 @@ def backup_ops_status(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsManager])
 def backup_ops_job_status(request, job_id: str):
     denied = _require_admin(request)
     if denied:
@@ -619,7 +623,7 @@ def backup_ops_job_status(request, job_id: str):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsManager])
 def backup_ops_backup_now(request):
     denied = _require_admin(request)
     if denied:
@@ -639,7 +643,7 @@ def backup_ops_backup_now(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsManager])
 def backup_ops_restore(request):
     denied = _require_admin(request)
     if denied:
@@ -663,7 +667,7 @@ def backup_ops_restore(request):
 
 
 @api_view(["POST"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsManager])
 def backup_ops_sync(request):
     denied = _require_admin(request)
     if denied:
@@ -689,7 +693,7 @@ def backup_ops_sync(request):
 
 
 @api_view(["GET"])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsManager])
 def backup_ops_export(request, backup_date: str):
     denied = _require_admin(request)
     if denied:

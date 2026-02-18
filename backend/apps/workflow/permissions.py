@@ -1,71 +1,81 @@
 """
-PHASE C: Role-Based Access Control (RBAC) for RIMS workflow desks
+Comprehensive Role-Based Access Control (RBAC) for RIMS workflow
 
-Roles:
-- RECEPTION: Registration desk only
-- USG_OPERATOR: Can work on USG items (start, save draft, submit)
-- VERIFIER: Can verify and publish USG reports
-- OPD_OPERATOR: Can work on OPD vitals
-- DOCTOR: Can finalize and publish OPD consultations
-- ADMIN: Full access
+New Roles:
+- receptionist: Can register patients, create visits
+- technologist: Can perform scans, start reports, save drafts
+- radiologist: Can verify, publish, return reports
+- manager: Can access admin settings, backups, etc.
+
+Legacy Roles (backward compatible):
+- registration_desk / registration -> receptionist
+- performance_desk / performance -> technologist
+- verification_desk / verification -> radiologist
 """
 from rest_framework import permissions
 
-# Desk roles (canonical Django group names)
-# Note: Django admin may create groups as "Registration", "Performance", "Verification"
-# or "registration_desk", "performance_desk", "verification_desk"
-# Backend checks for both variations (case-insensitive)
-DESK_ROLES = {
-    "REGISTRATION": "registration_desk",
-    "PERFORMANCE": "performance_desk",
-    "VERIFICATION": "verification_desk",
-}
 
-# Alternative group names that Django admin might create
-DESK_ROLES_ALT = {
-    "REGISTRATION": ["Registration", "registration", "registration_desk"],
-    "PERFORMANCE": ["Performance", "performance", "performance_desk"],
-    "VERIFICATION": ["Verification", "verification", "verification_desk"],
-}
+def _get_user_group_names(user):
+    """Get lowercase group names for a user"""
+    if not user or not user.is_authenticated:
+        return []
+    return [g.name.lower() for g in user.groups.all()]
+
+
+def _has_role(user, role_names):
+    """Check if user has any of the specified roles (case-insensitive)"""
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_superuser:
+        return True
+    group_names = _get_user_group_names(user)
+    return any(name in role_names for name in group_names)
+
+
+# Role name mappings (new roles + legacy compatibility)
+RECEPTIONIST_ROLES = ["receptionist", "registration", "registration_desk"]
+TECHNOLOGIST_ROLES = ["technologist", "performance", "performance_desk"]
+RADIOLOGIST_ROLES = ["radiologist", "verification", "verification_desk"]
+MANAGER_ROLES = ["manager", "admin"]
+
+# All workflow roles
+ALL_WORKFLOW_ROLES = RECEPTIONIST_ROLES + TECHNOLOGIST_ROLES + RADIOLOGIST_ROLES
+
+
+class IsReceptionist(permissions.BasePermission):
+    """Permission check for Receptionist role (can register patients, create visits)"""
+    def has_permission(self, request, view):
+        return _has_role(request.user, RECEPTIONIST_ROLES)
 
 
 class IsRegistrationDesk(permissions.BasePermission):
-    """Permission check for Registration desk"""
+    """Legacy alias for IsReceptionist - maintains backward compatibility"""
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        # Superusers have all permissions
-        if request.user.is_superuser:
-            return True
-        # Check for any variation of registration group name (case-insensitive)
-        group_names = [g.name.lower() for g in request.user.groups.all()]
-        return any(name in ["registration", "registration_desk"] for name in group_names)
+        return IsReceptionist().has_permission(request, view)
+
+
+class IsTechnologist(permissions.BasePermission):
+    """Permission check for Technologist role (can perform scans, start reports, save drafts)"""
+    def has_permission(self, request, view):
+        return _has_role(request.user, TECHNOLOGIST_ROLES)
 
 
 class IsPerformanceDesk(permissions.BasePermission):
-    """Permission check for Performance desk"""
+    """Legacy alias for IsTechnologist - maintains backward compatibility"""
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        # Superusers have all permissions
-        if request.user.is_superuser:
-            return True
-        # Check for any variation of performance group name (case-insensitive)
-        group_names = [g.name.lower() for g in request.user.groups.all()]
-        return any(name in ["performance", "performance_desk"] for name in group_names)
+        return IsTechnologist().has_permission(request, view)
+
+
+class IsRadiologist(permissions.BasePermission):
+    """Permission check for Radiologist role (can verify, publish, return reports)"""
+    def has_permission(self, request, view):
+        return _has_role(request.user, RADIOLOGIST_ROLES)
 
 
 class IsVerificationDesk(permissions.BasePermission):
-    """Permission check for Verification desk"""
+    """Legacy alias for IsRadiologist - maintains backward compatibility"""
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        # Superusers have all permissions
-        if request.user.is_superuser:
-            return True
-        # Check for any variation of verification group name (case-insensitive)
-        group_names = [g.name.lower() for g in request.user.groups.all()]
-        return any(name in ["verification", "verification_desk"] for name in group_names)
+        return IsRadiologist().has_permission(request, view)
 
 
 class IsRegistrationOrPerformanceDesk(permissions.BasePermission):
@@ -92,55 +102,39 @@ class IsPerformanceOrVerificationDesk(permissions.BasePermission):
                IsVerificationDesk().has_permission(request, view)
 
 
+class IsManager(permissions.BasePermission):
+    """Permission check for Manager role (can access admin settings, backups, etc.)"""
+    def has_permission(self, request, view):
+        return _has_role(request.user, MANAGER_ROLES)
+
+
 class IsAnyDesk(permissions.BasePermission):
-    """Permission check for any desk role - allows any authenticated user for MVP"""
+    """Permission check for any workflow role (receptionist, technologist, radiologist)"""
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
         if request.user.is_superuser:
             return True
-        # Check for any desk group variation (case-insensitive)
-        group_names = [g.name.lower() for g in request.user.groups.all()]
-        desk_groups = ["registration", "registration_desk", "performance", "performance_desk", 
-                      "verification", "verification_desk"]
-        return any(name in desk_groups for name in group_names)
+        return _has_role(request.user, ALL_WORKFLOW_ROLES)
 
 
 # PHASE C: Granular role permissions
 class IsUSGOperator(permissions.BasePermission):
     """Permission for USG operators (can start, save draft, submit)"""
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        if request.user.is_superuser:
-            return True
-        # Check for any variation of performance group name (case-insensitive)
-        group_names = [g.name.lower() for g in request.user.groups.all()]
-        return any(name in ["performance", "performance_desk"] for name in group_names)
+        return IsTechnologist().has_permission(request, view)
 
 
 class IsVerifier(permissions.BasePermission):
     """Permission for verifiers/radiologists (can verify, publish, return)"""
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        if request.user.is_superuser:
-            return True
-        # Check for any variation of verification group name (case-insensitive)
-        group_names = [g.name.lower() for g in request.user.groups.all()]
-        return any(name in ["verification", "verification_desk"] for name in group_names)
+        return IsRadiologist().has_permission(request, view)
 
 
 class IsOPDOperator(permissions.BasePermission):
     """Permission for OPD operators (can enter vitals)"""
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        if request.user.is_superuser:
-            return True
-        # Check for any variation of performance group name (case-insensitive)
-        group_names = [g.name.lower() for g in request.user.groups.all()]
-        return any(name in ["performance", "performance_desk"] for name in group_names)
+        return IsTechnologist().has_permission(request, view)
 
 
 class IsDoctor(permissions.BasePermission):
@@ -163,11 +157,7 @@ class IsDoctor(permissions.BasePermission):
 class IsReception(permissions.BasePermission):
     """Permission for reception desk (can register, cannot edit clinical content)"""
     def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        if request.user.is_superuser:
-            return True
-        return IsRegistrationDesk().has_permission(request, view)
+        return IsReceptionist().has_permission(request, view)
 
 
 class IsRegistrationOrVerificationDesk(permissions.BasePermission):
@@ -175,8 +165,13 @@ class IsRegistrationOrVerificationDesk(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user or not request.user.is_authenticated:
             return False
-        # Superusers have all permissions
         if request.user.is_superuser:
             return True
-        return IsRegistrationDesk().has_permission(request, view) or \
-               IsVerificationDesk().has_permission(request, view)
+        return IsReceptionist().has_permission(request, view) or \
+               IsRadiologist().has_permission(request, view)
+
+
+class IsReceptionistOrRadiologist(permissions.BasePermission):
+    """Permission check for Receptionist or Radiologist - allows radiologists to create visits"""
+    def has_permission(self, request, view):
+        return IsRegistrationOrVerificationDesk().has_permission(request, view)
