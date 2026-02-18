@@ -523,37 +523,131 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
 
     @action(detail=True, methods=["post"])
     def verify(self, request, pk=None):
+        """
+        Verify a submitted report.
+        
+        This changes the ReportInstanceV2 status from "submitted" to "verified".
+        Only verified reports can be published.
+        """
         item = self._get_item(pk)
+        
         # Allow verification_desk group (workflow) or reporting_verifier group (legacy)
         # Check case-insensitively for variations
         group_names = [g.name.lower() for g in request.user.groups.all()]
-        if not (request.user.is_superuser or 
-                any(name in ["verification", "verification_desk", "reporting_verifier"] for name in group_names)):
-            raise exceptions.PermissionDenied("Only verifiers can verify reports.")
+        has_permission = request.user.is_superuser or \
+            any(name in ["verification", "verification_desk", "reporting_verifier"] for name in group_names)
+        
+        if not has_permission:
+            logger.warning(
+                "verify_permission_denied",
+                extra={
+                    "event": "verify_permission_denied",
+                    "user": request.user.username,
+                    "user_groups": group_names,
+                    "item_id": str(item.id),
+                },
+            )
+            raise exceptions.PermissionDenied(
+                f"Only verifiers can verify reports. User groups: {group_names}"
+            )
+        
         notes = request.data.get("notes", "")
 
         template_v2 = self._get_v2_template(item)
         instance = self._get_or_create_instance(item, template_v2, request.user)
+        
         if instance.status != "submitted":
-            return Response({"error": "Only submitted reports can be verified."}, status=409)
-
-        with transaction.atomic():
-            instance.status = "verified"
-            instance.save(update_fields=["status", "updated_at"])
-            ReportActionLogV2.objects.create(
-                report_v2=instance,
-                action="verify",
-                actor=request.user,
-                meta={"notes": notes},
+            logger.warning(
+                "verify_invalid_status",
+                extra={
+                    "event": "verify_invalid_status",
+                    "user": request.user.username,
+                    "item_id": str(item.id),
+                    "instance_id": str(instance.id),
+                    "current_status": instance.status,
+                    "required_status": "submitted",
+                },
             )
+            return Response(
+                {"error": f"Only submitted reports can be verified. Current status: {instance.status}"}, 
+                status=409
+            )
+
+        try:
+            with transaction.atomic():
+                logger.info(
+                    "verify_start",
+                    extra={
+                        "event": "verify_start",
+                        "user": request.user.username,
+                        "item_id": str(item.id),
+                        "instance_id": str(instance.id),
+                    },
+                )
+                
+                instance.status = "verified"
+                instance.save(update_fields=["status", "updated_at"])
+                
+                ReportActionLogV2.objects.create(
+                    report_v2=instance,
+                    action="verify",
+                    actor=request.user,
+                    meta={"notes": notes},
+                )
+                
+                logger.info(
+                    "verify_success",
+                    extra={
+                        "event": "verify_success",
+                        "user": request.user.username,
+                        "item_id": str(item.id),
+                        "instance_id": str(instance.id),
+                    },
+                )
+                
+        except Exception as e:
+            logger.error(
+                "verify_error",
+                extra={
+                    "event": "verify_error",
+                    "user": request.user.username,
+                    "item_id": str(item.id),
+                    "instance_id": str(instance.id) if instance else None,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
+            )
+            raise exceptions.APIException(
+                detail=f"Failed to verify report: {str(e)}",
+                code="verify_failed"
+            )
+            
         return Response({"status": "verified"})
 
     def _perform_publish_v2(self, instance_v2, user):
+        """
+        Create a ReportPublishSnapshotV2 for a verified report instance.
+        
+        This method:
+        1. Generates narrative from template and values
+        2. Calculates version number (increments from last snapshot)
+        3. Generates content hash for integrity verification
+        4. Generates PDF
+        5. Creates and saves ReportPublishSnapshotV2
+        6. Updates ServiceVisitItem status to PUBLISHED
+        
+        Returns:
+            tuple: (version_number, ReportPublishSnapshotV2 instance)
+        """
         template_v2 = instance_v2.template_v2
         narrative_json = generate_narrative_v2(template_v2, instance_v2.values_json)
+        
+        # Get next version number
         last_snapshot = instance_v2.publish_snapshots_v2.order_by("-version").first()
         version = (last_snapshot.version + 1) if last_snapshot else 1
 
+        # Generate content hash for integrity verification
         hash_input = json.dumps(
             {
                 "template_id": str(template_v2.id),
@@ -565,9 +659,11 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
         )
         content_hash = hashlib.sha256(hash_input.encode("utf-8")).hexdigest()
 
+        # Generate PDF
         pdf_bytes = generate_report_pdf_v2(str(instance_v2.id), narrative_json)
         file_name = f"Report_V2_{instance_v2.work_item.service_visit.visit_id}_v{version}.pdf"
 
+        # Create ReportPublishSnapshotV2 - THIS IS THE KEY MODEL
         snapshot = ReportPublishSnapshotV2(
             report_instance_v2=instance_v2,
             template_v2=template_v2,
@@ -577,38 +673,160 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
             published_by=user,
             version=version,
         )
+        
+        # Save PDF file and snapshot
         snapshot.pdf_file.save(file_name, ContentFile(pdf_bytes), save=False)
         snapshot.save()
+        
+        # Verify snapshot was saved
+        if not snapshot.id:
+            raise ValueError("Failed to save publish snapshot - no ID assigned")
+        
+        logger.info(
+            "publish_snapshot_created",
+            extra={
+                "event": "publish_snapshot_created",
+                "snapshot_id": str(snapshot.id),
+                "instance_id": str(instance_v2.id),
+                "version": version,
+                "content_hash": content_hash,
+                "pdf_file": snapshot.pdf_file.name if snapshot.pdf_file else None,
+            },
+        )
 
+        # Update ServiceVisitItem status to PUBLISHED
         item = instance_v2.work_item
         item.status = "PUBLISHED"
         item.published_at = timezone.now()
         item.save(update_fields=["status", "published_at"])
+        
+        logger.info(
+            "publish_item_status_updated",
+            extra={
+                "event": "publish_item_status_updated",
+                "item_id": str(item.id),
+                "new_status": "PUBLISHED",
+                "published_at": item.published_at.isoformat(),
+            },
+        )
 
         return version, snapshot
 
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
+        """
+        Publish a verified report by creating a ReportPublishSnapshotV2.
+        
+        This endpoint:
+        1. Checks user permissions (verification group required)
+        2. Validates report is in "verified" status
+        3. Creates a ReportPublishSnapshotV2 with PDF
+        4. Updates ServiceVisitItem status to PUBLISHED
+        5. Creates audit log entry
+        """
         item = self._get_item(pk)
+        
         # Allow verification_desk group (workflow) or reporting_verifier group (legacy)
         # Check case-insensitively for variations
         group_names = [g.name.lower() for g in request.user.groups.all()]
-        if not (request.user.is_superuser or 
-                any(name in ["verification", "verification_desk", "reporting_verifier"] for name in group_names)):
-            raise exceptions.PermissionDenied("Only verifiers can publish reports.")
+        has_permission = request.user.is_superuser or \
+            any(name in ["verification", "verification_desk", "reporting_verifier"] for name in group_names)
+        
+        if not has_permission:
+            logger.warning(
+                "publish_permission_denied",
+                extra={
+                    "event": "publish_permission_denied",
+                    "user": request.user.username,
+                    "user_groups": group_names,
+                    "item_id": str(item.id),
+                },
+            )
+            raise exceptions.PermissionDenied(
+                f"Only verifiers can publish reports. User groups: {group_names}"
+            )
 
         template_v2 = self._get_v2_template(item)
         instance = self._get_or_create_instance(item, template_v2, request.user)
+        
         if instance.status != "verified":
-            return Response({"error": "Only verified reports can be published."}, status=403)
+            logger.warning(
+                "publish_invalid_status",
+                extra={
+                    "event": "publish_invalid_status",
+                    "user": request.user.username,
+                    "item_id": str(item.id),
+                    "instance_id": str(instance.id),
+                    "current_status": instance.status,
+                    "required_status": "verified",
+                },
+            )
+            return Response(
+                {"error": f"Only verified reports can be published. Current status: {instance.status}"}, 
+                status=403
+            )
 
-        with transaction.atomic():
-            version, snapshot = self._perform_publish_v2(instance, request.user)
-            ReportActionLogV2.objects.create(
-                report_v2=instance,
-                action="publish",
-                actor=request.user,
-                meta={"version": version, "sha256": snapshot.content_hash},
+        try:
+            with transaction.atomic():
+                logger.info(
+                    "publish_start",
+                    extra={
+                        "event": "publish_start",
+                        "user": request.user.username,
+                        "item_id": str(item.id),
+                        "instance_id": str(instance.id),
+                    },
+                )
+                
+                # Create publish snapshot - this is the key step
+                version, snapshot = self._perform_publish_v2(instance, request.user)
+                
+                # Verify snapshot was created
+                if not snapshot or not snapshot.id:
+                    raise ValueError("Failed to create publish snapshot")
+                
+                # Verify snapshot is saved to database
+                snapshot.refresh_from_db()
+                if not ReportPublishSnapshotV2.objects.filter(id=snapshot.id).exists():
+                    raise ValueError("Publish snapshot was not saved to database")
+                
+                # Create audit log
+                ReportActionLogV2.objects.create(
+                    report_v2=instance,
+                    action="publish",
+                    actor=request.user,
+                    meta={"version": version, "sha256": snapshot.content_hash},
+                )
+                
+                logger.info(
+                    "publish_success",
+                    extra={
+                        "event": "publish_success",
+                        "user": request.user.username,
+                        "item_id": str(item.id),
+                        "instance_id": str(instance.id),
+                        "snapshot_id": str(snapshot.id),
+                        "version": version,
+                        "content_hash": snapshot.content_hash,
+                    },
+                )
+                
+        except Exception as e:
+            logger.error(
+                "publish_error",
+                extra={
+                    "event": "publish_error",
+                    "user": request.user.username,
+                    "item_id": str(item.id),
+                    "instance_id": str(instance.id) if instance else None,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                },
+                exc_info=True,
+            )
+            raise exceptions.APIException(
+                detail=f"Failed to publish report: {str(e)}",
+                code="publish_failed"
             )
 
         return Response(

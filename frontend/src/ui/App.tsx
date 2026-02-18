@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { useAuth, AuthProvider } from "./auth";
 import { apiGet } from "./api";
@@ -36,6 +36,16 @@ function Shell() {
   const navigate = useNavigate();
   const groups = user?.groups || [];
   const isSuperuser = user?.is_superuser || false;
+  
+  // Debug: Log user groups to help troubleshoot permission issues
+  React.useEffect(() => {
+    if (user) {
+      console.log("[DEBUG] User groups:", groups);
+      console.log("[DEBUG] User is superuser:", isSuperuser);
+      console.log("[DEBUG] User object:", user);
+    }
+  }, [user, groups, isSuperuser]);
+  
   const canRegister = isSuperuser || groups.includes("registration");
   const canPerform = isSuperuser || groups.includes("performance");
   const canVerify = isSuperuser || groups.includes("verification");
@@ -284,9 +294,18 @@ function Shell() {
               {/* Legacy endpoints disabled in Phase 2 */}
               <Route path="/studies" element={<Navigate to="/" replace />} />
               <Route path="/reports/:reportId/edit" element={<Navigate to="/reports" replace />} />
-              <Route path="/reporting/worklist" element={<ReportingWorklistPage />} />
-              <Route path="/reporting/worklist/:service_visit_item_id/report" element={<ReportingPage />} />
-              <Route path="/reports" element={<ReportPrintingWorklist />} />
+              <Route 
+                path="/reporting/worklist" 
+                element={canWorkflow ? <ReportingWorklistPage /> : <AccessDenied />} 
+              />
+              <Route 
+                path="/reporting/worklist/:service_visit_item_id/report" 
+                element={canWorkflow ? <ReportingPage /> : <AccessDenied />} 
+              />
+              <Route 
+                path="/reports" 
+                element={canWorkflow ? <ReportPrintingWorklist /> : <AccessDenied />} 
+              />
             </Routes>
 
           </div>
