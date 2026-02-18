@@ -46,14 +46,28 @@ function Shell() {
     }
   }, [user, groups, isSuperuser]);
   
-  const canRegister = isSuperuser || groups.includes("registration");
-  const canPerform = isSuperuser || groups.includes("performance");
-  const canVerify = isSuperuser || groups.includes("verification");
+  // Helper function to check if user has any of the specified roles (case-insensitive)
+  const hasRole = (roleNames: string[]): boolean => {
+    if (isSuperuser) return true;
+    const userGroups = groups.map((g: string) => g.toLowerCase());
+    return roleNames.some(role => userGroups.includes(role.toLowerCase()));
+  };
+
+  // New role names (primary)
+  const isReceptionist = hasRole(["receptionist", "registration", "registration_desk"]);
+  const isTechnologist = hasRole(["technologist", "performance", "performance_desk"]);
+  const isRadiologist = hasRole(["radiologist", "verification", "verification_desk"]);
+  const isManager = hasRole(["manager", "admin"]);
+
+  // Legacy role checks (backward compatibility)
+  const canRegister = isSuperuser || isReceptionist;
+  const canPerform = isSuperuser || isTechnologist;
+  const canVerify = isSuperuser || isRadiologist;
   const canAdmin = isSuperuser;
-  const canBackupAdmin = isSuperuser || groups.includes("manager") || groups.includes("admin");
-  const canWorkflow = isSuperuser || canRegister || canPerform || canVerify;
-  // Verification users should have access to all workflow pages
-  const canAccessAllWorkflow = isSuperuser || canVerify || canPerform || canRegister;
+  const canBackupAdmin = isSuperuser || isManager;
+  const canWorkflow = isSuperuser || isReceptionist || isTechnologist || isRadiologist;
+  // Verification/Radiologist users should have access to all workflow pages
+  const canAccessAllWorkflow = isSuperuser || isRadiologist || isTechnologist || isReceptionist;
 
   if (!token) return <Navigate to="/login" replace />;
   if (isLoading) {
@@ -116,21 +130,25 @@ function Shell() {
                 WORKFLOW
               </div>
             </div>
-            {(canRegister || canVerify) && (
+            {/* Registration: Receptionist and Radiologist can register */}
+            {(isReceptionist || isRadiologist) && (
               <NavLink to="/registration">
                 Registration
               </NavLink>
             )}
+            {/* Patient Workflow: All workflow roles can view */}
             {canWorkflow && (
               <NavLink to="/patients/workflow">
                 Patient workflow
               </NavLink>
             )}
-            {(canPerform || canVerify) && (
+            {/* Reporting Worklist: Technologist and Radiologist can access */}
+            {(isTechnologist || isRadiologist) && (
               <NavLink to="/reporting/worklist">
                 Reporting worklist
               </NavLink>
             )}
+            {/* Print Reports: All workflow roles can print */}
             {canWorkflow && (
               <NavLink to="/reports">
                 Print reports
