@@ -109,11 +109,13 @@ export async function getReportPrintPayload(serviceVisitItemId: string, token: s
 }
 
 export async function fetchReportPdf(serviceVisitItemId: string, token: string | null): Promise<Blob> {
+    const headers: Record<string, string> = {};
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
     const response = await fetch(`${API_BASE}/reporting/workitems/${serviceVisitItemId}/report-pdf/`, {
         method: "GET",
-        headers: {
-            "Authorization": `Bearer ${token}`
-        }
+        headers
     });
     if (!response.ok) {
         throw new Error("Failed to fetch PDF");
@@ -142,11 +144,13 @@ export async function getPublishHistory(serviceVisitItemId: string, token: strin
 }
 
 export async function fetchPublishedPdf(serviceVisitItemId: string, version: number, token: string | null): Promise<Blob> {
+    const headers: Record<string, string> = {};
+    if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+    }
     const response = await fetch(`${API_BASE}/reporting/workitems/${serviceVisitItemId}/published-pdf/?version=${version}`, {
         method: "GET",
-        headers: {
-            "Authorization": `Bearer ${token}`
-        }
+        headers
     });
     if (!response.ok) {
         throw new Error("Failed to fetch PDF");
