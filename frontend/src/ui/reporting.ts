@@ -105,20 +105,39 @@ export async function getNarrative(serviceVisitItemId: string, token: string | n
 }
 
 export async function getReportPrintPayload(serviceVisitItemId: string, token: string | null): Promise<ReportPrintPayload> {
+    if (!token) {
+        throw new Error("Authentication token is required");
+    }
     return apiGet(`/reporting/workitems/${serviceVisitItemId}/print-payload/`, token);
 }
 
 export async function fetchReportPdf(serviceVisitItemId: string, token: string | null): Promise<Blob> {
-    const headers: Record<string, string> = {};
-    if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
+    if (!token) {
+        throw new Error("Authentication token is required");
     }
+    const headers: Record<string, string> = {
+        "Authorization": `Bearer ${token}`
+    };
     const response = await fetch(`${API_BASE}/reporting/workitems/${serviceVisitItemId}/report-pdf/`, {
         method: "GET",
         headers
     });
     if (!response.ok) {
-        throw new Error("Failed to fetch PDF");
+        const errorText = await response.text();
+        let errorMsg = "Failed to fetch PDF";
+        try {
+            const errorJson = JSON.parse(errorText);
+            errorMsg = errorJson.detail || errorJson.message || errorMsg;
+        } catch {
+            if (response.status === 401) {
+                errorMsg = "Authentication required. Please log in again.";
+            } else if (response.status === 403) {
+                errorMsg = "You don't have permission to access this PDF.";
+            } else if (response.status === 404) {
+                errorMsg = "PDF not found.";
+            }
+        }
+        throw new Error(errorMsg);
     }
     return response.blob();
 }
@@ -132,7 +151,10 @@ export async function returnReport(serviceVisitItemId: string, reason: string, t
 }
 
 export async function publishReport(serviceVisitItemId: string, notes: string, token: string | null) {
-    return apiPost(`/reporting/workitems/${serviceVisitItemId}/publish/`, token, { notes, confirm: "PUBLISH" });
+    if (!token) {
+        throw new Error("Authentication token is required");
+    }
+    return apiPost(`/reporting/workitems/${serviceVisitItemId}/publish/`, token, { notes: notes || "" });
 }
 
 export async function checkIntegrity(serviceVisitItemId: string, version: number, token: string | null) {
@@ -144,16 +166,32 @@ export async function getPublishHistory(serviceVisitItemId: string, token: strin
 }
 
 export async function fetchPublishedPdf(serviceVisitItemId: string, version: number, token: string | null): Promise<Blob> {
-    const headers: Record<string, string> = {};
-    if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
+    if (!token) {
+        throw new Error("Authentication token is required");
     }
+    const headers: Record<string, string> = {
+        "Authorization": `Bearer ${token}`
+    };
     const response = await fetch(`${API_BASE}/reporting/workitems/${serviceVisitItemId}/published-pdf/?version=${version}`, {
         method: "GET",
         headers
     });
     if (!response.ok) {
-        throw new Error("Failed to fetch PDF");
+        const errorText = await response.text();
+        let errorMsg = "Failed to fetch PDF";
+        try {
+            const errorJson = JSON.parse(errorText);
+            errorMsg = errorJson.detail || errorJson.message || errorMsg;
+        } catch {
+            if (response.status === 401) {
+                errorMsg = "Authentication required. Please log in again.";
+            } else if (response.status === 403) {
+                errorMsg = "You don't have permission to access this PDF.";
+            } else if (response.status === 404) {
+                errorMsg = "PDF not found.";
+            }
+        }
+        throw new Error(errorMsg);
     }
     return response.blob();
 }

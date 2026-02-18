@@ -52,7 +52,6 @@ export default function ReportingPage() {
     const [showPublishModal, setShowPublishModal] = useState(false);
     const [returnReason, setReturnReason] = useState("");
     const [publishNotes, setPublishNotes] = useState("");
-    const [publishConfirm, setPublishConfirm] = useState("");
     const [publishHistory, setPublishHistory] = useState<any[]>([]);
 
     const [narrative, setNarrative] = useState<NarrativeResponseV2 | null>(null);
@@ -184,13 +183,19 @@ export default function ReportingPage() {
     };
 
     const handlePublish = async () => {
-        if (!id) return;
+        if (!id || !token) return;
         try {
+            setSaving(true);
+            setError(null);
             await publishReport(id, publishNotes, token);
             setShowPublishModal(false);
+            setPublishNotes("");
             await loadData();
+            setSuccess("Report published successfully");
         } catch (e: any) {
             setError(e.message || "Failed to publish report");
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -377,21 +382,17 @@ export default function ReportingPage() {
                         <h3>Publish report</h3>
                         <textarea
                             data-testid="publish-notes"
-                            placeholder="Notes"
+                            placeholder="Notes (optional)"
                             value={publishNotes}
                             onChange={e => setPublishNotes(e.target.value)}
                             style={{ width: "100%", minHeight: 80, marginBottom: 12 }}
                         />
-                        <input
-                            data-testid="publish-confirm"
-                            placeholder="Type PUBLISH to confirm"
-                            value={publishConfirm}
-                            onChange={e => setPublishConfirm(e.target.value)}
-                            style={{ width: "100%", marginBottom: 12 }}
-                        />
                         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-                            <Button variant="secondary" onClick={() => setShowPublishModal(false)}>Cancel</Button>
-                            <Button data-testid="publish-confirm-button" onClick={handlePublish} disabled={publishConfirm !== "PUBLISH"}>Publish</Button>
+                            <Button variant="secondary" onClick={() => {
+                                setShowPublishModal(false);
+                                setPublishNotes("");
+                            }}>Cancel</Button>
+                            <Button data-testid="publish-confirm-button" onClick={handlePublish} disabled={saving}>Publish</Button>
                         </div>
                     </div>
                 </div>

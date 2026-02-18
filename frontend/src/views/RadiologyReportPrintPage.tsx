@@ -16,12 +16,25 @@ export default function RadiologyReportPrintPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!id || !token) return;
+    if (!id || !token) {
+      setError("Authentication required. Please log in.");
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     setError(null);
     getReportPrintPayload(id, token)
-      .then((data) => setPayload(data))
-      .catch((e: any) => setError(e?.message || "Failed to load print preview"))
+      .then((data) => {
+        if (!data || typeof data !== 'object') {
+          throw new Error("Invalid response format from server");
+        }
+        setPayload(data);
+      })
+      .catch((e: any) => {
+        console.error("Failed to load print preview:", e);
+        const errorMsg = e?.message || e?.detail || "Failed to load print preview. Please check your connection and try again.";
+        setError(errorMsg);
+      })
       .finally(() => setLoading(false));
   }, [id, token]);
 
