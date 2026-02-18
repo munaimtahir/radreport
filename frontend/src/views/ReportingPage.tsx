@@ -274,7 +274,7 @@ export default function ReportingPage() {
                 <Button variant="secondary" onClick={handleGenerateNarrative} disabled={generatingNarrative}>Generate Narrative</Button>
                 <Button data-testid="report-preview" variant="secondary" onClick={handleFetchPdf}>Preview / Print Layout</Button>
                 <Button variant="secondary" onClick={handleDownloadServerPdf}>Download Server PDF</Button>
-                {(user?.is_superuser || user?.groups?.includes("reporting_verifier")) && (
+                {(user?.is_superuser || user?.groups?.includes("reporting_verifier") || user?.groups?.includes("verification")) && (
                     <>
                         <Button variant="secondary" onClick={() => setShowReturnModal(true)} disabled={status === "draft"}>Return</Button>
                         <Button data-testid="report-verify" variant="secondary" onClick={handleVerify} disabled={status !== "submitted"}>Verify</Button>

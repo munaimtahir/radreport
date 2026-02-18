@@ -32,7 +32,8 @@ from apps.catalog.serializers import ServiceSerializer
 from .permissions import (
     IsRegistrationDesk, IsPerformanceDesk, IsVerificationDesk,
     IsRegistrationOrPerformanceDesk, IsPerformanceOrVerificationDesk, IsAnyDesk,
-    IsUSGOperator, IsVerifier, IsOPDOperator, IsDoctor, IsReception
+    IsUSGOperator, IsVerifier, IsOPDOperator, IsDoctor, IsReception,
+    IsRegistrationOrVerificationDesk
 )
 from .transitions import transition_item_status, get_allowed_transitions
 from django.core.exceptions import ValidationError, SuspiciousFileOperation
@@ -236,9 +237,9 @@ class ServiceVisitViewSet(viewsets.ModelViewSet):
         
         return queryset
     
-    @action(detail=False, methods=["post"], permission_classes=[IsRegistrationDesk])
+    @action(detail=False, methods=["post"], permission_classes=[IsRegistrationOrVerificationDesk])
     def create_visit(self, request):
-        """Create service visit at registration desk"""
+        """Create service visit at registration desk - verification users can also create visits"""
         serializer = ServiceVisitCreateSerializer(data=request.data, context={"request": request})
         if serializer.is_valid():
             service_visit = serializer.save()

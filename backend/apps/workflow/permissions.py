@@ -12,10 +12,20 @@ Roles:
 from rest_framework import permissions
 
 # Desk roles (canonical Django group names)
+# Note: Django admin may create groups as "Registration", "Performance", "Verification"
+# or "registration_desk", "performance_desk", "verification_desk"
+# Backend checks for both variations (case-insensitive)
 DESK_ROLES = {
     "REGISTRATION": "registration_desk",
     "PERFORMANCE": "performance_desk",
     "VERIFICATION": "verification_desk",
+}
+
+# Alternative group names that Django admin might create
+DESK_ROLES_ALT = {
+    "REGISTRATION": ["Registration", "registration", "registration_desk"],
+    "PERFORMANCE": ["Performance", "performance", "performance_desk"],
+    "VERIFICATION": ["Verification", "verification", "verification_desk"],
 }
 
 
@@ -27,7 +37,9 @@ class IsRegistrationDesk(permissions.BasePermission):
         # Superusers have all permissions
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name=DESK_ROLES["REGISTRATION"]).exists()
+        # Check for any variation of registration group name (case-insensitive)
+        group_names = [g.name.lower() for g in request.user.groups.all()]
+        return any(name in ["registration", "registration_desk"] for name in group_names)
 
 
 class IsPerformanceDesk(permissions.BasePermission):
@@ -38,7 +50,9 @@ class IsPerformanceDesk(permissions.BasePermission):
         # Superusers have all permissions
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name=DESK_ROLES["PERFORMANCE"]).exists()
+        # Check for any variation of performance group name (case-insensitive)
+        group_names = [g.name.lower() for g in request.user.groups.all()]
+        return any(name in ["performance", "performance_desk"] for name in group_names)
 
 
 class IsVerificationDesk(permissions.BasePermission):
@@ -49,7 +63,9 @@ class IsVerificationDesk(permissions.BasePermission):
         # Superusers have all permissions
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name=DESK_ROLES["VERIFICATION"]).exists()
+        # Check for any variation of verification group name (case-insensitive)
+        group_names = [g.name.lower() for g in request.user.groups.all()]
+        return any(name in ["verification", "verification_desk"] for name in group_names)
 
 
 class IsRegistrationOrPerformanceDesk(permissions.BasePermission):
@@ -83,7 +99,11 @@ class IsAnyDesk(permissions.BasePermission):
             return False
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name__in=DESK_ROLES.values()).exists()
+        # Check for any desk group variation (case-insensitive)
+        group_names = [g.name.lower() for g in request.user.groups.all()]
+        desk_groups = ["registration", "registration_desk", "performance", "performance_desk", 
+                      "verification", "verification_desk"]
+        return any(name in desk_groups for name in group_names)
 
 
 # PHASE C: Granular role permissions
@@ -94,7 +114,9 @@ class IsUSGOperator(permissions.BasePermission):
             return False
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name=DESK_ROLES["PERFORMANCE"]).exists()
+        # Check for any variation of performance group name (case-insensitive)
+        group_names = [g.name.lower() for g in request.user.groups.all()]
+        return any(name in ["performance", "performance_desk"] for name in group_names)
 
 
 class IsVerifier(permissions.BasePermission):
@@ -104,7 +126,9 @@ class IsVerifier(permissions.BasePermission):
             return False
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name=DESK_ROLES["VERIFICATION"]).exists()
+        # Check for any variation of verification group name (case-insensitive)
+        group_names = [g.name.lower() for g in request.user.groups.all()]
+        return any(name in ["verification", "verification_desk"] for name in group_names)
 
 
 class IsOPDOperator(permissions.BasePermission):
@@ -114,7 +138,9 @@ class IsOPDOperator(permissions.BasePermission):
             return False
         if request.user.is_superuser:
             return True
-        return request.user.groups.filter(name=DESK_ROLES["PERFORMANCE"]).exists()
+        # Check for any variation of performance group name (case-insensitive)
+        group_names = [g.name.lower() for g in request.user.groups.all()]
+        return any(name in ["performance", "performance_desk"] for name in group_names)
 
 
 class IsDoctor(permissions.BasePermission):
@@ -142,3 +168,15 @@ class IsReception(permissions.BasePermission):
         if request.user.is_superuser:
             return True
         return IsRegistrationDesk().has_permission(request, view)
+
+
+class IsRegistrationOrVerificationDesk(permissions.BasePermission):
+    """Permission check for Registration or Verification desk - allows verification users to create visits"""
+    def has_permission(self, request, view):
+        if not request.user or not request.user.is_authenticated:
+            return False
+        # Superusers have all permissions
+        if request.user.is_superuser:
+            return True
+        return IsRegistrationDesk().has_permission(request, view) or \
+               IsVerificationDesk().has_permission(request, view)

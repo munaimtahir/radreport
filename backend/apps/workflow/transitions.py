@@ -58,20 +58,22 @@ OPD_TRANSITIONS = {
 }
 
 # PHASE C: Role-based permissions for transitions
+# NOTE: VERIFICATION role has access to all workflow transitions to allow verification users
+# to access all workflow pages and perform all workflow tasks
 TRANSITION_PERMISSIONS = {
     # USG transitions
-    ("USG", "REGISTERED", "IN_PROGRESS"): ["USG_OPERATOR", "PERFORMANCE", "ADMIN"],
-    ("USG", "IN_PROGRESS", "PENDING_VERIFICATION"): ["USG_OPERATOR", "PERFORMANCE", "ADMIN"],
+    ("USG", "REGISTERED", "IN_PROGRESS"): ["USG_OPERATOR", "PERFORMANCE", "VERIFIER", "VERIFICATION", "ADMIN"],
+    ("USG", "IN_PROGRESS", "PENDING_VERIFICATION"): ["USG_OPERATOR", "PERFORMANCE", "VERIFIER", "VERIFICATION", "ADMIN"],
     ("USG", "PENDING_VERIFICATION", "PUBLISHED"): ["VERIFIER", "VERIFICATION", "ADMIN"],
     ("USG", "PENDING_VERIFICATION", "RETURNED_FOR_CORRECTION"): ["VERIFIER", "VERIFICATION", "ADMIN"],
-    ("USG", "RETURNED_FOR_CORRECTION", "IN_PROGRESS"): ["USG_OPERATOR", "PERFORMANCE", "ADMIN"],
+    ("USG", "RETURNED_FOR_CORRECTION", "IN_PROGRESS"): ["USG_OPERATOR", "PERFORMANCE", "VERIFIER", "VERIFICATION", "ADMIN"],
     
     # OPD transitions
-    ("OPD", "REGISTERED", "IN_PROGRESS"): ["OPD_OPERATOR", "PERFORMANCE", "ADMIN"],
-    ("OPD", "IN_PROGRESS", "FINALIZED"): ["DOCTOR", "ADMIN"],
-    ("OPD", "IN_PROGRESS", "PENDING_VERIFICATION"): ["OPD_OPERATOR", "PERFORMANCE", "ADMIN"],  # Optional
-    ("OPD", "FINALIZED", "PUBLISHED"): ["DOCTOR", "ADMIN"],
-    ("OPD", "PENDING_VERIFICATION", "PUBLISHED"): ["DOCTOR", "ADMIN"],
+    ("OPD", "REGISTERED", "IN_PROGRESS"): ["OPD_OPERATOR", "PERFORMANCE", "VERIFIER", "VERIFICATION", "ADMIN"],
+    ("OPD", "IN_PROGRESS", "FINALIZED"): ["DOCTOR", "VERIFIER", "VERIFICATION", "ADMIN"],
+    ("OPD", "IN_PROGRESS", "PENDING_VERIFICATION"): ["OPD_OPERATOR", "PERFORMANCE", "VERIFIER", "VERIFICATION", "ADMIN"],  # Optional
+    ("OPD", "FINALIZED", "PUBLISHED"): ["DOCTOR", "VERIFIER", "VERIFICATION", "ADMIN"],
+    ("OPD", "PENDING_VERIFICATION", "PUBLISHED"): ["DOCTOR", "VERIFIER", "VERIFICATION", "ADMIN"],
     
     # Common transitions
     ("*", "*", "CANCELLED"): ["ADMIN"],  # Only admin can cancel
@@ -82,6 +84,11 @@ def get_user_roles(user):
     """
     Get user roles from groups or profile.
     Returns list of role strings.
+    
+    Handles group name variations (case-insensitive, with/without _desk suffix):
+    - "Registration", "registration", "registration_desk" → REGISTRATION
+    - "Performance", "performance", "performance_desk" → PERFORMANCE, USG_OPERATOR, OPD_OPERATOR
+    - "Verification", "verification", "verification_desk" → VERIFICATION, VERIFIER
     """
     if not user or not user.is_authenticated:
         return []
@@ -91,17 +98,18 @@ def get_user_roles(user):
     
     roles = []
     
-    # Check Django groups
-    group_names = user.groups.values_list("name", flat=True)
-    for group_name in group_names:
-        group_upper = group_name.upper()
-        if group_upper in ["REGISTRATION", "PERFORMANCE", "VERIFICATION", "ADMIN"]:
-            roles.append(group_upper)
-        # Map group names to role names
-        if group_upper == "PERFORMANCE":
-            roles.extend(["USG_OPERATOR", "OPD_OPERATOR"])
-        if group_upper == "VERIFICATION":
-            roles.append("VERIFIER")
+    # Check Django groups (normalize to lowercase for comparison)
+    group_names = [g.name.lower() for g in user.groups.all()]
+    
+    # Map group names to roles (case-insensitive, handles variations)
+    if any(name in ["registration", "registration_desk"] for name in group_names):
+        roles.append("REGISTRATION")
+    
+    if any(name in ["performance", "performance_desk"] for name in group_names):
+        roles.extend(["PERFORMANCE", "USG_OPERATOR", "OPD_OPERATOR"])
+    
+    if any(name in ["verification", "verification_desk"] for name in group_names):
+        roles.extend(["VERIFICATION", "VERIFIER"])
     
     return list(set(roles))  # Remove duplicates
 

@@ -493,7 +493,11 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"], url_path="return-for-correction")
     def return_for_correction(self, request, pk=None):
         item = self._get_item(pk)
-        if not (request.user.is_superuser or request.user.groups.filter(name="reporting_verifier").exists()):
+        # Allow verification_desk group (workflow) or reporting_verifier group (legacy)
+        # Check case-insensitively for variations
+        group_names = [g.name.lower() for g in request.user.groups.all()]
+        if not (request.user.is_superuser or 
+                any(name in ["verification", "verification_desk", "reporting_verifier"] for name in group_names)):
             raise exceptions.PermissionDenied("Only verifiers can return reports.")
         reason = request.data.get("reason", "").strip()
         if not reason:
@@ -520,7 +524,11 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"])
     def verify(self, request, pk=None):
         item = self._get_item(pk)
-        if not (request.user.is_superuser or request.user.groups.filter(name="reporting_verifier").exists()):
+        # Allow verification_desk group (workflow) or reporting_verifier group (legacy)
+        # Check case-insensitively for variations
+        group_names = [g.name.lower() for g in request.user.groups.all()]
+        if not (request.user.is_superuser or 
+                any(name in ["verification", "verification_desk", "reporting_verifier"] for name in group_names)):
             raise exceptions.PermissionDenied("Only verifiers can verify reports.")
         notes = request.data.get("notes", "")
 
@@ -582,7 +590,11 @@ class ReportWorkItemViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
         item = self._get_item(pk)
-        if not (request.user.is_superuser or request.user.groups.filter(name="reporting_verifier").exists()):
+        # Allow verification_desk group (workflow) or reporting_verifier group (legacy)
+        # Check case-insensitively for variations
+        group_names = [g.name.lower() for g in request.user.groups.all()]
+        if not (request.user.is_superuser or 
+                any(name in ["verification", "verification_desk", "reporting_verifier"] for name in group_names)):
             raise exceptions.PermissionDenied("Only verifiers can publish reports.")
 
         template_v2 = self._get_v2_template(item)

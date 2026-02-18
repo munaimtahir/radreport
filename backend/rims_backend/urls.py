@@ -127,9 +127,18 @@ def health_auth(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def auth_me(request):
-    """Return current user identity and group membership for RBAC."""
+    """Return current user identity and group membership for RBAC.
+    
+    Normalizes group names to lowercase for consistency between Django admin
+    (which may use capitalized names like "Registration") and frontend/backend
+    (which expect lowercase like "registration").
+    """
     user = request.user
-    groups = list(user.groups.values_list("name", flat=True))
+    # Normalize group names to lowercase for frontend compatibility
+    # Django admin may create groups as "Registration", "Performance", "Verification"
+    # but frontend checks for "registration", "performance", "verification"
+    raw_groups = list(user.groups.values_list("name", flat=True))
+    groups = [g.lower() for g in raw_groups]
     return JsonResponse({
         "username": user.username,
         "is_superuser": user.is_superuser,

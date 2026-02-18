@@ -42,6 +42,8 @@ function Shell() {
   const canAdmin = isSuperuser;
   const canBackupAdmin = isSuperuser || groups.includes("manager") || groups.includes("admin");
   const canWorkflow = isSuperuser || canRegister || canPerform || canVerify;
+  // Verification users should have access to all workflow pages
+  const canAccessAllWorkflow = isSuperuser || canVerify || canPerform || canRegister;
 
   if (!token) return <Navigate to="/login" replace />;
   if (isLoading) {
@@ -104,7 +106,7 @@ function Shell() {
                 WORKFLOW
               </div>
             </div>
-            {canRegister && (
+            {(canRegister || canVerify) && (
               <NavLink to="/registration">
                 Registration
               </NavLink>
@@ -243,7 +245,7 @@ function Shell() {
               {/* Workflow Routes */}
               <Route
                 path="/registration"
-                element={canRegister ? <RegistrationPage /> : <AccessDenied />}
+                element={(canRegister || canVerify) ? <RegistrationPage /> : <AccessDenied />}
               />
               <Route
                 path="/patients/workflow"
