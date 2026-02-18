@@ -149,6 +149,79 @@ If `cbd_comment` is blank, sentence remains valid.
 
 ---
 
+---
+
+## Template Field Design for Intelligence
+
+### Normal / Abnormal / Detail pattern
+
+Each organ in USG abdomen templates follows a consistent pattern:
+
+1. **Visualization** (`<org>_visualized`): Whether the organ is seen (Satisfactory, Partially, No, or modality-specific values).
+2. **Status / normal summary**: When visualized and no abnormal toggles are true, emit a normal summary.
+3. **Abnormal toggles**: Booleans for stones, lesion, dilation, etc.
+4. **Detail fields**: Numeric/enum fields that appear only when the corresponding abnormal toggle is true (e.g. `gb_largest_stone_mm` when `gb_stones_present`).
+
+**Suppression rules:**
+- If organ is not visualized, suppress size/echotexture/lesion statements (visibility dominates).
+- If `gb_post_cholecystectomy` is true, suppress stone/sludge/CBD rules for gallbladder.
+
+### Field prefix convention (per organ)
+
+| Prefix   | Organ             | Examples                                  |
+|----------|-------------------|-------------------------------------------|
+| `liv_`   | Liver             | liv_visualized, liv_fatty_grade, liv_lesion_* |
+| `gb_`    | Gallbladder       | gb_stones_present, gb_wall_thickness_mm   |
+| `cbd_`   | Common bile duct  | cbd_dilated                               |
+| `panc_`  | Pancreas          | panc_visualized, panc_duct_dilated        |
+| `spl_`   | Spleen            | spl_lesion_present, spl_size              |
+| `kid_r_` | Right kidney      | kid_r_hydronephrosis_grade, kid_r_cyst_*  |
+| `kid_l_` | Left kidney       | kid_l_ureter_stone_present                |
+| `bla_`   | Urinary bladder   | bla_wall_thickened, bla_calculus_*        |
+| `asc_`   | Ascites           | asc_present, asc_amount                   |
+| `aff_`   | Fluid collections | aff_collection_site, aff_collection_mm    |
+| `ff_`    | Free fluid        | ff_present, ff_amount                     |
+
+### Placeholder usage
+
+- **Required**: `{{field}}` — sentence omitted if missing.
+- **Optional**: `{{field?}}` — if missing, blank; sentence still renders.
+- **Default**: `{{field|N/A}}` or `{{field?|N/A}}` — fallback when empty.
+
+Example rule snippets:
+
+```json
+{
+  "if": {"field": "gb_stones_present", "equals": true},
+  "then": "Echogenic calculus/calculi noted within the gallbladder lumen with acoustic shadowing."
+},
+{
+  "if": {
+    "all": [
+      {"field": "gb_stones_present", "equals": true},
+      {"field": "gb_largest_stone_mm", "gt": 0}
+    ]
+  },
+  "then": "Largest measures {{gb_largest_stone_mm}} mm."
+}
+```
+
+Post-cholecystectomy suppression:
+
+```json
+{
+  "if": {
+    "any": [
+      {"field": "gb_post_cholecystectomy", "equals": true},
+      {"field": "gb_visualized", "equals": "Post-cholecystectomy"}
+    ]
+  },
+  "then": "Gallbladder is not visualized (post-cholecystectomy)."
+}
+```
+
+---
+
 ## Where to modify in future
 
 ### To enhance narrative intelligence further (next iterations)

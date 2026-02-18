@@ -282,6 +282,203 @@
           "Moderate",
           "Gross"
         ]
+      },
+      "liv_size": {
+        "type": "string",
+        "title": "Liver Size (abnormal)",
+        "enum": ["normal", "enlarged", "reduced"]
+      },
+      "liv_surface": {
+        "type": "string",
+        "title": "Liver Surface",
+        "enum": ["smooth", "irregular"]
+      },
+      "liv_fatty_grade": {
+        "type": "string",
+        "title": "Fatty Infiltration Grade",
+        "enum": ["mild", "moderate", "severe"]
+      },
+      "liv_largest_lesion_mm": {
+        "type": "number",
+        "title": "Largest Lesion (mm)"
+      },
+      "liv_lesion_character": {
+        "type": "string",
+        "title": "Lesion Character",
+        "enum": ["cystic", "solid", "mixed"]
+      },
+      "liv_lesion_echo": {
+        "type": "string",
+        "title": "Lesion Echogenicity",
+        "enum": ["hyperechoic", "hypoechoic", "isoechoic", "anechoic"]
+      },
+      "gb_largest_stone_mm": {
+        "type": "number",
+        "title": "Largest Stone (mm)"
+      },
+      "gb_polyp_present": {
+        "type": "boolean",
+        "title": "Polyp Present"
+      },
+      "gb_polyp_mm": {
+        "type": "number",
+        "title": "Polyp Size (mm)"
+      },
+      "gb_post_cholecystectomy": {
+        "type": "boolean",
+        "title": "Post-cholecystectomy"
+      },
+      "cbd_dilated": {
+        "type": "boolean",
+        "title": "CBD Dilated"
+      },
+      "panc_size": {
+        "type": "string",
+        "title": "Pancreas Size",
+        "enum": ["normal", "bulky", "atrophic"]
+      },
+      "panc_duct_dilated": {
+        "type": "boolean",
+        "title": "MPD Dilated"
+      },
+      "panc_peripancreatic_fluid": {
+        "type": "boolean",
+        "title": "Peripancreatic Fluid"
+      },
+      "panc_calcification_present": {
+        "type": "boolean",
+        "title": "Calcification Present"
+      },
+      "spl_size": {
+        "type": "string",
+        "title": "Spleen Size",
+        "enum": ["normal", "enlarged"]
+      },
+      "spl_lesion_present": {
+        "type": "boolean",
+        "title": "Lesion Present"
+      },
+      "spl_largest_lesion_mm": {
+        "type": "number",
+        "title": "Largest Lesion (mm)"
+      },
+      "spl_lesion_character": {
+        "type": "string",
+        "title": "Lesion Character",
+        "enum": ["cystic", "solid", "mixed"]
+      },
+      "kid_r_cortical_thickness_mm": {
+        "type": "number",
+        "title": "Cortical Thickness (mm)"
+      },
+      "kid_r_cyst_present": {
+        "type": "boolean",
+        "title": "Cyst Present"
+      },
+      "kid_r_cyst_type": {
+        "type": "string",
+        "title": "Cyst Type",
+        "enum": ["simple", "complex"]
+      },
+      "kid_r_mass_mm": {
+        "type": "number",
+        "title": "Mass Size (mm)"
+      },
+      "kid_r_hydro_grade": {
+        "type": "string",
+        "title": "Hydronephrosis Grade",
+        "enum": ["mild", "moderate", "severe"]
+      },
+      "kid_r_ureter_stone_present": {
+        "type": "boolean",
+        "title": "Ureteric Stone Present"
+      },
+      "kid_r_ureter_stone_mm": {
+        "type": "number",
+        "title": "Ureteric Stone (mm)"
+      },
+      "kid_l_cortical_thickness_mm": {
+        "type": "number",
+        "title": "Cortical Thickness (mm)"
+      },
+      "kid_l_cyst_present": {
+        "type": "boolean",
+        "title": "Cyst Present"
+      },
+      "kid_l_cyst_type": {
+        "type": "string",
+        "title": "Cyst Type",
+        "enum": ["simple", "complex"]
+      },
+      "kid_l_mass_mm": {
+        "type": "number",
+        "title": "Mass Size (mm)"
+      },
+      "kid_l_hydro_grade": {
+        "type": "string",
+        "title": "Hydronephrosis Grade",
+        "enum": ["mild", "moderate", "severe"]
+      },
+      "kid_l_ureter_stone_present": {
+        "type": "boolean",
+        "title": "Ureteric Stone Present"
+      },
+      "kid_l_ureter_stone_mm": {
+        "type": "number",
+        "title": "Ureteric Stone (mm)"
+      },
+      "bla_adequately_filled": {
+        "type": "boolean",
+        "title": "Adequately Filled"
+      },
+      "bla_wall_thickness_mm": {
+        "type": "number",
+        "title": "Wall Thickness (mm)"
+      },
+      "bla_wall_thickened": {
+        "type": "boolean",
+        "title": "Wall Thickened"
+      },
+      "bla_trabeculation": {
+        "type": "boolean",
+        "title": "Trabeculation"
+      },
+      "bla_calculus_present": {
+        "type": "boolean",
+        "title": "Calculus Present"
+      },
+      "bla_calculus_mm": {
+        "type": "number",
+        "title": "Calculus Size (mm)"
+      },
+      "bla_mass_present": {
+        "type": "boolean",
+        "title": "Mass Present"
+      },
+      "bla_post_void_residual_ml": {
+        "type": "number",
+        "title": "Post-void Residual (ml)"
+      },
+      "asc_present": {
+        "type": "boolean",
+        "title": "Ascites Present"
+      },
+      "asc_amount": {
+        "type": "string",
+        "title": "Ascites Amount",
+        "enum": ["mild", "moderate", "gross"]
+      },
+      "aff_collection_present": {
+        "type": "boolean",
+        "title": "Fluid Collection Present"
+      },
+      "aff_collection_site": {
+        "type": "string",
+        "title": "Collection Site"
+      },
+      "aff_collection_mm": {
+        "type": "number",
+        "title": "Collection Size (mm)"
       }
     },
     "required": [
@@ -300,10 +497,16 @@
           "liv_image_quality",
           "liv_limitation_reason",
           "liv_size_cm",
+          "liv_size",
           "liv_contour",
+          "liv_surface",
           "liv_echotexture",
           "liv_echogenicity",
+          "liv_fatty_grade",
           "liv_focal_lesion_present",
+          "liv_largest_lesion_mm",
+          "liv_lesion_character",
+          "liv_lesion_echo",
           "liv_ihbd_present",
           "liv_portal_vein_diameter_mm"
         ]
@@ -312,13 +515,18 @@
         "title": "Gallbladder & Biliary",
         "fields": [
           "gb_visualized",
+          "gb_post_cholecystectomy",
           "gb_status",
           "gb_stones_present",
+          "gb_largest_stone_mm",
           "gb_sludge_present",
           "gb_wall_thickness_mm",
           "gb_murphy_sign_positive",
           "gb_pericholecystic_fluid_present",
+          "gb_polyp_present",
+          "gb_polyp_mm",
           "gb_cbd_diameter_mm",
+          "cbd_dilated",
           "gb_cbd_stone_suspected"
         ]
       },
@@ -327,8 +535,12 @@
         "fields": [
           "panc_visualized",
           "panc_echotexture",
+          "panc_size",
           "panc_mpd_diameter_mm",
-          "panc_focal_lesion_present"
+          "panc_duct_dilated",
+          "panc_focal_lesion_present",
+          "panc_peripancreatic_fluid",
+          "panc_calcification_present"
         ]
       },
       {
@@ -336,7 +548,11 @@
         "fields": [
           "spl_visualized",
           "spl_length_cm",
-          "spl_echotexture"
+          "spl_size",
+          "spl_echotexture",
+          "spl_lesion_present",
+          "spl_largest_lesion_mm",
+          "spl_lesion_character"
         ]
       },
       {
@@ -344,12 +560,19 @@
         "fields": [
           "kid_r_visualized",
           "kid_r_length_cm",
+          "kid_r_cortical_thickness_mm",
           "kid_r_cortical_echogenicity",
           "kid_r_cmd",
           "kid_r_hydronephrosis_grade",
+          "kid_r_hydro_grade",
           "kid_r_calculus_present",
           "kid_r_largest_calculus_mm",
-          "kid_r_mass_suspected"
+          "kid_r_cyst_present",
+          "kid_r_cyst_type",
+          "kid_r_mass_suspected",
+          "kid_r_mass_mm",
+          "kid_r_ureter_stone_present",
+          "kid_r_ureter_stone_mm"
         ]
       },
       {
@@ -357,12 +580,32 @@
         "fields": [
           "kid_l_visualized",
           "kid_l_length_cm",
+          "kid_l_cortical_thickness_mm",
           "kid_l_cortical_echogenicity",
           "kid_l_cmd",
           "kid_l_hydronephrosis_grade",
+          "kid_l_hydro_grade",
           "kid_l_calculus_present",
           "kid_l_largest_calculus_mm",
-          "kid_l_mass_suspected"
+          "kid_l_cyst_present",
+          "kid_l_cyst_type",
+          "kid_l_mass_suspected",
+          "kid_l_mass_mm",
+          "kid_l_ureter_stone_present",
+          "kid_l_ureter_stone_mm"
+        ]
+      },
+      {
+        "title": "Urinary Bladder",
+        "fields": [
+          "bla_adequately_filled",
+          "bla_wall_thickness_mm",
+          "bla_wall_thickened",
+          "bla_trabeculation",
+          "bla_calculus_present",
+          "bla_calculus_mm",
+          "bla_mass_present",
+          "bla_post_void_residual_ml"
         ]
       },
       {
@@ -371,7 +614,12 @@
           "aiv_visualized",
           "aiv_aorta_max_diameter_mm",
           "ff_present",
-          "ff_amount"
+          "ff_amount",
+          "asc_present",
+          "asc_amount",
+          "aff_collection_present",
+          "aff_collection_site",
+          "aff_collection_mm"
         ]
       }
     ],
@@ -380,48 +628,94 @@
       "liv_image_quality",
       "liv_limitation_reason",
       "liv_size_cm",
+      "liv_size",
       "liv_contour",
+      "liv_surface",
       "liv_echotexture",
       "liv_echogenicity",
+      "liv_fatty_grade",
       "liv_focal_lesion_present",
+      "liv_largest_lesion_mm",
+      "liv_lesion_character",
+      "liv_lesion_echo",
       "liv_ihbd_present",
       "liv_portal_vein_diameter_mm",
       "gb_visualized",
+      "gb_post_cholecystectomy",
       "gb_status",
       "gb_stones_present",
+      "gb_largest_stone_mm",
       "gb_sludge_present",
       "gb_wall_thickness_mm",
       "gb_murphy_sign_positive",
       "gb_pericholecystic_fluid_present",
+      "gb_polyp_present",
+      "gb_polyp_mm",
       "gb_cbd_diameter_mm",
+      "cbd_dilated",
       "gb_cbd_stone_suspected",
       "panc_visualized",
       "panc_echotexture",
+      "panc_size",
       "panc_mpd_diameter_mm",
+      "panc_duct_dilated",
       "panc_focal_lesion_present",
+      "panc_peripancreatic_fluid",
+      "panc_calcification_present",
       "spl_visualized",
       "spl_length_cm",
+      "spl_size",
       "spl_echotexture",
+      "spl_lesion_present",
+      "spl_largest_lesion_mm",
+      "spl_lesion_character",
       "kid_r_visualized",
       "kid_r_length_cm",
+      "kid_r_cortical_thickness_mm",
       "kid_r_cortical_echogenicity",
       "kid_r_cmd",
       "kid_r_hydronephrosis_grade",
+      "kid_r_hydro_grade",
       "kid_r_calculus_present",
       "kid_r_largest_calculus_mm",
+      "kid_r_cyst_present",
+      "kid_r_cyst_type",
       "kid_r_mass_suspected",
+      "kid_r_mass_mm",
+      "kid_r_ureter_stone_present",
+      "kid_r_ureter_stone_mm",
       "kid_l_visualized",
       "kid_l_length_cm",
+      "kid_l_cortical_thickness_mm",
       "kid_l_cortical_echogenicity",
       "kid_l_cmd",
       "kid_l_hydronephrosis_grade",
+      "kid_l_hydro_grade",
       "kid_l_calculus_present",
       "kid_l_largest_calculus_mm",
+      "kid_l_cyst_present",
+      "kid_l_cyst_type",
       "kid_l_mass_suspected",
+      "kid_l_mass_mm",
+      "kid_l_ureter_stone_present",
+      "kid_l_ureter_stone_mm",
       "aiv_visualized",
       "aiv_aorta_max_diameter_mm",
       "ff_present",
-      "ff_amount"
+      "ff_amount",
+      "bla_adequately_filled",
+      "bla_wall_thickness_mm",
+      "bla_wall_thickened",
+      "bla_trabeculation",
+      "bla_calculus_present",
+      "bla_calculus_mm",
+      "bla_mass_present",
+      "bla_post_void_residual_ml",
+      "asc_present",
+      "asc_amount",
+      "aff_collection_present",
+      "aff_collection_site",
+      "aff_collection_mm"
     ]
   },
   "narrative_rules": {
@@ -429,6 +723,13 @@
       {
         "title": "Liver",
         "content": [
+          {
+            "if": {
+              "field": "liv_visualized",
+              "in": ["Partially", "No"]
+            },
+            "then": "Liver is not visualized."
+          },
           {
             "if": {
               "field": "liv_visualized",
@@ -444,6 +745,13 @@
               },
               {
                 "if": {
+                  "field": "liv_size",
+                  "is_not_empty": true
+                },
+                "then": "Size is {{liv_size}}."
+              },
+              {
+                "if": {
                   "field": "liv_contour",
                   "is_not_empty": true
                 },
@@ -451,10 +759,24 @@
               },
               {
                 "if": {
+                  "field": "liv_surface",
+                  "is_not_empty": true
+                },
+                "then": "Surface is {{liv_surface}}."
+              },
+              {
+                "if": {
                   "field": "liv_echogenicity",
                   "is_not_empty": true
                 },
                 "then": "Parenchymal echogenicity is {{liv_echogenicity}}."
+              },
+              {
+                "if": {
+                  "field": "liv_fatty_grade",
+                  "is_not_empty": true
+                },
+                "then": "Liver shows fatty infiltration ({{liv_fatty_grade}})."
               }
             ]
           },
@@ -464,6 +786,33 @@
               "equals": true
             },
             "then": "A focal hepatic lesion is noted."
+          },
+          {
+            "if": {
+              "all": [
+                {"field": "liv_focal_lesion_present", "equals": true},
+                {"field": "liv_largest_lesion_mm", "gt": 0}
+              ]
+            },
+            "then": "Largest lesion measures {{liv_largest_lesion_mm}} mm."
+          },
+          {
+            "if": {
+              "all": [
+                {"field": "liv_focal_lesion_present", "equals": true},
+                {"field": "liv_lesion_character", "is_not_empty": true}
+              ]
+            },
+            "then": "Lesion character is {{liv_lesion_character}}."
+          },
+          {
+            "if": {
+              "all": [
+                {"field": "liv_focal_lesion_present", "equals": true},
+                {"field": "liv_lesion_echo", "is_not_empty": true}
+              ]
+            },
+            "then": "Lesion is {{liv_lesion_echo}}."
           },
           {
             "if": {
@@ -486,8 +835,28 @@
         "content": [
           {
             "if": {
-              "field": "gb_visualized",
-              "not_equals": "No"
+              "any": [
+                {"field": "gb_post_cholecystectomy", "equals": true},
+                {"field": "gb_visualized", "equals": "Post-cholecystectomy"}
+              ]
+            },
+            "then": "Gallbladder is not visualized (post-cholecystectomy)."
+          },
+          {
+            "if": {
+              "all": [
+                {"field": "gb_visualized", "in": ["Partially", "No"]},
+                {"not": {"field": "gb_post_cholecystectomy", "equals": true}}
+              ]
+            },
+            "then": "Gallbladder is not visualized."
+          },
+          {
+            "if": {
+              "all": [
+                {"field": "gb_visualized", "in": ["Satisfactory", "Contracted"]},
+                {"not": {"field": "gb_post_cholecystectomy", "equals": true}}
+              ]
             },
             "then": [
               {
@@ -503,42 +872,81 @@
                   "gt": 0
                 },
                 "then": "Wall thickness is {{gb_wall_thickness_mm}} mm."
+              },
+              {
+                "if": {
+                  "field": "gb_stones_present",
+                  "equals": true
+                },
+                "then": "Echogenic calculus/calculi noted within the gallbladder lumen with acoustic shadowing."
+              },
+              {
+                "if": {
+                  "all": [
+                    {"field": "gb_stones_present", "equals": true},
+                    {"field": "gb_largest_stone_mm", "gt": 0}
+                  ]
+                },
+                "then": "Largest measures {{gb_largest_stone_mm}} mm."
+              },
+              {
+                "if": {
+                  "field": "gb_sludge_present",
+                  "equals": true
+                },
+                "then": "Luminal sludge is present."
+              },
+              {
+                "if": {
+                  "field": "gb_polyp_present",
+                  "equals": true
+                },
+                "then": "Polyp noted."
+              },
+              {
+                "if": {
+                  "all": [
+                    {"field": "gb_polyp_present", "equals": true},
+                    {"field": "gb_polyp_mm", "gt": 0}
+                  ]
+                },
+                "then": "Polyp measures {{gb_polyp_mm}} mm."
+              },
+              {
+                "if": {
+                  "field": "gb_cbd_diameter_mm",
+                  "gt": 0
+                },
+                "then": "Common bile duct measures {{gb_cbd_diameter_mm}} mm."
+              },
+              {
+                "if": {
+                  "field": "cbd_dilated",
+                  "equals": true
+                },
+                "then": "CBD is dilated."
+              },
+              {
+                "if": {
+                  "field": "gb_cbd_stone_suspected",
+                  "equals": true
+                },
+                "then": "Choledocholithiasis is suspected."
               }
             ]
-          },
-          {
-            "if": {
-              "field": "gb_stones_present",
-              "equals": true
-            },
-            "then": "Echo-genic calculus/calculi noted within the gallbladder lumen with acoustic shadowing."
-          },
-          {
-            "if": {
-              "field": "gb_sludge_present",
-              "equals": true
-            },
-            "then": "Luminal sludge is present."
-          },
-          {
-            "if": {
-              "field": "gb_cbd_diameter_mm",
-              "gt": 0
-            },
-            "then": "Common Bile Duct measures {{gb_cbd_diameter_mm}} mm."
-          },
-          {
-            "if": {
-              "field": "gb_cbd_stone_suspected",
-              "equals": true
-            },
-            "then": "Choledocholithiasis is suspected."
           }
         ]
       },
       {
         "title": "Pancreas",
         "content": [
+          {
+            "if": {
+              "field": "panc_visualized",
+              "in": ["Partially", "Obscured by bowel gas"]
+            },
+            "then": "Pancreas is not visualized."
+          },
           {
             "if": {
               "field": "panc_visualized",
@@ -552,7 +960,54 @@
                 },
                 "then": "Pancreas appears {{panc_echotexture}} in echotexture."
               },
-              "No focal lesion is seen."
+              {
+                "if": {
+                  "field": "panc_size",
+                  "is_not_empty": true
+                },
+                "then": "Pancreas is {{panc_size}}."
+              },
+              {
+                "if": {
+                  "field": "panc_mpd_diameter_mm",
+                  "gt": 0
+                },
+                "then": "MPD measures {{panc_mpd_diameter_mm}} mm."
+              },
+              {
+                "if": {
+                  "field": "panc_duct_dilated",
+                  "equals": true
+                },
+                "then": "MPD is dilated."
+              },
+              {
+                "if": {
+                  "field": "panc_focal_lesion_present",
+                  "equals": true
+                },
+                "then": "A focal lesion is noted."
+              },
+              {
+                "if": {
+                  "field": "panc_peripancreatic_fluid",
+                  "equals": true
+                },
+                "then": "Peripancreatic fluid is present."
+              },
+              {
+                "if": {
+                  "field": "panc_calcification_present",
+                  "equals": true
+                },
+                "then": "Calcification is noted."
+              },
+              {
+                "if": {
+                  "not": {"field": "panc_focal_lesion_present", "equals": true}
+                },
+                "then": "No focal lesion is seen."
+              }
             ]
           }
         ]
@@ -560,6 +1015,13 @@
       {
         "title": "Spleen",
         "content": [
+          {
+            "if": {
+              "field": "spl_visualized",
+              "equals": "No"
+            },
+            "then": "Spleen is not visualized."
+          },
           {
             "if": {
               "field": "spl_visualized",
@@ -575,10 +1037,42 @@
               },
               {
                 "if": {
+                  "field": "spl_size",
+                  "is_not_empty": true
+                },
+                "then": "Spleen size is {{spl_size}}."
+              },
+              {
+                "if": {
                   "field": "spl_length_cm",
                   "is_not_empty": true
                 },
                 "then": "Bipolar length is {{spl_length_cm}} cm."
+              },
+              {
+                "if": {
+                  "field": "spl_lesion_present",
+                  "equals": true
+                },
+                "then": "A focal lesion is noted."
+              },
+              {
+                "if": {
+                  "all": [
+                    {"field": "spl_lesion_present", "equals": true},
+                    {"field": "spl_largest_lesion_mm", "gt": 0}
+                  ]
+                },
+                "then": "Largest lesion measures {{spl_largest_lesion_mm}} mm."
+              },
+              {
+                "if": {
+                  "all": [
+                    {"field": "spl_lesion_present", "equals": true},
+                    {"field": "spl_lesion_character", "is_not_empty": true}
+                  ]
+                },
+                "then": "Lesion character is {{spl_lesion_character}}."
               }
             ]
           }
@@ -587,6 +1081,13 @@
       {
         "title": "Right Kidney",
         "content": [
+          {
+            "if": {
+              "field": "kid_r_visualized",
+              "equals": "No"
+            },
+            "then": "Right kidney is not visualized."
+          },
           {
             "if": {
               "field": "kid_r_visualized",
@@ -602,6 +1103,13 @@
               },
               {
                 "if": {
+                  "field": "kid_r_cortical_thickness_mm",
+                  "gt": 0
+                },
+                "then": "Cortical thickness is {{kid_r_cortical_thickness_mm}} mm."
+              },
+              {
+                "if": {
                   "field": "kid_r_cortical_echogenicity",
                   "is_not_empty": true
                 },
@@ -613,28 +1121,99 @@
                   "is_not_empty": true
                 },
                 "then": "Corticomedullary differentiation is {{kid_r_cmd}}."
+              },
+              {
+                "if": {
+                  "field": "kid_r_calculus_present",
+                  "equals": true
+                },
+                "then": "Calculus noted."
+              },
+              {
+                "if": {
+                  "all": [
+                    {"field": "kid_r_calculus_present", "equals": true},
+                    {"field": "kid_r_largest_calculus_mm", "gt": 0}
+                  ]
+                },
+                "then": "Largest calculus measures {{kid_r_largest_calculus_mm}} mm."
+              },
+              {
+                "if": {
+                  "field": "kid_r_hydro_grade",
+                  "is_not_empty": true
+                },
+                "then": "{{kid_r_hydro_grade}} hydronephrosis is present."
+              },
+              {
+                "if": {
+                  "field": "kid_r_hydronephrosis_grade",
+                  "gt": 0
+                },
+                "then": "Grade {{kid_r_hydronephrosis_grade}} hydronephrosis is present."
+              },
+              {
+                "if": {
+                  "field": "kid_r_cyst_present",
+                  "equals": true
+                },
+                "then": "Cyst noted."
+              },
+              {
+                "if": {
+                  "all": [
+                    {"field": "kid_r_cyst_present", "equals": true},
+                    {"field": "kid_r_cyst_type", "is_not_empty": true}
+                  ]
+                },
+                "then": "Cyst type is {{kid_r_cyst_type}}."
+              },
+              {
+                "if": {
+                  "field": "kid_r_mass_suspected",
+                  "equals": true
+                },
+                "then": "Mass suspected."
+              },
+              {
+                "if": {
+                  "all": [
+                    {"field": "kid_r_mass_suspected", "equals": true},
+                    {"field": "kid_r_mass_mm", "gt": 0}
+                  ]
+                },
+                "then": "Mass measures {{kid_r_mass_mm}} mm."
+              },
+              {
+                "if": {
+                  "field": "kid_r_ureter_stone_present",
+                  "equals": true
+                },
+                "then": "Ureteric calculus noted."
+              },
+              {
+                "if": {
+                  "all": [
+                    {"field": "kid_r_ureter_stone_present", "equals": true},
+                    {"field": "kid_r_ureter_stone_mm", "gt": 0}
+                  ]
+                },
+                "then": "Ureteric calculus measures {{kid_r_ureter_stone_mm}} mm."
               }
             ]
-          },
-          {
-            "if": {
-              "field": "kid_r_calculus_present",
-              "equals": true
-            },
-            "then": "Calculus measuring {{kid_r_largest_calculus_mm}} mm noted."
-          },
-          {
-            "if": {
-              "field": "kid_r_hydronephrosis_grade",
-              "gt": 0
-            },
-            "then": "Grade {{kid_r_hydronephrosis_grade}} hydronephrosis is present."
           }
         ]
       },
       {
         "title": "Left Kidney",
         "content": [
+          {
+            "if": {
+              "field": "kid_l_visualized",
+              "equals": "No"
+            },
+            "then": "Left kidney is not visualized."
+          },
           {
             "if": {
               "field": "kid_l_visualized",
@@ -650,6 +1229,13 @@
               },
               {
                 "if": {
+                  "field": "kid_l_cortical_thickness_mm",
+                  "gt": 0
+                },
+                "then": "Cortical thickness is {{kid_l_cortical_thickness_mm}} mm."
+              },
+              {
+                "if": {
                   "field": "kid_l_cortical_echogenicity",
                   "is_not_empty": true
                 },
@@ -661,22 +1247,211 @@
                   "is_not_empty": true
                 },
                 "then": "Corticomedullary differentiation is {{kid_l_cmd}}."
+              },
+              {
+                "if": {
+                  "field": "kid_l_calculus_present",
+                  "equals": true
+                },
+                "then": "Calculus noted."
+              },
+              {
+                "if": {
+                  "all": [
+                    {"field": "kid_l_calculus_present", "equals": true},
+                    {"field": "kid_l_largest_calculus_mm", "gt": 0}
+                  ]
+                },
+                "then": "Largest calculus measures {{kid_l_largest_calculus_mm}} mm."
+              },
+              {
+                "if": {
+                  "field": "kid_l_hydro_grade",
+                  "is_not_empty": true
+                },
+                "then": "{{kid_l_hydro_grade}} hydronephrosis is present."
+              },
+              {
+                "if": {
+                  "field": "kid_l_hydronephrosis_grade",
+                  "gt": 0
+                },
+                "then": "Grade {{kid_l_hydronephrosis_grade}} hydronephrosis is present."
+              },
+              {
+                "if": {
+                  "field": "kid_l_cyst_present",
+                  "equals": true
+                },
+                "then": "Cyst noted."
+              },
+              {
+                "if": {
+                  "all": [
+                    {"field": "kid_l_cyst_present", "equals": true},
+                    {"field": "kid_l_cyst_type", "is_not_empty": true}
+                  ]
+                },
+                "then": "Cyst type is {{kid_l_cyst_type}}."
+              },
+              {
+                "if": {
+                  "field": "kid_l_mass_suspected",
+                  "equals": true
+                },
+                "then": "Mass suspected."
+              },
+              {
+                "if": {
+                  "all": [
+                    {"field": "kid_l_mass_suspected", "equals": true},
+                    {"field": "kid_l_mass_mm", "gt": 0}
+                  ]
+                },
+                "then": "Mass measures {{kid_l_mass_mm}} mm."
+              },
+              {
+                "if": {
+                  "field": "kid_l_ureter_stone_present",
+                  "equals": true
+                },
+                "then": "Ureteric calculus noted."
+              },
+              {
+                "if": {
+                  "all": [
+                    {"field": "kid_l_ureter_stone_present", "equals": true},
+                    {"field": "kid_l_ureter_stone_mm", "gt": 0}
+                  ]
+                },
+                "then": "Ureteric calculus measures {{kid_l_ureter_stone_mm}} mm."
               }
             ]
-          },
+          }
+        ]
+      },
+      {
+        "title": "Urinary Bladder",
+        "content": [
           {
             "if": {
-              "field": "kid_l_calculus_present",
+              "field": "bla_adequately_filled",
               "equals": true
             },
-            "then": "Calculus measuring {{kid_l_largest_calculus_mm}} mm noted."
+            "then": "Urinary bladder is adequately filled."
           },
           {
             "if": {
-              "field": "kid_l_hydronephrosis_grade",
+              "field": "bla_wall_thickness_mm",
               "gt": 0
             },
-            "then": "Grade {{kid_l_hydronephrosis_grade}} hydronephrosis is present."
+            "then": "Wall thickness is {{bla_wall_thickness_mm}} mm."
+          },
+          {
+            "if": {
+              "field": "bla_wall_thickened",
+              "equals": true
+            },
+            "then": "Bladder wall is thickened."
+          },
+          {
+            "if": {
+              "field": "bla_trabeculation",
+              "equals": true
+            },
+            "then": "Trabeculation is present."
+          },
+          {
+            "if": {
+              "field": "bla_calculus_present",
+              "equals": true
+            },
+            "then": "Calculus noted."
+          },
+          {
+            "if": {
+              "all": [
+                {"field": "bla_calculus_present", "equals": true},
+                {"field": "bla_calculus_mm", "gt": 0}
+              ]
+            },
+            "then": "Calculus measures {{bla_calculus_mm}} mm."
+          },
+          {
+            "if": {
+              "field": "bla_mass_present",
+              "equals": true
+            },
+            "then": "Mass noted."
+          },
+          {
+            "if": {
+              "field": "bla_post_void_residual_ml",
+              "gt": 0
+            },
+            "then": "Post-void residual is {{bla_post_void_residual_ml}} ml."
+          }
+        ]
+      },
+      {
+        "title": "Peritoneal Cavity",
+        "content": [
+          {
+            "if": {
+              "field": "ff_present",
+              "equals": true
+            },
+            "then": "Free peritoneal fluid is present."
+          },
+          {
+            "if": {
+              "all": [
+                {"field": "ff_present", "equals": true},
+                {"field": "ff_amount", "is_not_empty": true}
+              ]
+            },
+            "then": "Amount is {{ff_amount}}."
+          },
+          {
+            "if": {
+              "field": "asc_present",
+              "equals": true
+            },
+            "then": "Ascites is present."
+          },
+          {
+            "if": {
+              "all": [
+                {"field": "asc_present", "equals": true},
+                {"field": "asc_amount", "is_not_empty": true}
+              ]
+            },
+            "then": "Amount is {{asc_amount}}."
+          },
+          {
+            "if": {
+              "field": "aff_collection_present",
+              "equals": true
+            },
+            "then": "Fluid collection noted."
+          },
+          {
+            "if": {
+              "all": [
+                {"field": "aff_collection_present", "equals": true},
+                {"field": "aff_collection_site", "is_not_empty": true}
+              ]
+            },
+            "then": "Site: {{aff_collection_site}}."
+          },
+          {
+            "if": {
+              "all": [
+                {"field": "aff_collection_present", "equals": true},
+                {"field": "aff_collection_mm", "gt": 0}
+              ]
+            },
+            "then": "Collection measures {{aff_collection_mm}} mm."
           }
         ]
       },
@@ -705,19 +1480,69 @@
     "impression_rules": [
       {
         "priority": 10,
+        "when": {"field": "gb_stones_present", "equals": true},
+        "text": "Cholelithiasis.",
+        "continue": true
+      },
+      {
+        "priority": 12,
         "when": {
-          "field": "gb_stones_present",
-          "equals": true
+          "all": [
+            {"field": "gb_wall_thickness_mm", "gt": 3},
+            {"field": "gb_pericholecystic_fluid_present", "equals": true},
+            {"any": [{"field": "gb_stones_present", "equals": true}, {"field": "gb_sludge_present", "equals": true}]}
+          ]
         },
-        "text": "Cholelithiasis."
+        "text": "Findings suggestive of acute cholecystitis.",
+        "continue": true
+      },
+      {
+        "priority": 15,
+        "when": {"any": [{"field": "cbd_dilated", "equals": true}, {"field": "gb_cbd_diameter_mm", "gt": 6}]},
+        "text": "CBD dilatation.",
+        "continue": true
       },
       {
         "priority": 20,
-        "when": {
-          "field": "liv_echogenicity",
-          "equals": "Increased (Fatty)"
-        },
-        "text": "Fatty Liver changes."
+        "when": {"field": "liv_echogenicity", "equals": "Increased (Fatty)"},
+        "text": "Fatty liver changes.",
+        "continue": true
+      },
+      {
+        "priority": 22,
+        "when": {"field": "liv_fatty_grade", "is_not_empty": true},
+        "text": "Fatty liver ({{liv_fatty_grade}}).",
+        "continue": true
+      },
+      {
+        "priority": 30,
+        "when": {"any": [{"field": "kid_r_hydronephrosis_grade", "gt": 0}, {"field": "kid_l_hydronephrosis_grade", "gt": 0}]},
+        "text": "Hydronephrosis.",
+        "continue": true
+      },
+      {
+        "priority": 32,
+        "when": {"any": [{"field": "kid_r_hydro_grade", "is_not_empty": true}, {"field": "kid_l_hydro_grade", "is_not_empty": true}]},
+        "text": "Hydronephrosis.",
+        "continue": true
+      },
+      {
+        "priority": 35,
+        "when": {"any": [{"field": "kid_r_calculus_present", "equals": true}, {"field": "kid_l_calculus_present", "equals": true}]},
+        "text": "Renal calculi.",
+        "continue": true
+      },
+      {
+        "priority": 36,
+        "when": {"any": [{"field": "kid_r_ureter_stone_present", "equals": true}, {"field": "kid_l_ureter_stone_present", "equals": true}]},
+        "text": "Ureteric calculi.",
+        "continue": true
+      },
+      {
+        "priority": 40,
+        "when": {"any": [{"field": "ff_present", "equals": true}, {"field": "asc_present", "equals": true}]},
+        "text": "Ascites/free fluid.",
+        "continue": true
       }
     ]
   }

@@ -56,6 +56,7 @@ ORGAN_PREFIX_MAP = {
     "pros_": "prostate",
     "asc_": "peritoneum",
     "aff_": "peritoneum",
+    "ff_": "peritoneum",
 }
 
 SECTION_TITLE_MAP = {
