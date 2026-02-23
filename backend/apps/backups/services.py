@@ -31,13 +31,36 @@ class BackupError(RuntimeError):
 
 
 def _project_root() -> Path:
-    return Path(settings.BASE_DIR).resolve().parent
+    # In Docker, BASE_DIR is /app. Parent is /.
+    # We want to avoid returning / if possible.
+    base = Path(settings.BASE_DIR).resolve()
+    if base.parent == Path("/"):
+        return base
+    return base.parent
 
 
 def backup_root() -> Path:
-    root = Path(os.getenv("BACKUP_ROOT", str(_project_root() / "backups"))).resolve()
+    # Prefer env var, then default to BASE_DIR/backups or MEDIA_ROOT/backups
+    env_root = os.getenv("BACKUP_ROOT")
+    if env_root:
+        root = Path(env_root).resolve()
+    else:
+        # Try BASE_DIR/backups, if BASE_DIR is /app, it might be /app/backups
+        # If BASE_DIR is /app/backend, it might be /app/backups
+        prj = _project_root()
+        root = prj / "backups"
+        
+        # Fallback to media/backups if project root is not writable
+        try:
+            root.mkdir(parents=True, exist_ok=True)
+        except (PermissionError, OSError):
+            root = Path(settings.MEDIA_ROOT) / "backups"
+
     root.mkdir(parents=True, exist_ok=True)
-    os.chmod(root, 0o750)
+    try:
+        os.chmod(root, 0o750)
+    except OSError:
+        pass # Might fail on some filesystems
     return root
 
 

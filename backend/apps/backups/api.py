@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -35,7 +36,7 @@ def _is_manager(user) -> bool:
         return False
     if user.is_superuser:
         return True
-    groups = set(user.groups.values_list("name", flat=True))
+    groups = set(g.lower() for g in user.groups.values_list("name", flat=True))
     return bool(groups.intersection({"manager", "admin"}))
 
 
@@ -92,7 +93,7 @@ def backups_collection(request):
             "cloud": {
                 "remote_name": os.getenv("BACKUP_RCLONE_REMOTE", "offsite"),
                 "remote_path": os.getenv("BACKUP_RCLONE_PATH", "radreport-backups"),
-                "connected": bool(shutil_which("rclone")),
+                "connected": bool(shutil.which("rclone")),
             },
             "restore_in_progress": (backup_root() / ".restore_in_progress").exists(),
             "police_mode": os.getenv("BACKUP_POLICE_MODE", "0").lower() in {"1", "true", "yes"},
@@ -365,9 +366,3 @@ def _artifact_file(root: Path, name: str) -> Path | None:
     if p.exists() and p.is_file():
         return p
     return None
-
-
-def shutil_which(name: str):
-    import shutil
-
-    return shutil.which(name)

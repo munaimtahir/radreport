@@ -5,25 +5,17 @@ import { Link, useNavigate } from "react-router-dom";
 import PageHeader from "../ui/components/PageHeader";
 import ErrorAlert from "../ui/components/ErrorAlert";
 
-interface DashboardSummary {
-  date: string;
-  server_time: string;
-  total_patients_today: number;
-  total_services_today: number;
-  reports_pending: number;
-  reports_verified: number;
-  critical_delays: number;
-  threshold_hours: number;
+interface Metric {
+  key: string;
+  label: string;
+  value: number;
+  definition: string;
 }
 
-interface DashboardFlow {
-  date: string;
-  server_time: string;
-  registered_count: number;
-  paid_count: number;
-  performed_count: number;
-  reported_count: number;
-  verified_count: number;
+interface UserContext {
+  username: string;
+  is_admin: boolean;
+  scope: string;
 }
 
 interface WorklistItem {
@@ -42,11 +34,31 @@ interface WorklistItem {
   action_url: string;
 }
 
-interface WorklistResponse {
-  scope: string;
-  items?: WorklistItem[];
-  grouped_by_department?: Record<string, WorklistItem[]>;
-  total_items: number;
+interface DashboardFlow {
+  registered_count: number;
+  paid_count: number;
+  performed_count: number;
+  reported_count: number;
+  verified_count: number;
+}
+
+interface Sections {
+  pending_worklist: {
+    items: WorklistItem[];
+    grouped_by_department: Record<string, WorklistItem[]> | null;
+    total_items: number;
+    scope: string;
+  };
+  flow: DashboardFlow;
+}
+
+interface DashboardPayload {
+  timestamp_generated: string;
+  timezone_used: string;
+  tenant_id: string | null;
+  user_context: UserContext;
+  metrics: Metric[];
+  sections: Sections;
 }
 
 interface HealthStatus {
@@ -65,22 +77,14 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>("");
-  
-  // Layer 1: Summary
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  
-  // Layer 2: Worklist
-  const [worklist, setWorklist] = useState<WorklistResponse | null>(null);
-  
-  // Layer 3: Flow
-  const [flow, setFlow] = useState<DashboardFlow | null>(null);
-  
+
+  // Canonical Dashboard Payload
+  const [dashboardData, setDashboardData] = useState<DashboardPayload | null>(null);
+
   // Layer 4: Health
   const [health, setHealth] = useState<HealthStatus | null>(null);
   const [healthLastChecked, setHealthLastChecked] = useState<Date | null>(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
-
-  const isAdmin = user?.is_superuser || (user?.groups || []).some((g: string) => g.toLowerCase() === "admin");
 
   // Load dashboard data
   useEffect(() => {
@@ -113,15 +117,8 @@ export default function Dashboard() {
     setLoading(true);
     setError("");
     try {
-      const [summaryData, worklistData, flowData] = await Promise.all([
-        apiGet("/dashboard/summary/", token).catch(() => null),
-        apiGet(`/dashboard/worklist/?scope=${isAdmin ? "department" : "my"}`, token).catch(() => null),
-        apiGet("/dashboard/flow/", token).catch(() => null),
-      ]);
-      
-      if (summaryData) setSummary(summaryData);
-      if (worklistData) setWorklist(worklistData);
-      if (flowData) setFlow(flowData);
+      const data = await apiGet("/dashboard/summary/", token);
+      setDashboardData(data);
     } catch (err: any) {
       setError(err.message || "Failed to load dashboard data");
     } finally {
@@ -148,22 +145,17 @@ export default function Dashboard() {
   };
 
   const handleKPIClick = (type: string) => {
-    // Navigate to filtered list based on KPI type
     switch (type) {
-      case "patients":
+      case "total_patients_today":
+      case "total_services_today":
         navigate("/registration");
         break;
-      case "services":
-        navigate("/registration");
-        break;
-      case "pending":
+      case "reports_pending":
+      case "critical_delays":
         navigate("/worklists/verification?status=PENDING_VERIFICATION");
         break;
-      case "verified":
+      case "reports_verified":
         navigate("/reports?status=PUBLISHED");
-        break;
-      case "delays":
-        navigate("/worklists/verification?status=PENDING_VERIFICATION");
         break;
     }
   };
@@ -192,7 +184,7 @@ export default function Dashboard() {
     return colors[status] || "#666";
   };
 
-  if (loading && !summary) {
+  if (loading && !dashboardData) {
     return (
       <div>
         <PageHeader title="Dashboard" />
@@ -201,59 +193,88 @@ export default function Dashboard() {
     );
   }
 
+  const worklist = dashboardData?.sections.pending_worklist;
+  const flow = dashboardData?.sections.flow;
+  const isAdmin = dashboardData?.user_context.is_admin;
+
   return (
     <div style={{ maxWidth: 1400, margin: "0 auto" }}>
-      <PageHeader title="Dashboard" />
-      
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+        <PageHeader title="Dashboard" />
+        <button
+          onClick={loadDashboardData}
+          style={{
+            padding: "8px 16px",
+            background: "#fff",
+            border: "1px solid #ddd",
+            borderRadius: "4px",
+            cursor: "pointer"
+          }}>
+          ↻ Refresh
+        </button>
+      </div>
+
       {error && <ErrorAlert message={error} onDismiss={() => setError("")} />}
 
       {/* Layer 1: Global Status Strip (KPI Tiles) */}
       <div style={{ marginBottom: 24 }}>
-        <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, color: "#333" }}>
-          Today's Overview
-        </h2>
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", 
-          gap: 16 
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: "#333", margin: 0 }}>
+            Today's Overview
+          </h2>
+          {dashboardData && (
+            <span style={{ fontSize: 12, color: "#666" }}>
+              Timezone: {dashboardData.timezone_used} | Updated: {new Date(dashboardData.timestamp_generated).toLocaleTimeString()}
+            </span>
+          )}
+        </div>
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+          gap: 16
         }}>
-          {[
-            { key: "patients", label: "Total Patients Today", value: summary?.total_patients_today || 0, color: "#0B5ED7" },
-            { key: "services", label: "Total Services Today", value: summary?.total_services_today || 0, color: "#17a2b8" },
-            { key: "pending", label: "Reports Pending", value: summary?.reports_pending || 0, color: "#ffc107" },
-            { key: "verified", label: "Reports Verified", value: summary?.reports_verified || 0, color: "#28a745" },
-            { key: "delays", label: "Critical Delays", value: summary?.critical_delays || 0, color: "#dc3545" },
-          ].map((tile) => (
-            <div
-              key={tile.key}
-              onClick={() => handleKPIClick(tile.key)}
-              style={{
-                border: "1px solid #e0e0e0",
-                borderRadius: 8,
-                padding: 20,
-                background: "white",
-                boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
-                cursor: "pointer",
-                transition: "all 0.2s",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
-                e.currentTarget.style.transform = "translateY(-2px)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
-                e.currentTarget.style.transform = "translateY(0)";
-              }}
-            >
-              <h3 style={{ margin: "0 0 10px 0", color: "#666", fontSize: 13, fontWeight: 500 }}>
-                {tile.label}
-              </h3>
-              <div style={{ fontSize: 32, fontWeight: "bold", color: tile.color, marginBottom: 8 }}>
-                {tile.value}
+          {dashboardData?.metrics.map((metric) => {
+            const isAlert = metric.key === "critical_delays" && metric.value > 0;
+            const colorMapping: Record<string, string> = {
+              "total_patients_today": "#0B5ED7",
+              "total_services_today": "#17a2b8",
+              "reports_pending": "#ffc107",
+              "reports_verified": "#28a745",
+              "critical_delays": isAlert ? "#dc3545" : "#666"
+            };
+            return (
+              <div
+                key={metric.key}
+                onClick={() => handleKPIClick(metric.key)}
+                title={metric.definition}
+                style={{
+                  border: "1px solid #e0e0e0",
+                  borderRadius: 8,
+                  padding: 20,
+                  background: isAlert ? "#fff5f5" : "white",
+                  boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+                  cursor: "pointer",
+                  transition: "all 0.2s",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.boxShadow = "0 4px 8px rgba(0,0,0,0.15)";
+                  e.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.boxShadow = "0 1px 3px rgba(0,0,0,0.1)";
+                  e.currentTarget.style.transform = "translateY(0)";
+                }}
+              >
+                <h3 style={{ margin: "0 0 10px 0", color: "#666", fontSize: 13, fontWeight: 500 }}>
+                  {metric.label}
+                </h3>
+                <div style={{ fontSize: 32, fontWeight: "bold", color: colorMapping[metric.key] || "#333", marginBottom: 8 }}>
+                  {metric.value}
+                </div>
+                <div style={{ fontSize: 11, color: "#999" }}>Click to view →</div>
               </div>
-              <div style={{ fontSize: 11, color: "#999" }}>Click to view →</div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       </div>
 
@@ -269,9 +290,9 @@ export default function Dashboard() {
               <h3 style={{ fontSize: 14, fontWeight: 600, color: "#666", marginBottom: 8 }}>
                 {dept} ({items.length} items)
               </h3>
-              <div style={{ 
-                border: "1px solid #e0e0e0", 
-                borderRadius: 8, 
+              <div style={{
+                border: "1px solid #e0e0e0",
+                borderRadius: 8,
                 background: "white",
                 overflow: "hidden"
               }}>
@@ -290,7 +311,7 @@ export default function Dashboard() {
                       <tr
                         key={item.id}
                         onClick={() => handleWorklistItemClick(item)}
-                        style={{ 
+                        style={{
                           borderBottom: "1px solid #f0f0f0",
                           cursor: "pointer",
                         }}
@@ -333,9 +354,9 @@ export default function Dashboard() {
           ))
         ) : worklist?.items && worklist.items.length > 0 ? (
           // Non-admin: My worklist
-          <div style={{ 
-            border: "1px solid #e0e0e0", 
-            borderRadius: 8, 
+          <div style={{
+            border: "1px solid #e0e0e0",
+            borderRadius: 8,
             background: "white",
             overflow: "hidden"
           }}>
@@ -354,7 +375,7 @@ export default function Dashboard() {
                   <tr
                     key={item.id}
                     onClick={() => handleWorklistItemClick(item)}
-                    style={{ 
+                    style={{
                       borderBottom: "1px solid #f0f0f0",
                       cursor: "pointer",
                     }}
@@ -394,10 +415,10 @@ export default function Dashboard() {
             </table>
           </div>
         ) : (
-          <div style={{ 
-            border: "1px solid #e0e0e0", 
-            borderRadius: 8, 
-            padding: 40, 
+          <div style={{
+            border: "1px solid #e0e0e0",
+            borderRadius: 8,
+            padding: 40,
             background: "white",
             textAlign: "center",
             color: "#999"
@@ -413,10 +434,10 @@ export default function Dashboard() {
           <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, color: "#333" }}>
             Today's Flow
           </h2>
-          <div style={{ 
-            display: "grid", 
-            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", 
-            gap: 16 
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+            gap: 16
           }}>
             {[
               { label: "Registered", value: flow.registered_count, color: "#0B5ED7" },
@@ -465,17 +486,17 @@ export default function Dashboard() {
         </h2>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 16 }}>
           {/* Alerts Card */}
-          <div style={{ 
-            border: "1px solid #e0e0e0", 
-            borderRadius: 8, 
-            padding: 20, 
-            background: "white" 
+          <div style={{
+            border: "1px solid #e0e0e0",
+            borderRadius: 8,
+            padding: 20,
+            background: "white"
           }}>
             <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "#333" }}>Alerts</h3>
             <div style={{ fontSize: 13, color: "#666" }}>
-              {summary?.critical_delays && summary.critical_delays > 0 ? (
+              {dashboardData?.metrics.find(m => m.key === "critical_delays")?.value ? (
                 <div style={{ padding: "8px 12px", background: "#fff3cd", borderRadius: 4, marginBottom: 8 }}>
-                  ⚠️ {summary.critical_delays} items pending &gt; {summary.threshold_hours}h
+                  ⚠️ {dashboardData.metrics.find(m => m.key === "critical_delays")!.value} items critically delayed
                 </div>
               ) : (
                 <div style={{ color: "#999" }}>No active alerts</div>
@@ -484,22 +505,22 @@ export default function Dashboard() {
           </div>
 
           {/* System Health Card */}
-          <div style={{ 
-            border: "1px solid #e0e0e0", 
-            borderRadius: 8, 
-            padding: 20, 
-            background: "white" 
+          <div style={{
+            border: "1px solid #e0e0e0",
+            borderRadius: 8,
+            padding: 20,
+            background: "white"
           }}>
             <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12, color: "#333" }}>System Health</h3>
             {health ? (
               <div style={{ fontSize: 13 }}>
                 <div style={{ marginBottom: 8 }}>
                   <span style={{ color: "#666" }}>Backend API: </span>
-                  <span style={{ 
+                  <span style={{
                     color: health.status === "ok" ? "#28a745" : health.status === "degraded" ? "#ffc107" : "#dc3545",
                     fontWeight: 500
                   }}>
-                    {health.status.toUpperCase()}
+                    {health.status?.toUpperCase() || 'UNKNOWN'}
                   </span>
                   {health.latency_ms > 0 && (
                     <span style={{ color: "#999", marginLeft: 8 }}>
@@ -509,16 +530,16 @@ export default function Dashboard() {
                 </div>
                 <div style={{ marginBottom: 8 }}>
                   <span style={{ color: "#666" }}>Database: </span>
-                  <span style={{ 
-                    color: health.checks.db === "ok" ? "#28a745" : "#dc3545",
+                  <span style={{
+                    color: health.checks?.db === "ok" ? "#28a745" : "#dc3545",
                     fontWeight: 500
                   }}>
-                    {health.checks.db.toUpperCase()}
+                    {health.checks?.db?.toUpperCase() || 'UNKNOWN'}
                   </span>
                 </div>
                 <div style={{ marginBottom: 8 }}>
                   <span style={{ color: "#666" }}>Network: </span>
-                  <span style={{ 
+                  <span style={{
                     color: isOnline ? "#28a745" : "#dc3545",
                     fontWeight: 500
                   }}>
@@ -548,10 +569,10 @@ export default function Dashboard() {
         <h2 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, color: "#333" }}>
           Quick Actions
         </h2>
-        <div style={{ 
-          display: "grid", 
-          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", 
-          gap: 12 
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))",
+          gap: 12
         }}>
           {[
             { label: "New Registration", path: "/registration", icon: "➕" },

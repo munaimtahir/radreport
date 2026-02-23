@@ -10,7 +10,7 @@ class IsBackupManager(BasePermission):
             return False
         if user.is_superuser:
             return True
-        groups = set(user.groups.values_list("name", flat=True))
+        groups = set(g.lower() for g in user.groups.values_list("name", flat=True))
         return bool(groups.intersection({"manager", "admin"}))
 
 
