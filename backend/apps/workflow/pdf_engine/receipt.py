@@ -533,9 +533,14 @@ def _draw_receipt_copy(
     canvas.setFont("Helvetica", font_size)
     canvas.setFillColor(black)
     
-    # Reserve space for numbering column (e.g., "1.", "2.", ..., "99.")
-    # 8 points is sufficient for up to 2 digits plus period and spacing
-    number_width = 8  # Width in points for the number column
+    # Reserve space for numbering column (e.g., "1.", "2.", ..., "999.")
+    # Compute the required width dynamically based on the largest number on this page
+    if items_count > 0:
+        largest_item_number = f"{start_service_number + items_count - 1}."
+        # Width in points for the largest number plus a small padding to separate it from the text
+        number_width = pdfmetrics.stringWidth(largest_item_number, "Helvetica", font_size) + 4
+    else:
+        number_width = 0
     
     for idx in range(items_count):
         service_name, amount_text = services_to_display[idx]
